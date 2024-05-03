@@ -27,12 +27,7 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdf.model.StmtIterator;
-import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFParser;
-import org.dbpedia.databus.moss.services.GstoreConnector;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
+import org.dbpedia.moss.requests.GstoreConnector;
 import com.google.gson.JsonParser;
 
 /**
@@ -119,7 +114,7 @@ public class DataLoader {
 
                 for (int i = 0; i < fileURIs.length; i++) {
                     System.out.println("Loading " + fileURIs[i]);
-                    Model model = cleanModel(loadModel(fileURIs[i]));
+                    Model model = cleanModel(gstoreConnector.read(fileURIs[i]));
                     URI fileURI = new URI(fileURIs[i]);
 
                     String filePath = fileURI.getPath();
@@ -176,25 +171,5 @@ public class DataLoader {
         }
 
         return cleanedModel;
-    }
-
-    private Model loadModel(String fileURI) throws UnsupportedEncodingException, URISyntaxException {
-        Model model = ModelFactory.createDefaultModel();
-
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Accept", "application/ld+json");
-        headers.add("Content-Type", "application/ld+json");
-
-        URI gstoreURI = new URI(fileURI);
-        ResponseEntity<String> response = restTemplate.getForEntity(gstoreURI, String.class);
-        String serverResponse = response.getBody();
-
-        if (serverResponse != null) {
-            ByteArrayInputStream targetStream = new ByteArrayInputStream(serverResponse.getBytes("UTF-8"));
-            RDFParser.source(targetStream).lang(Lang.TTL).parse(model);
-        }
-
-        return model;
     }
 }

@@ -1,22 +1,15 @@
 package org.dbpedia.moss.indexer;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
-import java.net.MalformedURLException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.List;
-
-import org.apache.jena.ext.com.google.common.io.Files;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
-
 
 public class IndexingTask implements Runnable {
 
@@ -31,54 +24,43 @@ public class IndexingTask implements Runnable {
         this.indexEndpoint = indexEndpoint;
     }
 
-    @SuppressWarnings({ "deprecation", "null" })
+    @SuppressWarnings({ "deprecation" })
     @Override
     public void run() {
-
         System.out.println("Ich bims der runner auf thread " + Thread.currentThread().getId());
 
         try {
             File configFile = new File(configPath);
             System.out.println("Building index with config " + configFile.getAbsolutePath());
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-            RestTemplate restTemplate = new RestTemplate();
+            byte[] configFileBytes = readBytesFromFile(configFile);
 
-            byte[] configFileBytes = Files.toByteArray(configFile);
+            // Construct the URL for the index endpoint
+            URL url = new URL(indexEndpoint);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=boundary");
+            connection.setDoOutput(true);
 
-            // This nested HttpEntiy is important to create the correct
-            // Content-Disposition entry with metadata "name" and "filename"
-            MultiValueMap<String, String> fileMap = new LinkedMultiValueMap<>();
-            ContentDisposition contentDisposition = ContentDisposition
-                    .builder("form-data")
-                    .name("config")
-                    .filename(configFile.getAbsolutePath())
-                    .build();
-            fileMap.add(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString());
-            HttpEntity<byte[]> fileEntity = new HttpEntity<>(configFileBytes, fileMap);
-
-            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("config", fileEntity);
-
-
-            HttpEntity<MultiValueMap<String, Object>> requestEntity =
-                    new HttpEntity<>(body, headers);
-
-            System.out.println(requestEntity);
-            try {
-                ResponseEntity<String> response = restTemplate.exchange(
-                        this.indexEndpoint,
-                        HttpMethod.POST,
-                        requestEntity,
-                        String.class);
-                System.out.println(response);
-            } catch (HttpClientErrorException e) {
-                e.printStackTrace();
+            // Write the config file bytes to the connection output stream
+            try (OutputStream outputStream = connection.getOutputStream()) {
+                outputStream.write(configFileBytes);
             }
 
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
+            // Get the response code
+            int responseCode = connection.getResponseCode();
+            System.out.println("Response code: " + responseCode);
+
+            // Print the response
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        System.out.println(line);
+                    }
+                }
+            }
+
         } catch (IOException e) {
             System.out.println("gefahr");
             e.printStackTrace();
@@ -86,6 +68,18 @@ public class IndexingTask implements Runnable {
             System.out.println("gefahr");
             e.printStackTrace();
         }
+
         System.out.println("Fertig auf " + Thread.currentThread().getId());
+    }
+
+    private byte[] readBytesFromFile(File file) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            int c;
+            while ((c = reader.read()) != -1) {
+                bos.write(c);
+            }
+            return bos.toByteArray();
+        }
     }
 }
