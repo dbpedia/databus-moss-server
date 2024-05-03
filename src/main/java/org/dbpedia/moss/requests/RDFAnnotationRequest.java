@@ -1,4 +1,4 @@
-package org.dbpedia.databus.moss.services;
+package org.dbpedia.moss.requests;
 
 import org.apache.jena.rdf.model.Model;
 

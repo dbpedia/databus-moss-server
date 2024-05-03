@@ -1,4 +1,4 @@
-package org.dbpedia.databus.moss.services;
+package org.dbpedia.moss.requests;
 
 import java.util.Calendar;
 import java.util.Map;
@@ -11,7 +11,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
-import org.dbpedia.databus.utils.DatabusUtilFunctions;
+import org.dbpedia.moss.utils.MossUtils;
 
 /**
  * Java object representing the data of a simple annotation
@@ -35,7 +35,7 @@ public class RDFAnnotationModData {
         this.modType = request.getModType();
         this.annotationModel = request.getAnnotationModel();
         this.modVersion = request.getModVersion();
-        this.fileURI = DatabusUtilFunctions.createAnnotationFileURI(baseURI, this.modType,
+        this.fileURI = MossUtils.createAnnotationFileURI(baseURI, this.modType,
                 this.databusURI);
 
         this.startedAtTime = ResourceFactory.createTypedLiteral( new XSDDateTime(Calendar.getInstance()));

@@ -1,5 +1,6 @@
 package org.dbpedia.moss;
 
+import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.ConstraintSecurityHandler;
 import org.eclipse.jetty.security.DefaultIdentityService;
@@ -33,6 +34,7 @@ import java.util.Collections;
  */
 public class Main {
 
+    public static String KEY_CONFIG = "config";
     /**
      * Run to start a jetty server that hosts the moss servlet and makes it
      * accessible
@@ -83,7 +85,7 @@ public class Main {
         
         ServletContextHandler context = new ServletContextHandler();
         context.setContextPath("/*");
-        context.addServlet(new ServletHolder(new UnprotectedServlet()), "/unprotected");
+        context.addServlet(new ServletHolder(new MetadataReadServlet()), "/g/*");
         context.addServlet(new ServletHolder(new UnprotectedServlet()), "/unprotected2");
 
         // Context handler for the protected route

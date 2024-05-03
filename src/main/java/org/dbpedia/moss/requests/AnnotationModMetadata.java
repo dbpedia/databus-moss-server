@@ -1,4 +1,4 @@
-package org.dbpedia.databus.moss.services;
+package org.dbpedia.moss.requests;
 
 import java.io.InputStream;
 import java.time.LocalDateTime;
@@ -10,7 +10,6 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.vocabulary.DC;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 
@@ -47,20 +46,6 @@ public class AnnotationModMetadata {
                                 "moss", "https://dataid.dbpedia.org/moss#",
                                 "rdfs", RDFS.getURI(),
                                 "mod", "http://dataid.dbpedia.org/ns/mod#");
-    }
-
-    public void annotateModel(Model annotationModel, String fileIdentifier, Resource databusResource, SimpleAnnotationRequest annotationRequest) {
-        Resource annotationDocumentResource = ResourceFactory.createResource(fileIdentifier + modFragment);
-        Resource modTypResource = ResourceFactory.createResource("https://dataid.dbpedia.org/moss#" + this.modType);
-
-        for(String tag: annotationRequest.getTags()) {
-            annotationModel.add(
-                    databusResource,
-                    DC.subject,
-                    ResourceFactory.createResource(tag));
-        }
-
-        this.annotateModInfo(annotationModel, databusResource, annotationDocumentResource, modTypResource);
     }
 
 

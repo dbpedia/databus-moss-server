@@ -1,26 +1,20 @@
-package org.dbpedia.databus.utils;
+package org.dbpedia.moss.utils;
 
-import org.apache.jena.riot.system.StreamRDF;
-
+import org.apache.http.client.utils.URIBuilder;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.atomgraph.etl.json.JsonStreamRDFWriter;
-import org.apache.jena.riot.system.StreamRDFLib;
-
-public final class MossUtilityFunctions {
+public final class MossUtils {
 
     public static final Pattern baseRegex = Pattern.compile("^(https?://[^/]+)");
 
@@ -34,19 +28,40 @@ public final class MossUtilityFunctions {
             return str_array[0];
         }
     }
+    
 
+    public static String createAnnotationFileURI(String baseURL, String modType, String databusIdentifier) {
+        List<String> pathSegments = new ArrayList<String>();
 
+        databusIdentifier = databusIdentifier.replaceAll( "http[s]?://", "");
+        String[] resourceSegments = databusIdentifier.split("/");
 
-    public static String get_ntriples_from_json(String json_string) {
+        pathSegments.add("g");
 
-        Writer w = new StringWriter();
-        Reader r = new StringReader(json_string);
-        StreamRDF stream_rdf = StreamRDFLib.writer(w);
-        JsonStreamRDFWriter json_rdf_writer = new JsonStreamRDFWriter(r, stream_rdf, json_rdf_base_uri);
-        json_rdf_writer.convert();
+        for (String segment : resourceSegments) {
+            pathSegments.add(segment);
+        }
 
-        return w.toString();
+        String fileName = modType.toLowerCase() + ".jsonld";
+        pathSegments.add(fileName);
+
+        return buildURL(baseURL, pathSegments);
     }
+
+
+     public static String buildURL(String baseURL, List<String> pathSegments) {
+        String identifier = "";
+        try {
+            URIBuilder builder = new URIBuilder(baseURL);
+            builder.setPathSegments(pathSegments);
+
+            identifier = builder.build().toString();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+        return  identifier;
+    }
+
 
     public static String extractBaseFromURL(String uri) {
         Matcher m = baseRegex.matcher(uri);
