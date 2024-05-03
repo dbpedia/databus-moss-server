@@ -30,7 +30,7 @@ public class MetadataWriteServlet extends HttpServlet {
 	@Override
 	public void init() throws ServletException {
 		String configPath = getInitParameter(Main.KEY_CONFIG);
-		configuration = MossConfiguration.Load(configPath);
+		configuration = MossConfiguration.Load();
 	}
 
 	@Override

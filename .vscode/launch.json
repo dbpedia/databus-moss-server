@@ -9,7 +9,10 @@
             "name": "Launch Moss Server",
             "request": "launch",
             "mainClass": "org.dbpedia.moss.Main",
-            "projectName": "moss"
+            "projectName": "moss",
+            "env": {
+                "GSTORE_BASE_URL": "http://localhost:2001"
+            }
         }
     ]
 }

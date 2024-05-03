@@ -30,16 +30,17 @@ public class MetadataAnnotateServlet extends HttpServlet {
 	@Override
 	public void init() throws ServletException {
 		String configPath = getInitParameter(Main.KEY_CONFIG);
-		configuration = MossConfiguration.Load(configPath);
+		configuration = MossConfiguration.Load();
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		
-		/*
-		  // Extract request parameters
+        /*
+        
+        INPUTS
+
         String databusURI = req.getParameter("databusURI");
-        String modURI = req.getParameter("modURI");
         String modType = req.getParameter("modType");
         String modVersion = req.getParameter("modVersion");
 
@@ -55,6 +56,39 @@ public class MetadataAnnotateServlet extends HttpServlet {
         multipartInputStreamProvider.parseRequest();
         annotationGraph = multipartInputStreamProvider.getMultipartFile("annotationGraph");
 		
+
+
+        // Same old:
+
+        // Parsen in Jena Model
+
+        // Annotation Header dazu packen
+
+        // Annotierte Metadaten zurückgeben in response (input + moss-header)
+
+
+
+
+        // 8===>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		
+		  // Extract request parameters
+        String modURI = req.getParameter("modURI");
+
+  
 
 		Model annotationModel = ModelFactory.createDefaultModel();
 

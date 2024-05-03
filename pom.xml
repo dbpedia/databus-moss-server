@@ -8,10 +8,9 @@
   <version>1.0</version>
   <name>moss</name>
   <url>https://github.com/dbpedia/databus-moss</url>
-  <properties>
+  <properties> 
+    <java.version>21</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
   <dependencies>
     <dependency>
@@ -100,7 +99,7 @@
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.2.6</version> <!-- Use the latest version -->
+      <version>1.2.6</version> 
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>

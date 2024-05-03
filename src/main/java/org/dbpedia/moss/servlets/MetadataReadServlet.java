@@ -35,13 +35,13 @@ public class MetadataReadServlet extends HttpServlet {
 	@Override
 	public void init() throws ServletException {
 		String configPath = getInitParameter(Main.KEY_CONFIG);
-		configuration = MossConfiguration.Load(configPath);
+		configuration = MossConfiguration.Load();
 	}
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		// Construct the URL for the request
-		String requestURL = this.configuration.getGStoreBaseURL() + req.getRequestURI();
+		String requestURL = this.configuration.getGstoreBaseURL() + req.getRequestURI();
 		
 		// Create a new HTTP client
 		HttpClient httpClient = HttpClient.newHttpClient();

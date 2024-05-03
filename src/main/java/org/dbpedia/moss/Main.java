@@ -77,23 +77,23 @@ public class Main {
 
         // Context handler for the unprotected routes
         ServletContextHandler openContext = new ServletContextHandler();
-        openContext.setContextPath("/*");
-        openContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/g/*");
-        openContext.addServlet(new ServletHolder(new MetadataAnnotateServlet()), "/api/annotate");
+        openContext.setContextPath("/g");
+        openContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
         // Context handler for the protected routes
          
         // Context handler for the protected route
         ServletContextHandler protectedContext = new ServletContextHandler();
         protectedContext.setContextPath("/*");
-        protectedContext.addServlet(new ServletHolder(new LogoutServlet(loginService)), "auth/logout");
+        protectedContext.addServlet(new ServletHolder(new LogoutServlet(loginService)), "/auth/logout");
         protectedContext.addServlet(new ServletHolder(new MetadataWriteServlet()), "/api/save");
-        protectedContext.setSessionHandler(sessionHandler);
-        protectedContext.setSecurityHandler(security);
+        protectedContext.addServlet(new ServletHolder(new MetadataAnnotateServlet()), "/api/annotate");
+        // protectedContext.setSessionHandler(sessionHandler);
+        // protectedContext.setSecurityHandler(security);
 
         // Set up handler collection
         HandlerList  handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { protectedContext, openContext });
+        handlers.setHandlers(new Handler[] { openContext, protectedContext  });
 
         server.setHandler(handlers);
 
