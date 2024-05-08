@@ -9,15 +9,15 @@ import java.io.File;
 import java.io.IOException;
 
 
-public class IndexerManagerConfig {
+public class MossConfiguration {
     private List<DataLoaderConfig> loaders;
-    private List<ModIndexerConfig> indexers;
+    private List<ModIndexerConfiguration> indexers;
 
-    public List<ModIndexerConfig> getIndexers() {
+    public List<ModIndexerConfiguration> getIndexers() {
         return indexers;
     }
 
-    public void setIndexers(List<ModIndexerConfig> indexerConfigs) {
+    public void setIndexers(List<ModIndexerConfiguration> indexerConfigs) {
         this.indexers = indexerConfigs;
     }
 
@@ -31,11 +31,11 @@ public class IndexerManagerConfig {
     }
 
     
-    public static IndexerManagerConfig fromJson(File file) {
+    public static MossConfiguration fromJson(File file) {
         try {
             ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
         
-            return mapper.readValue(file, IndexerManagerConfig.class);
+            return mapper.readValue(file, MossConfiguration.class);
         } catch (IOException e) {
             e.printStackTrace();
             return null;

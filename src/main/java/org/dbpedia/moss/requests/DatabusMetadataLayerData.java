@@ -1,8 +1,10 @@
 
 package org.dbpedia.moss.requests;
 
+import org.dbpedia.moss.utils.MossUtils;
+
 public class DatabusMetadataLayerData {
-    
+
     private String databusURI;
     private String name;
     private String version;
@@ -41,9 +43,32 @@ public class DatabusMetadataLayerData {
         this.version = version;
     }
 
-    public String GetURI() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'GetURI'");
+    public String GetDocumentURI(String mossBaseURL) {
+
+        String uriFragments = MossUtils.getMossDocumentUriFragments(databusURI);
+        return MossUtils.getMossDocumentUri(mossBaseURL, uriFragments, name, "jsonld");
+    }
+
+    public String GetURI(String mossBaseURL) {
+
+        String uriFragments = MossUtils.getMossDocumentUriFragments(databusURI);
+        return MossUtils.getMossDocumentUri(mossBaseURL, uriFragments, name, "jsonld") + "#layer";
+    }
+
+    public boolean isValid() {
+        if(name == null) {
+            return false;
+        }
+
+        if(version == null) {
+            return false;
+        }
+        
+        if(databusURI == null) {
+            return false;
+        }
+
+        return true;
     }
    
 }

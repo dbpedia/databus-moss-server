@@ -108,7 +108,7 @@ public final class MossUtils {
 
 
     public static URL createSaveURL(String annotationFileURI) throws MalformedURLException {
-        MossConfiguration config = MossConfiguration.Load();
+        MossEnvironment config = MossEnvironment.Get();
         String path = annotationFileURI.replaceAll(MossUtils.baseURI, "");
         String gStoreBaseURL = config.getGstoreBaseURL();
         String uriString = gStoreBaseURL + path;

@@ -9,7 +9,7 @@ import java.io.File;
 import java.io.IOException;
 
 
-public class ModIndexerConfig {
+public class ModIndexerConfiguration {
     private String configPath;
     private List<String> mods;
 
@@ -29,9 +29,9 @@ public class ModIndexerConfig {
         this.mods = mods;
     }
 
-    public static ModIndexerConfig fromJson(File file) throws IOException {
+    public static ModIndexerConfiguration fromJson(File file) throws IOException {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
-        return mapper.readValue(file, ModIndexerConfig.class);
+        return mapper.readValue(file, ModIndexerConfiguration.class);
     }
 
 }

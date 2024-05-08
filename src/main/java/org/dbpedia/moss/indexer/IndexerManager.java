@@ -8,8 +8,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.dbpedia.moss.requests.GstoreConnector;
-import org.dbpedia.moss.utils.MossConfiguration;
+import org.dbpedia.moss.utils.MossEnvironment;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -27,31 +28,26 @@ public class IndexerManager {
 
     private ScheduledExecutorService scheduler;
 
-    public IndexerManager(MossConfiguration config) {
-        // TODO
-        GstoreConnector gstoreConnector = new GstoreConnector(config.getGstoreBaseURL());
-    }
+    public IndexerManager(MossEnvironment environment) {
+        GstoreConnector gstoreConnector = new GstoreConnector(environment.getGstoreBaseURL());
+        
+        File configFile = new File(environment.GetConfigPath());
+        String configRootPath = configFile.getParent();
 
-    public IndexerManager(String configRootPath, IndexerManagerConfig config,
-        GstoreConnector gstoreConnector, String lookupBaseURL) {
+        MossConfiguration config = MossConfiguration.fromJson(configFile);
 
         this.indexers = new ArrayList<ModIndexer>();
         this.indexerMappings = new HashMap<String, List<ModIndexer>>();
 
-        if(config == null){
-            return;
-        }
-
         for(DataLoaderConfig loaderConfig : config.getLoaders()) {
-            DataLoader loader = new DataLoader(loaderConfig, gstoreConnector, 
-                configRootPath, lookupBaseURL);
+            DataLoader loader = new DataLoader(loaderConfig, gstoreConnector, configRootPath, environment.GetLookupBaseURL());
                 
             loader.load();
         }
 
-        for(ModIndexerConfig indexerConfig : config.getIndexers()) {
+        for(ModIndexerConfiguration indexerConfig : config.getIndexers()) {
 
-            ModIndexer modIndexer = new ModIndexer(indexerConfig, configRootPath, lookupBaseURL);
+            ModIndexer modIndexer = new ModIndexer(indexerConfig, configRootPath, environment.GetLookupBaseURL());
 
             this.indexers.add(modIndexer);
             System.out.println("Created indexer with id " + modIndexer.getId());
@@ -78,6 +74,7 @@ public class IndexerManager {
         this.worker = new ThreadPoolExecutor(fixedPoolSize, fixedPoolSize,
             0L, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<Runnable>());
+
     }
 
     private void tick() {

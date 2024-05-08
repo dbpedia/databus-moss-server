@@ -23,7 +23,7 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.RDF;
 import org.dbpedia.moss.Main;
-import org.dbpedia.moss.utils.MossConfiguration;
+import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.utils.MossUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +44,7 @@ public class MetadataAnnotateServlet extends HttpServlet {
 
 	final static Logger logger = LoggerFactory.getLogger(MetadataAnnotateServlet.class);
 
-	private MossConfiguration configuration;
+	private MossEnvironment configuration;
    //  private MetadataService metadataService;
 
     public MetadataAnnotateServlet() {
@@ -54,7 +54,7 @@ public class MetadataAnnotateServlet extends HttpServlet {
 	@Override
 	public void init() throws ServletException {
 		String configPath = getInitParameter(Main.KEY_CONFIG);
-		configuration = MossConfiguration.Load();
+		configuration = MossEnvironment.Get();
 	}
 
 	@Override

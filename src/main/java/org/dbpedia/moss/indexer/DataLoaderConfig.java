@@ -12,7 +12,7 @@ import java.io.IOException;
  */
 public class DataLoaderConfig {
     private String collectionURI;
-    private ModIndexerConfig indexer;
+    private ModIndexerConfiguration indexer;
 
     public String getCollectionURI() {
         return collectionURI;
@@ -22,17 +22,17 @@ public class DataLoaderConfig {
         this.collectionURI = collectionURI;
     }
 
-    public ModIndexerConfig getIndexer() {
+    public ModIndexerConfiguration getIndexer() {
         return indexer;
     }
 
-    public void setIndexer(ModIndexerConfig indexer) {
+    public void setIndexer(ModIndexerConfiguration indexer) {
         this.indexer = indexer;
     }
 
-    public static ModIndexerConfig fromJson(File file) throws IOException {
+    public static ModIndexerConfiguration fromJson(File file) throws IOException {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
-        return mapper.readValue(file, ModIndexerConfig.class);
+        return mapper.readValue(file, ModIndexerConfiguration.class);
     }
 
 }

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.Collection;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -26,7 +25,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.requests.DatabusMetadataLayerData;
 import org.dbpedia.moss.requests.GstoreConnector;
-import org.dbpedia.moss.utils.MossConfiguration;
+import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.utils.MossUtils;
 import org.dbpedia.moss.utils.RDFUris;
 import org.slf4j.Logger;
@@ -44,10 +43,11 @@ public class MetadataWriteServlet extends HttpServlet {
 	 */
 	private static final long serialVersionUID = 102831973239L;
 
+    private static final String REQ_PARAM_DOCUMENT = "document";
+
 	final static Logger logger = LoggerFactory.getLogger(MetadataWriteServlet.class);
 
-	private MossConfiguration configuration;
-    // private MetadataService metadataService;
+	private MossEnvironment configuration;
 
     private GstoreConnector gstoreConnector;
 
@@ -59,14 +59,12 @@ public class MetadataWriteServlet extends HttpServlet {
 
     @Override
 	public void init() throws ServletException {
-		configuration = MossConfiguration.Load();
+		configuration = MossEnvironment.Get();
         gstoreConnector = new GstoreConnector(configuration.getGstoreBaseURL());
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
-        resp.setContentType("text/html");
 
         try {
             InputStream documentStream = null;
@@ -75,7 +73,7 @@ public class MetadataWriteServlet extends HttpServlet {
             Collection<Part> parts = req.getParts();
 
             for (Part part : parts) {
-                if (part.getName().equals("document")) {
+                if (part.getName().equals(REQ_PARAM_DOCUMENT)) {
                     documentStream = part.getInputStream();
                 }
             }
@@ -89,45 +87,75 @@ public class MetadataWriteServlet extends HttpServlet {
             Resource metadataLayerType = ResourceFactory.createResource(RDFUris.MOSS_DATABUS_METADATA_LAYER);
             ExtendedIterator<Statement> metadataLayerStatements = model.listStatements(null, RDF.type, metadataLayerType);
 
-            // Iterate over each resource of the specified type
-            while (metadataLayerStatements.hasNext()) {
-
-                Statement statement = metadataLayerStatements.next();
-                Resource resource = statement.getSubject();
-                DatabusMetadataLayerData layerData = new DatabusMetadataLayerData();
-               
-                // Do something with the resource
-                System.out.println("Resource of type " + metadataLayerType + ": " + resource);
-
-                // Read all triples that have this resource as a subject
-                StmtIterator stmtIterator = model.listStatements(resource, null, (RDFNode) null);
-                while (stmtIterator.hasNext()) {
-                    Statement triple = stmtIterator.next();
-                    // Do something with the triple
-                    System.out.println("Triple: " + triple);
-
-                  
-                }
-                
-                stmtIterator.close();
-
-                indexerManager.updateIndices(layerData.getName(), layerData.GetURI());
-                gstoreConnector.write(layerData.GetURI(), jsonString);
+            if(!metadataLayerStatements.hasNext()) {
+                resp.setStatus(400);
+                return;
             }
 
+            Statement statement = metadataLayerStatements.next();
+            
             // Remember to close the iterator
             metadataLayerStatements.close();
 
-        } catch (UnsupportedEncodingException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (URISyntaxException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+            Resource resource = statement.getSubject();
+            DatabusMetadataLayerData layerData = new DatabusMetadataLayerData();
+            
+            // Do something with the resource
+            System.out.println("Resource of type " + metadataLayerType + ": " + resource);
 
-        // Do something with the request body string
-        // String json = requestBody.toString();
-        // this.metadataService.saveMod(json);
+            // Read all triples that have this resource as a subject
+            StmtIterator stmtIterator = model.listStatements(resource, null, (RDFNode) null);
+
+            while (stmtIterator.hasNext()) {
+                Statement triple = stmtIterator.next();
+                RDFNode object = triple.getObject();
+                String predicateURI = triple.getPredicate().getURI();
+
+                // Do something with the triple
+                System.out.println("Triple: " + triple);
+
+                    // Check the predicate of the triple and set the corresponding field in layerData
+                if (predicateURI.equals(RDFUris.MOSS_NAME)) {
+                    layerData.setName(object.toString());
+                    continue;
+                }
+                if (predicateURI.equals(RDFUris.MOSS_VERSION)) {
+                    layerData.setVersion(object.toString());
+                    continue;
+                }
+                if (predicateURI.equals(RDFUris.PROV_USED)) {
+                    layerData.setDatabusURI(object.toString());
+                    continue;
+                }
+            }
+            
+            stmtIterator.close();
+
+            if(layerData.isValid()) {
+                String documentURI = layerData.GetDocumentURI(configuration.getMossBaseUrl());
+                System.out.println("Saving and indexing layer data to " + documentURI);
+
+                // Write unchanged json string
+                gstoreConnector.write(documentURI, jsonString);
+                
+                // Update indices
+                indexerManager.updateIndices(layerData.getName(), layerData.GetURI(configuration.getMossBaseUrl()));
+
+            } else {
+                System.out.println("Invalid layer data: " + layerData.toString());
+                resp.setStatus(400);
+            }
+
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            resp.setStatus(400);
+            return;
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            resp.setStatus(400);
+            return;
+        }
+        
+        resp.setStatus(200);
     }
 }

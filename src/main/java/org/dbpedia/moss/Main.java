@@ -2,7 +2,7 @@ package org.dbpedia.moss;
 
 import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
-import org.dbpedia.moss.utils.MossConfiguration;
+import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.servlets.MetadataAnnotateServlet;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.LogoutServlet;
@@ -16,7 +16,6 @@ import org.eclipse.jetty.security.openid.OpenIdLoginService;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.security.Constraint;
@@ -45,13 +44,13 @@ public class Main {
 
 
         // Logger log = LoggerFactory.getLogger(Main.class);
-        MossConfiguration config = MossConfiguration.Load();
+        MossEnvironment config = MossEnvironment.Get();
 
         IndexerManager indexerManager = new IndexerManager(config);
         
         Server server = new Server(8080);
 
-        SessionHandler sessionHandler = new SessionHandler();
+        // SessionHandler sessionHandler = new SessionHandler();
 
         String ISSUER = "https://auth.dbpedia.org/realms/dbpedia";
         String CLIENT_ID = "moss-dev";

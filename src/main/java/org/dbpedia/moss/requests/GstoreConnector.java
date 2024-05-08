@@ -2,6 +2,8 @@ package org.dbpedia.moss.requests;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -16,8 +18,11 @@ import org.apache.jena.riot.RDFParser;
 
 public class GstoreConnector {
 
-    private static final String ACCEPT_HEADER = "Accept";
-    private static final String CONTENT_TYPE_HEADER = "Content-Type";
+    private static final String REQ_METHOD_POST = "POST";
+    private static final String REQ_METHOD_GET = "GET";
+    private static final String CHAR_ENCODING_UTF8 ="UTF-8";
+    private static final String HEADER_ACCEPT = "Accept";
+    private static final String HEADER_CONTENT_TYPE = "Content-Type";
     private static final String APPLICATION_LD_JSON = "application/ld+json";
     private static final String GRAPH_READ_ENDPOINT = "/graph/read";
     private static final String GRAPH_SAVE_ENDPOINT = "/graph/save";
@@ -34,9 +39,9 @@ public class GstoreConnector {
         try {
             URL url = new URI(targetURI).toURL();
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setRequestProperty(ACCEPT_HEADER, APPLICATION_LD_JSON);
-            connection.setRequestProperty(CONTENT_TYPE_HEADER, APPLICATION_LD_JSON);
+            connection.setRequestMethod(REQ_METHOD_GET);
+            connection.setRequestProperty(HEADER_ACCEPT, APPLICATION_LD_JSON);
+            connection.setRequestProperty(HEADER_CONTENT_TYPE, APPLICATION_LD_JSON);
 
             InputStream inputStream = connection.getInputStream();
             RDFParser.source(inputStream).forceLang(Lang.JSONLD).parse(model);
@@ -60,23 +65,17 @@ public class GstoreConnector {
         try {
             URL url = new URI(saveUrl).toURL();
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty(ACCEPT_HEADER, APPLICATION_LD_JSON);
-            connection.setRequestProperty(CONTENT_TYPE_HEADER, APPLICATION_LD_JSON);
+            connection.setRequestMethod(REQ_METHOD_POST);
+            connection.setRequestProperty(HEADER_ACCEPT, APPLICATION_LD_JSON);
+            connection.setRequestProperty(HEADER_CONTENT_TYPE, APPLICATION_LD_JSON);
             connection.setDoOutput(true);
 
-            /* 
-
-            TODO: Write JSON as stream
-
             OutputStream outputStream = connection.getOutputStream();
-            RDFDataMgr.write(outputStream, model, Lang.JSONLD);
-            outputStream.flush();
-            outputStream.close();
-
-            InputStream inputStream = connection.getInputStream();
-            inputStream.close();
- */
+            PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, CHAR_ENCODING_UTF8));
+            writer.write(json);
+            writer.flush();
+            writer.close();
+         
             connection.disconnect();
         } catch (Exception e) {
             e.printStackTrace();
@@ -90,9 +89,9 @@ public class GstoreConnector {
         try {
             URL url = new URI(targetURI).toURL();
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty(ACCEPT_HEADER, APPLICATION_LD_JSON);
-            connection.setRequestProperty(CONTENT_TYPE_HEADER, APPLICATION_LD_JSON);
+            connection.setRequestMethod(REQ_METHOD_POST);
+            connection.setRequestProperty(HEADER_ACCEPT, APPLICATION_LD_JSON);
+            connection.setRequestProperty(HEADER_CONTENT_TYPE, APPLICATION_LD_JSON);
             connection.setDoOutput(true);
 
             OutputStream outputStream = connection.getOutputStream();

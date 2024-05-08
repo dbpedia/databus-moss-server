@@ -12,14 +12,14 @@ public class ModIndexer {
     private String id;
     private HashSet<String> todos;
     // private ExecutorService worker;
-    private ModIndexerConfig config;
+    private ModIndexerConfiguration config;
     @SuppressWarnings("rawtypes")
     private Future indexingFuture;
     private String configRootPath;
     private String lookupBaseURL;
     // private final int fixedPoolSize = 1;
 
-    public ModIndexer(ModIndexerConfig config, String configRootPath, String lookupBaseURL) {
+    public ModIndexer(ModIndexerConfiguration config, String configRootPath, String lookupBaseURL) {
         this.config = config;
         this.configRootPath = configRootPath;
         this.todos = new HashSet<String>();
@@ -43,11 +43,11 @@ public class ModIndexer {
         return id;
     }
 
-    public ModIndexerConfig getConfig() {
+    public ModIndexerConfiguration getConfig() {
         return this.config;
     }
 
-    public void setConfig(ModIndexerConfig config) {
+    public void setConfig(ModIndexerConfiguration config) {
         this.config = config;
     }
 

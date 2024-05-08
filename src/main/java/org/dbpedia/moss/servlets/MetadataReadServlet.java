@@ -11,7 +11,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.dbpedia.moss.utils.MossConfiguration;
+import org.dbpedia.moss.utils.MossEnvironment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,11 +29,11 @@ public class MetadataReadServlet extends HttpServlet {
 
 	final static Logger logger = LoggerFactory.getLogger(MetadataReadServlet.class);
 
-	private MossConfiguration configuration;
+	private MossEnvironment configuration;
 
 	@Override
 	public void init() throws ServletException {
-		configuration = MossConfiguration.Load();
+		configuration = MossEnvironment.Get();
 	}
 
 	@Override
