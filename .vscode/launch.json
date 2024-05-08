@@ -11,7 +11,10 @@
             "mainClass": "org.dbpedia.moss.Main",
             "projectName": "moss",
             "env": {
-                "GSTORE_BASE_URL": "http://localhost:2001"
+                "CONFIG_PATH": "./config/moss-config.yml",
+                "MOSS_BASE_URL": "http://localhost:8080",
+                "GSTORE_BASE_URL": "http://localhost:2001",
+                "LOOKUP_BASE_URL": "http://localhost:2003"
             }
         }
     ]

@@ -11,7 +11,7 @@ import java.io.IOException;
 
 public class ModIndexerConfiguration {
     private String configPath;
-    private List<String> mods;
+    private List<String> layers;
 
     public String getConfigPath() {
         return configPath;
@@ -21,12 +21,12 @@ public class ModIndexerConfiguration {
         this.configPath = configPath;
     }
 
-    public List<String> getMods() {
-        return mods;
+    public List<String> getLayers() {
+        return layers;
     }
 
-    public void setMods(List<String> mods) {
-        this.mods = mods;
+    public void setLayers(List<String> layers) {
+        this.layers = layers;
     }
 
     public static ModIndexerConfiguration fromJson(File file) throws IOException {

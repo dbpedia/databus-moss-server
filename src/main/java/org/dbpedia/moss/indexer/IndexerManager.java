@@ -52,13 +52,13 @@ public class IndexerManager {
             this.indexers.add(modIndexer);
             System.out.println("Created indexer with id " + modIndexer.getId());
             System.out.println("Config path: " + modIndexer.getConfig().getConfigPath());
-            System.out.println("Mods: " + modIndexer.getConfig().getMods());
+            System.out.println("Mods: " + modIndexer.getConfig().getLayers());
         }this.worker = new ThreadPoolExecutor(fixedPoolSize, fixedPoolSize,
         0L, TimeUnit.MILLISECONDS,
         new LinkedBlockingQueue<Runnable>());
 
         for(ModIndexer indexer : this.indexers) {
-            for(String modType : indexer.getConfig().getMods()) {
+            for(String modType : indexer.getConfig().getLayers()) {
                 if(!this.indexerMappings.containsKey(modType)) {
                     this.indexerMappings.put(modType, new ArrayList<ModIndexer>());
                 }
