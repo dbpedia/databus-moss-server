@@ -4,6 +4,10 @@ import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.servlets.MetadataAnnotateServlet;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.LogoutServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
@@ -22,6 +26,8 @@ import org.eclipse.jetty.util.security.Constraint;
 
 import jakarta.servlet.MultipartConfigElement;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.Collections;
 
 /**
@@ -32,6 +38,20 @@ import java.util.Collections;
 public class Main {
 
     public static String KEY_CONFIG = "config";
+
+    public static Model parseJSONLD(String jsonld, String documentURI) {
+        // Convert JSON-LD string to InputStream
+        InputStream inputStream = new ByteArrayInputStream(jsonld.getBytes());
+
+        // Create an empty model
+        Model model = ModelFactory.createDefaultModel();
+
+        // Parse JSON-LD into the model
+        RDFDataMgr.read(model, inputStream, documentURI, Lang.JSONLD);
+
+        return model;
+    }
+
     /**
      * Run to start a jetty server that hosts the moss servlet and makes it
      * accessible
@@ -42,7 +62,8 @@ public class Main {
      */
     public static void main(String[] args) throws Exception {
 
-
+        testingNShiet();
+       
         // Logger log = LoggerFactory.getLogger(Main.class);
         MossEnvironment config = MossEnvironment.Get();
 
@@ -128,6 +149,34 @@ public class Main {
 
         server.start();
         server.join();
+    }
+
+    private static void testingNShiet() {
+        
+        String isna = """
+            {
+                "@context" : "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context2.jsonld",
+                "wasGeneratedBy" :  {
+                    "@id" : "#layer",
+                    "@type" : "DatabusMetadataLayer",
+                    "version" : "1.0.0",
+                    "name": "simple",
+                    "created" : "2024-03-01 14:37:32",
+                    "used" : "https://databus.dbpedia.org/lrec2024/linguistics/wordnet/2023#wordnet_lang=en.ttl.gz"
+                },
+                "subject" : [ "oeo:OEO_00020033" ]
+              }            
+                """;
+
+        InputStream inputStream = new ByteArrayInputStream(isna.getBytes());
+
+        // Create an empty model
+        Model model = ModelFactory.createDefaultModel();
+
+        // Parse JSON-LD into the model
+        RDFDataMgr.read(model, inputStream, "http://tmp.org/", Lang.JSONLD);
+            
+        model.write(System.out, "Turtle");
     }
 
 }

@@ -1,0 +1,5 @@
+{
+  "@context" : "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context.jsonld",
+  "@id" : "",
+  "subject" : [ "oeo:OEO_00020033" ]
+}

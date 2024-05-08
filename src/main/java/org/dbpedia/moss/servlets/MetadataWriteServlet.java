@@ -44,6 +44,10 @@ public class MetadataWriteServlet extends HttpServlet {
 	private static final long serialVersionUID = 102831973239L;
 
     private static final String REQ_PARAM_DOCUMENT = "document";
+    
+    private static final String REQ_PARAM_PATH = "path";
+
+    private static final String TMP_BASE_URL = "http://tmp.org";
 
 	final static Logger logger = LoggerFactory.getLogger(MetadataWriteServlet.class);
 
@@ -76,13 +80,20 @@ public class MetadataWriteServlet extends HttpServlet {
                 if (part.getName().equals(REQ_PARAM_DOCUMENT)) {
                     documentStream = part.getInputStream();
                 }
+
+                if (part.getName().equals(REQ_PARAM_PATH)) {
+                    documentStream = part.getInputStream();
+                }
             }
+
+
+            // PATH sein wie: /janni/dbpedia-databus/meta1.jsonld
 
             // Read stream to string
             String jsonString = MossUtils.readToString(documentStream);
 
             Model model = ModelFactory.createDefaultModel();
-            RDFDataMgr.read(model, jsonString, Lang.JSONLD);
+            RDFDataMgr.read(model, jsonString, TMP_BASE_URL, Lang.JSONLD);
         
             Resource metadataLayerType = ResourceFactory.createResource(RDFUris.MOSS_DATABUS_METADATA_LAYER);
             ExtendedIterator<Statement> metadataLayerStatements = model.listStatements(null, RDF.type, metadataLayerType);
