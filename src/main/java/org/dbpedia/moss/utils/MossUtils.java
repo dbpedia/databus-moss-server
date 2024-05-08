@@ -1,10 +1,20 @@
 package org.dbpedia.moss.utils;
 
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.jena.query.DatasetFactory;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.riot.JsonLDWriteContext;
+import org.apache.jena.riot.RDFFormat;
+import org.apache.jena.riot.writer.JsonLDWriter;
+import org.apache.jena.sparql.core.DatasetGraph;
+
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -20,6 +30,9 @@ public final class MossUtils {
 
     // this is intentionally without any # or / ending since json2rdf always appends # to the base uri
     public static final String json_rdf_base_uri = "http://mods.tools.dbpedia.org/ns/demo";
+    public static final String baseURI = "https://databus.dbpedia.org";
+    public static String contextURL = "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context.jsonld";
+
 
     public static String getValFromArray(String[] str_array) {
         if (str_array == null) {
@@ -90,6 +103,65 @@ public final class MossUtils {
             return true;
         }
         return false;
+    }
+
+
+    public static URL createSaveURL(String annotationFileURI) throws MalformedURLException {
+        MossConfiguration config = MossConfiguration.Load();
+        String path = annotationFileURI.replaceAll(MossUtils.baseURI, "");
+        String gStoreBaseURL = config.getGstoreBaseURL();
+        String uriString = gStoreBaseURL + path;
+        return URI.create(uriString).toURL();
+    }
+
+    public static void saveModel(Model annotationModel, URL saveUrl) throws IOException {
+
+        System.out.println("Saving with " + saveUrl.toString());
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final JsonLDWriteContext ctx = new JsonLDWriteContext();
+
+        String jsonLDContext = null;
+        try {
+            jsonLDContext = MossUtils.fetchJSON(MossUtils.contextURL);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        ctx.setJsonLDContext(jsonLDContext);
+        ctx.setJsonLDContextSubstitution("\"" + MossUtils.contextURL + "\"");
+
+        DatasetGraph datasetGraph = DatasetFactory.create(annotationModel).asDatasetGraph();
+        JsonLDWriter writer = new JsonLDWriter(RDFFormat.JSONLD_COMPACT_PRETTY);
+        writer.write(outputStream, datasetGraph, null, null, ctx);
+
+        String jsonString = outputStream.toString("UTF-8");
+        System.out.println("jsonjsonjsonjsonjsonjsonjsonjsonjsonjson");
+        System.out.println(jsonString);
+        System.out.println("jsonjsonjsonjsonjsonjsonjsonjsonjsonjson");
+
+        HttpURLConnection con = (HttpURLConnection) saveUrl.openConnection();
+        con.setRequestMethod("POST");
+        con.setRequestProperty("Accept", "application/ld+json");
+        con.setRequestProperty("Content-Type", "application/ld+json");
+
+        con.setDoOutput(true);
+
+        try (OutputStream os = con.getOutputStream()) {
+            byte[] input = jsonString.getBytes("utf-8");
+            os.write(input, 0, input.length);
+        }
+
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(con.getInputStream(), "utf-8"))) {
+            StringBuilder response = new StringBuilder();
+            String responseLine = null;
+            while ((responseLine = br.readLine()) != null) {
+                response.append(responseLine.trim());
+            }
+            System.out.println(response.toString());
+        }
     }
 
 

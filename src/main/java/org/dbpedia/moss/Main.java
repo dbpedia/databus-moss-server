@@ -1,8 +1,11 @@
 package org.dbpedia.moss;
 
 import org.dbpedia.moss.servlets.MetadataReadServlet;
+import org.dbpedia.moss.servlets.MetadataService;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
 import org.dbpedia.moss.servlets.MetadataAnnotateServlet;
+import org.apache.jena.sparql.function.library.max;
+import org.dbpedia.moss.requests.GstoreConnector;
 import org.dbpedia.moss.servlets.LogoutServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.ConstraintSecurityHandler;
@@ -19,6 +22,10 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.security.Constraint;
 
+import jakarta.servlet.MultipartConfigElement;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 
 /**
@@ -75,21 +82,37 @@ public class Main {
         security.setLoginService(loginService);
         security.setAuthenticator(openidAuthenticator);
 
+        String base = "http://localhost:2000";
+        String gstore = "http://localhost:2001";
+        String lookup = "http://localhost:2003";
+        String context = "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context.jsonld";
+
+        MetadataService metadataService = new MetadataService(base, context, gstore, lookup);
+        MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
+        ServletHolder servletHolder = new ServletHolder(new MetadataAnnotateServlet(metadataService));
+        servletHolder.setInitOrder(0);
+        servletHolder.getRegistration().setMultipartConfig(multipartConfig);
+
         // Context handler for the unprotected routes
         ServletContextHandler openContext = new ServletContextHandler();
         openContext.setContextPath("/g");
         openContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
         // Context handler for the protected routes
-         
-        // Context handler for the protected route
         ServletContextHandler protectedContext = new ServletContextHandler();
         protectedContext.setContextPath("/*");
         protectedContext.addServlet(new ServletHolder(new LogoutServlet(loginService)), "/auth/logout");
-        protectedContext.addServlet(new ServletHolder(new MetadataWriteServlet()), "/api/save");
-        protectedContext.addServlet(new ServletHolder(new MetadataAnnotateServlet()), "/api/annotate");
+        protectedContext.addServlet(new ServletHolder(new MetadataWriteServlet(metadataService)), "/api/save");
+        protectedContext.addServlet(servletHolder, "/api/annotate");
+
+
+        // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
+        // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
+
         // protectedContext.setSessionHandler(sessionHandler);
         // protectedContext.setSecurityHandler(security);
+
+        // String configPath, String baseURI, String contextURL, String gstoreBaseURL, String lookupBaseURL
 
         // Set up handler collection
         HandlerList  handlers = new HandlerList();

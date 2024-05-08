@@ -1,13 +1,42 @@
 package org.dbpedia.moss.servlets;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.util.Collection;
+import java.util.List;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.jena.query.DatasetFactory;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.riot.JsonLDWriteContext;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.riot.RDFFormat;
+import org.apache.jena.riot.writer.JsonLDWriter;
+import org.apache.jena.sparql.core.DatasetGraph;
 import org.dbpedia.moss.Main;
+import org.dbpedia.moss.requests.RDFAnnotationModData;
+import org.dbpedia.moss.requests.RDFAnnotationRequest;
 import org.dbpedia.moss.utils.MossConfiguration;
+import org.dbpedia.moss.utils.MossUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +55,11 @@ public class MetadataWriteServlet extends HttpServlet {
 	final static Logger logger = LoggerFactory.getLogger(MetadataWriteServlet.class);
 
 	private MossConfiguration configuration;
+    private MetadataService metadataService;
+
+    public MetadataWriteServlet(MetadataService service) {
+        this.metadataService = service;
+    }
 
 	@Override
 	public void init() throws ServletException {
@@ -35,120 +69,34 @@ public class MetadataWriteServlet extends HttpServlet {
 
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		
-		/*
-		  // Extract request parameters
-        String databusURI = req.getParameter("databusURI");
-        String modURI = req.getParameter("modURI");
-        String modType = req.getParameter("modType");
-        String modVersion = req.getParameter("modVersion");
+        resp.setContentType("text/html");
 
-        // Extract MultipartFile
-        MultipartFile annotationGraph = null;
-        Map<String, String[]> parameters = req.getParameterMap();
-        MultiMap<String> multiMap = new MultiMap<>();
-        for (Map.Entry<String, String[]> entry : parameters.entrySet()) {
-            multiMap.add(entry.getKey(), entry.getValue()[0]);
+        StringBuilder requestBody = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(req.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                requestBody.append(line);
+            }
         }
-        MultipartInputStreamProvider multipartInputStreamProvider = new MultipartInputStreamProvider(
-                multiMap, request.getInputStream(), request.getContentType());
-        multipartInputStreamProvider.parseRequest();
-        annotationGraph = multipartInputStreamProvider.getMultipartFile("annotationGraph");
-		
 
-		Model annotationModel = ModelFactory.createDefaultModel();
+        String json = requestBody.toString();
+        Model annotationModel = ModelFactory.createDefaultModel();
+        InputStream targetStream = new ByteArrayInputStream(json.getBytes());
+        RDFDataMgr.read(annotationModel, targetStream, Lang.JSONLD);
+        String provNamespace = "http://www.w3.org/ns/prov#";
+        Property generatedProperty = annotationModel.getProperty(provNamespace + "generated");
+        List<Resource> resources = annotationModel.listSubjectsWithProperty(generatedProperty).toList();
 
         try {
-            InputStream annotationGraphInputStream = annotationGraph.getInputStream();
-            RDFDataMgr.read(annotationModel, annotationGraphInputStream, Lang.JSONLD);
-            RDFAnnotationRequest request = new RDFAnnotationRequest(databusURI,
-                    modType,
-                    annotationModel,
-                    modVersion,
-                    modURI);
-
-            RDFAnnotationModData modData = metadataService.createRDFAnnotation(request);
-            this.metadataService.getIndexerManager().updateIndices(modData.getModType(), modData.getModURI());
+            Resource modURI = resources.get(0);
+            URL modSaveURL = MossUtils.createSaveURL(modURI.toString());
+            MossUtils.saveModel(annotationModel, modSaveURL);
         } catch (IOException ioException) {
             ioException.printStackTrace();
-        } catch (Exception exception) {
-            exception.printStackTrace();
         }
 
-        return null; */
-	}
-
-	
-	/*
-    public RDFAnnotationModData createRDFAnnotation(RDFAnnotationRequest request) {
-
-        RDFAnnotationModData modData = new RDFAnnotationModData(this.baseURI, request);
-        // FIXME: if modPath also required for model creation -> pass it into the
-        // RDFAnnotationModData constructor
-        String modURI = request.getModPath();
-        String saveURLRAW = modURI != null ? modURI : modData.getFileURI();
-
-        try {
-            saveModel(modData.toModel(), createSaveURL(saveURLRAW));
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
-        }
-
-        return modData;
+        // Do something with the request body string
+        // String json = requestBody.toString();
+        // this.metadataService.saveMod(json);
     }
-
-    public URL createSaveURL(String annotationFileURI) throws MalformedURLException {
-        String path = annotationFileURI.replaceAll(baseURI, "");
-        String uriString = this.gStoreBaseURL + path;
-        return URI.create(uriString).toURL();
-    }
-
-    public String getGStoreBaseURL() {
-        return this.gStoreBaseURL;
-    }
-
-    private void saveModel(Model annotationModel, URL saveUrl) throws IOException {
-
-        System.out.println("Saving with " + saveUrl.toString());
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
-        final JsonLDWriteContext ctx = new JsonLDWriteContext();
-
-        ctx.setJsonLDContext(this.contextJson);
-        ctx.setJsonLDContextSubstitution("\"" + this.contextURL + "\"");
-
-        DatasetGraph datasetGraph = DatasetFactory.create(annotationModel).asDatasetGraph();
-        JsonLDWriter writer = new JsonLDWriter(RDFFormat.JSONLD_COMPACT_PRETTY);
-        writer.write(outputStream, datasetGraph, null, null, ctx);
-
-
-        String jsonString = outputStream.toString("UTF-8");
-        System.out.println("jsonjsonjsonjsonjsonjsonjsonjsonjsonjson");
-        System.out.println(jsonString);
-        System.out.println("jsonjsonjsonjsonjsonjsonjsonjsonjsonjson");
-
-        HttpURLConnection con = (HttpURLConnection) saveUrl.openConnection();
-        con.setRequestMethod("POST");
-        con.setRequestProperty("Accept", "application/ld+json");
-        con.setRequestProperty("Content-Type", "application/ld+json");
-
-        con.setDoOutput(true);
-
-        try (OutputStream os = con.getOutputStream()) {
-            byte[] input = jsonString.getBytes("utf-8");
-            os.write(input, 0, input.length);
-        }
-
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(con.getInputStream(), "utf-8"))) {
-            StringBuilder response = new StringBuilder();
-            String responseLine = null;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
-            }
-            System.out.println(response.toString());
-        }
-    }
-	*/
 }

@@ -2,6 +2,8 @@ package org.dbpedia.moss.utils;
 
 import java.io.File;
 
+import org.dbpedia.moss.indexer.IndexerManagerConfig;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
@@ -9,6 +11,7 @@ public class MossConfiguration {
 
    
     private String gstoreBaseURL;
+    private String indexerConfigPath;
 
     public String getGstoreBaseURL() {
         return gstoreBaseURL;
@@ -16,6 +19,10 @@ public class MossConfiguration {
 
     public void setGstoreBaseURL(String gstoreBaseURL) {
         this.gstoreBaseURL = gstoreBaseURL;
+    }
+
+    public IndexerManagerConfig getIndexerManagerConfig() {
+        return IndexerManagerConfig.fromJson(new File(indexerConfigPath));
     }
     
     /**
