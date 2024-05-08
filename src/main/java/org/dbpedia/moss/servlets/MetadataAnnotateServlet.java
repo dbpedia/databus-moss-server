@@ -17,14 +17,20 @@ import org.apache.jena.datatypes.xsd.XSDDateTime;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.vocabulary.RDF;
 import org.dbpedia.moss.Main;
+import org.dbpedia.moss.requests.DatabusMetadataLayerData;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.utils.MossUtils;
+import org.dbpedia.moss.utils.RDFUris;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,10 +112,52 @@ public class MetadataAnnotateServlet extends HttpServlet {
         Model model = ModelFactory.createDefaultModel();
         RDFDataMgr.read(model, documentStream, Lang.JSONLD);
 
-        // 2 - Create mod header
+        // 2 - Create layer/mod header
 
         // a) Check if header info already there
         // TODO:
+        Resource metadataLayerType = ResourceFactory.createResource(RDFUris.MOSS_DATABUS_METADATA_LAYER);
+        ExtendedIterator<Statement> metadataLayerStatements = model.listStatements(null, RDF.type, metadataLayerType);
+
+        if(!metadataLayerStatements.hasNext()) {
+            resp.setStatus(400);
+            return;
+        }
+
+        Statement statement = metadataLayerStatements.next();
+        
+        // Remember to close the iterator
+        metadataLayerStatements.close();
+
+        Resource resource = statement.getSubject();
+        // DatabusMetadataLayerData layerData = new DatabusMetadataLayerData();
+
+        // Read all triples that have this resource as a subject
+        StmtIterator stmtIterator = model.listStatements(resource, null, (RDFNode) null);
+        Boolean layerContained = false;
+
+        while (stmtIterator.hasNext()) {
+            Statement triple = stmtIterator.next();
+            // RDFNode object = triple.getObject();
+            String predicateURI = triple.getPredicate().getURI();
+
+            // Do something with the triple
+            System.out.println("Triple: " + triple);
+
+            // Check the predicate of the triple and set the corresponding field in layerData
+            if (predicateURI.equals(RDFUris.MOSS_DATABUS_METADATA_LAYER)) {
+                layerContained = true;
+                break;
+            }
+        }
+
+        stmtIterator.close();
+        if (layerContained) {
+            resp.getWriter().println("Data already present");
+            resp.getWriter().println(model.toString());
+            return;
+        }
+
 
         // b) If not - add annotation mod header to model
         addLayerHeader(model, layerName, databusURI, layerVersion);
