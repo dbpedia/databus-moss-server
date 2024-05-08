@@ -8,6 +8,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.dbpedia.moss.requests.GstoreConnector;
+import org.dbpedia.moss.utils.MossConfiguration;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,6 +27,10 @@ public class IndexerManager {
 
     private ScheduledExecutorService scheduler;
 
+    public IndexerManager(MossConfiguration config) {
+        // TODO
+        GstoreConnector gstoreConnector = new GstoreConnector(config.getGstoreBaseURL());
+    }
 
     public IndexerManager(String configRootPath, IndexerManagerConfig config,
         GstoreConnector gstoreConnector, String lookupBaseURL) {

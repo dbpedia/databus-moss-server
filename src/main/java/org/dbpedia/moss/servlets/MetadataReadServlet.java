@@ -11,7 +11,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.dbpedia.moss.Main;
 import org.dbpedia.moss.utils.MossConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +33,6 @@ public class MetadataReadServlet extends HttpServlet {
 
 	@Override
 	public void init() throws ServletException {
-		String configPath = getInitParameter(Main.KEY_CONFIG);
 		configuration = MossConfiguration.Load();
 	}
 

@@ -55,6 +55,35 @@ public class GstoreConnector {
         return read(targetURI);
     }
 
+    public void write(String saveUrl, String json) throws UnsupportedEncodingException, URISyntaxException {
+
+        try {
+            URL url = new URI(saveUrl).toURL();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty(ACCEPT_HEADER, APPLICATION_LD_JSON);
+            connection.setRequestProperty(CONTENT_TYPE_HEADER, APPLICATION_LD_JSON);
+            connection.setDoOutput(true);
+
+            /* 
+
+            TODO: Write JSON as stream
+
+            OutputStream outputStream = connection.getOutputStream();
+            RDFDataMgr.write(outputStream, model, Lang.JSONLD);
+            outputStream.flush();
+            outputStream.close();
+
+            InputStream inputStream = connection.getInputStream();
+            inputStream.close();
+ */
+            connection.disconnect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
     public void write(String repo, String path, Model model) throws UnsupportedEncodingException, URISyntaxException {
         String targetURI = this.baseURL + GRAPH_SAVE_ENDPOINT + "?repo=" + repo + "&path=" + path;
 

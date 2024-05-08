@@ -41,4 +41,9 @@ public class MossConfiguration {
 		return configuration;
 	}
 
+    public String getMossBaseUrl() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getMOSSBaseUrl'");
+    }
+
 }

@@ -1,10 +1,11 @@
 package org.dbpedia.moss;
 
 import org.dbpedia.moss.servlets.MetadataReadServlet;
-import org.dbpedia.moss.servlets.MetadataService;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
+import org.dbpedia.moss.utils.MossConfiguration;
 import org.dbpedia.moss.servlets.MetadataAnnotateServlet;
 import org.apache.jena.sparql.function.library.max;
+import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.requests.GstoreConnector;
 import org.dbpedia.moss.servlets.LogoutServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
@@ -48,6 +49,9 @@ public class Main {
 
 
         // Logger log = LoggerFactory.getLogger(Main.class);
+        MossConfiguration config = MossConfiguration.Load();
+
+        IndexerManager indexerManager = new IndexerManager(config);
         
         Server server = new Server(8080);
 
@@ -82,16 +86,18 @@ public class Main {
         security.setLoginService(loginService);
         security.setAuthenticator(openidAuthenticator);
 
+        /*
         String base = "http://localhost:2000";
         String gstore = "http://localhost:2001";
         String lookup = "http://localhost:2003";
         String context = "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context.jsonld";
+        */
 
-        MetadataService metadataService = new MetadataService(base, context, gstore, lookup);
         MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
-        ServletHolder servletHolder = new ServletHolder(new MetadataAnnotateServlet(metadataService));
-        servletHolder.setInitOrder(0);
-        servletHolder.getRegistration().setMultipartConfig(multipartConfig);
+
+        ServletHolder metadataAnnotateServletHolder = new ServletHolder(new MetadataAnnotateServlet());
+        metadataAnnotateServletHolder.setInitOrder(0);
+        metadataAnnotateServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
         // Context handler for the unprotected routes
         ServletContextHandler openContext = new ServletContextHandler();
@@ -102,8 +108,13 @@ public class Main {
         ServletContextHandler protectedContext = new ServletContextHandler();
         protectedContext.setContextPath("/*");
         protectedContext.addServlet(new ServletHolder(new LogoutServlet(loginService)), "/auth/logout");
-        protectedContext.addServlet(new ServletHolder(new MetadataWriteServlet(metadataService)), "/api/save");
-        protectedContext.addServlet(servletHolder, "/api/annotate");
+
+        ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager));
+        metadataWriteServletHolder.setInitOrder(0);
+        metadataWriteServletHolder.getRegistration().setMultipartConfig(multipartConfig);
+
+        protectedContext.addServlet(metadataWriteServletHolder, "/api/save");
+        protectedContext.addServlet(metadataAnnotateServletHolder, "/api/annotate");
 
 
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");

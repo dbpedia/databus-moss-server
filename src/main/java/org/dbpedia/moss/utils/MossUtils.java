@@ -11,6 +11,7 @@ import org.apache.jena.sparql.core.DatasetGraph;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -181,5 +182,41 @@ public final class MossUtils {
         }
 
         return result.toString();
+    }
+
+
+    public static String getMossDocumentUriFragments(String databusDistributionUri) {
+        // TODO
+
+        // Mache aus
+        // "https://databus.dbpedia.org/kikiriki/jenkins/jenkins/2024-05-07-15#jenkins.txt"
+
+        // Den da
+        // "databus.dbpedia.org/kikiriki/jenkins/jenkins/2024-05-07-15/jenkins.txt"
+
+        // Also z.B: Als URI parsen, protocol weg-cutten, '#' ersetzen mit '/'
+        throw new UnsupportedOperationException("Unimplemented method 'getMOSSDocumentUriFragments'");
+    }
+
+
+    public static String getMossDocumentUri(String mossBaseUrl, String databusDistributionUriFragments,
+            String modType, String string) {
+        // TODO
+
+        // --> Besteht aus: MOSS-Base-URI + "/g/" + databusDistributionUriFragments + lowercase(modType) + fileEnding
+        throw new UnsupportedOperationException("Unimplemented method 'getMOSSDocumentUri'");
+    }
+
+    public static String readToString(InputStream inputStream) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        StringBuilder stringBuilder = new StringBuilder();
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+            stringBuilder.append(line).append("\n");
+        }
+
+        reader.close();
+        return stringBuilder.toString();
     }
 }
