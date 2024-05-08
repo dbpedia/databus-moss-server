@@ -44,7 +44,7 @@ public class GstoreConnector {
             connection.setRequestProperty(HEADER_CONTENT_TYPE, APPLICATION_LD_JSON);
 
             InputStream inputStream = connection.getInputStream();
-            RDFParser.source(inputStream).forceLang(Lang.JSONLD).parse(model);
+            RDFParser.source(inputStream).forceLang(Lang.TURTLE).parse(model);
 
             inputStream.close();
             connection.disconnect();

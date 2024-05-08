@@ -1,14 +1,16 @@
 package org.dbpedia.moss.indexer;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.List;
 
 public class IndexingTask implements Runnable {
@@ -33,18 +35,29 @@ public class IndexingTask implements Runnable {
             File configFile = new File(configPath);
             System.out.println("Building index with config " + configFile.getAbsolutePath());
 
-            byte[] configFileBytes = readBytesFromFile(configFile);
-
             // Construct the URL for the index endpoint
             URL url = new URL(indexEndpoint);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=boundary");
             connection.setDoOutput(true);
+            
+            try (OutputStream outputStream = connection.getOutputStream();
+                PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8), true)) {
+                // Write the boundary and content-disposition header for the file part
+                String boundary = "boundary";
+                writer.println("--" + boundary);
+                writer.println("Content-Disposition: form-data; name=\"config\"; filename=\"" + configFile.getName() + "\"");
+                writer.println("Content-Type: application/octet-stream");
+                writer.println(); 
 
-            // Write the config file bytes to the connection output stream
-            try (OutputStream outputStream = connection.getOutputStream()) {
-                outputStream.write(configFileBytes);
+                // Write the contents of the config file
+                Files.copy(configFile.toPath(), outputStream);
+                outputStream.flush();
+
+                // Write closing boundary
+                writer.println();
+                writer.println("--" + boundary + "--");
             }
 
             // Get the response code
@@ -72,14 +85,5 @@ public class IndexingTask implements Runnable {
         System.out.println("Fertig auf " + Thread.currentThread().getId());
     }
 
-    private byte[] readBytesFromFile(File file) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            int c;
-            while ((c = reader.read()) != -1) {
-                bos.write(c);
-            }
-            return bos.toByteArray();
-        }
-    }
+    
 }
