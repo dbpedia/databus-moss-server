@@ -1,3 +1,4 @@
+/*
 package org.dbpedia.moss.requests;
 
 import org.apache.jena.rdf.model.Model;
@@ -55,3 +56,4 @@ public class RDFAnnotationRequest {
     }
    
 }
+ */

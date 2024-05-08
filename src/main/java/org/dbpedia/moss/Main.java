@@ -4,9 +4,7 @@ import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
 import org.dbpedia.moss.utils.MossConfiguration;
 import org.dbpedia.moss.servlets.MetadataAnnotateServlet;
-import org.apache.jena.sparql.function.library.max;
 import org.dbpedia.moss.indexer.IndexerManager;
-import org.dbpedia.moss.requests.GstoreConnector;
 import org.dbpedia.moss.servlets.LogoutServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.ConstraintSecurityHandler;
@@ -25,8 +23,6 @@ import org.eclipse.jetty.util.security.Constraint;
 
 import jakarta.servlet.MultipartConfigElement;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 
 /**

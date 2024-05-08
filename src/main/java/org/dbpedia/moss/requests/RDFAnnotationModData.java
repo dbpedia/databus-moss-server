@@ -1,3 +1,5 @@
+/*
+
 package org.dbpedia.moss.requests;
 
 import java.util.Calendar;
@@ -13,10 +15,6 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.dbpedia.moss.utils.MossUtils;
 
-/**
- * Java object representing the data of a simple annotation
- * (SimpleAnnotationMod)
- */
 public class RDFAnnotationModData {
 
     Map<String, String> nameSpaces;
@@ -47,11 +45,6 @@ public class RDFAnnotationModData {
         this.modURI = this.fileURI + modFragment;
     }
 
-    /**
-     * Convert the entire object into a jena model
-     * 
-     * @return
-     */
     public Model toModel() {
         Model model = ModelFactory.createDefaultModel();
 
@@ -79,12 +72,6 @@ public class RDFAnnotationModData {
 
         return model;
     }
-
-    /**
-     * Get the document id
-     * 
-     * @return
-     */
     public String getId() {
         return fileURI + modFragment;
     }
@@ -107,3 +94,4 @@ public class RDFAnnotationModData {
 
 
 }
+*/

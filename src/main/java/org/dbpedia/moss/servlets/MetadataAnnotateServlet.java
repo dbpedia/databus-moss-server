@@ -1,17 +1,10 @@
 package org.dbpedia.moss.servlets;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.Calendar;
 import java.util.Collection;
 
-import jakarta.inject.Inject;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -21,29 +14,19 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 
 import org.apache.jena.datatypes.xsd.XSDDateTime;
-import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
-import org.apache.jena.riot.JsonLDWriteContext;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.riot.RDFFormat;
-import org.apache.jena.riot.writer.JsonLDWriter;
-import org.apache.jena.sparql.core.DatasetGraph;
 import org.apache.jena.vocabulary.RDF;
-import org.apache.jena.vocabulary.RDFS;
 import org.dbpedia.moss.Main;
-import org.dbpedia.moss.requests.RDFAnnotationModData;
-import org.dbpedia.moss.requests.RDFAnnotationRequest;
 import org.dbpedia.moss.utils.MossConfiguration;
 import org.dbpedia.moss.utils.MossUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.annotation.JacksonInject;
 
 /**
  * HTTP Servlet with handlers for the single lookup API request "/api/search"

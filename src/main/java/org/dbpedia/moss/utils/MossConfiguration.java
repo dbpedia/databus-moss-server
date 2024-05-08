@@ -4,9 +4,6 @@ import java.io.File;
 
 import org.dbpedia.moss.indexer.IndexerManagerConfig;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-
 public class MossConfiguration {
 
    

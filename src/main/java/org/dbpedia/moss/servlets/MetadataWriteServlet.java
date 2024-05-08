@@ -1,45 +1,22 @@
 package org.dbpedia.moss.servlets;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.Collection;
-import java.util.List;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.Property;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.riot.JsonLDWriteContext;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.riot.RDFFormat;
-import org.apache.jena.riot.writer.JsonLDWriter;
-import org.apache.jena.sparql.core.DatasetGraph;
-import org.dbpedia.moss.Main;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.requests.GstoreConnector;
-import org.dbpedia.moss.requests.RDFAnnotationModData;
-import org.dbpedia.moss.requests.RDFAnnotationRequest;
 import org.dbpedia.moss.utils.MossConfiguration;
 import org.dbpedia.moss.utils.MossUtils;
 import org.slf4j.Logger;
@@ -73,7 +50,6 @@ public class MetadataWriteServlet extends HttpServlet {
     @Override
 	public void init() throws ServletException {
 		configuration = MossConfiguration.Load();
-
         gstoreConnector = new GstoreConnector(configuration.getGstoreBaseURL());
 	}
 
@@ -81,7 +57,7 @@ public class MetadataWriteServlet extends HttpServlet {
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         resp.setContentType("text/html");
-        
+
         try {
             InputStream documentStream = null;
 
