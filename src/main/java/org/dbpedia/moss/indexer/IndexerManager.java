@@ -7,7 +7,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.dbpedia.moss.requests.GstoreConnector;
+import org.dbpedia.moss.GstoreConnector;
+import org.dbpedia.moss.MossConfiguration;
 import org.dbpedia.moss.utils.MossEnvironment;
 
 import java.io.File;

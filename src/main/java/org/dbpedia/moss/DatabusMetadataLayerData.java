@@ -1,5 +1,5 @@
 
-package org.dbpedia.moss.requests;
+package org.dbpedia.moss;
 
 import org.dbpedia.moss.utils.MossUtils;
 

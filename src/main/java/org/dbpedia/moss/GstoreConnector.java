@@ -1,4 +1,4 @@
-package org.dbpedia.moss.requests;
+package org.dbpedia.moss;
 
 import java.io.InputStream;
 import java.io.OutputStream;

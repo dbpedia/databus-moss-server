@@ -26,7 +26,8 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdf.model.StmtIterator;
-import org.dbpedia.moss.requests.GstoreConnector;
+import org.dbpedia.moss.GstoreConnector;
+
 import com.google.gson.JsonParser;
 
 /**
