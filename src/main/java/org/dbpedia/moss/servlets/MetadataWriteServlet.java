@@ -1,15 +1,16 @@
 package org.dbpedia.moss.servlets;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
-import java.util.Collection;
+import java.net.http.HttpRequest;
+import java.nio.charset.StandardCharsets;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.Part;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -43,11 +44,9 @@ public class MetadataWriteServlet extends HttpServlet {
 	 */
 	private static final long serialVersionUID = 102831973239L;
 
-    private static final String REQ_PARAM_DOCUMENT = "document";
-    
     private static final String REQ_PARAM_PATH = "path";
 
-    private static final String TMP_BASE_URL = "http://tmp.org";
+    private static final String REQ_REPO = "repo";
 
 	final static Logger logger = LoggerFactory.getLogger(MetadataWriteServlet.class);
 
@@ -71,28 +70,29 @@ public class MetadataWriteServlet extends HttpServlet {
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         try {
-            InputStream documentStream = null;
 
-            // Get all parts from the request
-            Collection<Part> parts = req.getParts();
-
-            for (Part part : parts) {
-                if (part.getName().equals(REQ_PARAM_DOCUMENT)) {
-                    documentStream = part.getInputStream();
-                }
-
-                if (part.getName().equals(REQ_PARAM_PATH)) {
-                    documentStream = part.getInputStream();
-                }
-            }
-
+            String requestBaseURL = getRequestBaseURL(req);
             // PATH sein wie: /janni/dbpedia-databus/meta1.jsonld
+            String repo = req.getParameter(REQ_REPO);
+            String path = req.getParameter(REQ_PARAM_PATH);
+
+            // TODO: Validate path (darf nicht mit / enden usw);
 
             // Read stream to string
-            String jsonString = MossUtils.readToString(documentStream);
+            String jsonString = MossUtils.readToString(req.getInputStream());
+
+            System.out.println("REQ Repo: " + repo);
+            System.out.println("REQ Path: " + path);
+            System.out.println(jsonString);
+
+            String documentURL = CreateDocumentURI(requestBaseURL, repo, path); 
+
+            System.out.println("Future doc URL: " + documentURL);
+
+            InputStream inputStream = new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8));
 
             Model model = ModelFactory.createDefaultModel();
-            RDFDataMgr.read(model, jsonString, TMP_BASE_URL, Lang.JSONLD);
+            RDFDataMgr.read(model, inputStream, documentURL, Lang.JSONLD);
         
             Resource metadataLayerType = ResourceFactory.createResource(RDFUris.MOSS_DATABUS_METADATA_LAYER);
             ExtendedIterator<Statement> metadataLayerStatements = model.listStatements(null, RDF.type, metadataLayerType);
@@ -142,11 +142,9 @@ public class MetadataWriteServlet extends HttpServlet {
             stmtIterator.close();
 
             if(layerData.isValid()) {
-                String documentURI = layerData.GetDocumentURI(configuration.getMossBaseUrl());
-                System.out.println("Saving and indexing layer data to " + documentURI);
 
                 // Write unchanged json string
-                gstoreConnector.write(documentURI, jsonString);
+                gstoreConnector.write(requestBaseURL, repo, path, jsonString);
                 
                 // Update indices
                 indexerManager.updateIndices(layerData.getName(), layerData.GetURI(configuration.getMossBaseUrl()));
@@ -167,5 +165,41 @@ public class MetadataWriteServlet extends HttpServlet {
         }
         
         resp.setStatus(200);
+    }
+
+    private String CreateDocumentURI(String base, String repo, String path) {
+
+        if(repo.startsWith("/")) {
+            repo = repo.substring(1);
+        }
+
+        if(repo.endsWith("/")) {
+            repo.substring(0, repo.length() - 1);
+        }
+
+        if(path.startsWith("/")) {
+            path = path.substring(1);
+        }
+
+        return base + "/g/" + repo + "/" + path;   
+    }
+
+    private String getRequestBaseURL(HttpServletRequest req) {
+          // Get the protocol (http or https)
+          String protocol = req.getScheme();
+        
+          // Get the server name
+          String serverName = req.getServerName();
+          
+          // Get the server port
+          int serverPort = req.getServerPort();
+          
+          // Construct the base URL
+          String baseURL = protocol + "://" + serverName;
+          if ((protocol.equals("http") && serverPort != 80) || (protocol.equals("https") && serverPort != 443)) {
+              baseURL += ":" + serverPort;
+          }
+
+          return baseURL;
     }
 }

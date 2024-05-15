@@ -62,8 +62,6 @@ public class Main {
      */
     public static void main(String[] args) throws Exception {
 
-        testingNShiet();
-       
         // Logger log = LoggerFactory.getLogger(Main.class);
         MossEnvironment config = MossEnvironment.Get();
 
@@ -151,7 +149,7 @@ public class Main {
         server.join();
     }
 
-    private static void testingNShiet() {
+    private static void testingThings() {
         
         String isna = """
             {

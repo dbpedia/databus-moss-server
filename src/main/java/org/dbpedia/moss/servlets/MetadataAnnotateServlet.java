@@ -26,8 +26,6 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.vocabulary.RDF;
-import org.dbpedia.moss.Main;
-import org.dbpedia.moss.DatabusMetadataLayerData;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.utils.MossUtils;
 import org.dbpedia.moss.utils.RDFUris;
@@ -56,7 +54,6 @@ public class MetadataAnnotateServlet extends HttpServlet {
 
 	@Override
 	public void init() throws ServletException {
-		String configPath = getInitParameter(Main.KEY_CONFIG);
 		configuration = MossEnvironment.Get();
 	}
 
@@ -112,8 +109,7 @@ public class MetadataAnnotateServlet extends HttpServlet {
         // a) Check if header info already there
         // TODO: Done possibly?
 
-        Resource metadataLayerType = ResourceFactory.createResource(RDFUris.MOSS_DATABUS_METADATA_LAYER);
-        Boolean layerContained = this.checkForHeader(model, metadataLayerType);
+        Boolean layerContained = this.checkForHeader(model);
 
         // FIXME: this case never evaluates to True, potential bug?
         if (layerContained) {
@@ -130,9 +126,10 @@ public class MetadataAnnotateServlet extends HttpServlet {
         resp.getWriter().println(model.toString());
     }
 
-    private boolean checkForHeader(Model model, Resource metadataLayerType) {
-        Boolean layerContained = false;
-
+    private boolean checkForHeader(Model model) {
+        boolean layerContained = false;
+        
+        Resource metadataLayerType = ResourceFactory.createResource(RDFUris.MOSS_DATABUS_METADATA_LAYER);
         ExtendedIterator<Statement> metadataLayerStatements = model.listStatements(null, RDF.type, metadataLayerType);
 
         if(!metadataLayerStatements.hasNext()) {
