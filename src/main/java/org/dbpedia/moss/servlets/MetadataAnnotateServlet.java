@@ -135,20 +135,20 @@ public class MetadataAnnotateServlet extends HttpServlet {
 
 
         // Write json string
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        RDFDataMgr.write(outputStream, model, Lang.JSONLD);
-        System.out.println(outputStream);
-        String jsonString = outputStream.toString();
-        String repo = "databus.openenergyplatform.org";
-        String path = "my/custom/path/oemetadatalayer.jsonld";
+        // ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        // RDFDataMgr.write(outputStream, model, Lang.JSONLD);
+        // System.out.println(outputStream);
+        // String jsonString = outputStream.toString();
+        // String repo = "databus.openenergyplatform.org";
+        // String path = "my/custom/path/oemetadatalayer.jsonld";
 
-        try {
-            //FIXME: what is the correct baseURL?
-            gstoreConnector.write(gstoreConnector.getBaseURL(), repo, path, jsonString);
-        } catch (Exception e) {
-            System.out.println("error while writing to gstore");
-            e.printStackTrace();
-        }
+        // try {
+        //     //FIXME: what is the correct baseURL?
+        //     gstoreConnector.write(gstoreConnector.getBaseURL(), repo, path, jsonString);
+        // } catch (Exception e) {
+        //     System.out.println("error while writing to gstore");
+        //     e.printStackTrace();
+        // }
 
         //TODO: implement this...
         // Update indices
