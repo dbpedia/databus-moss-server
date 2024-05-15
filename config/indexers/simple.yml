@@ -8,7 +8,7 @@ indexFields:
     query: >
       SELECT DISTINCT ?mod ?annotation WHERE {
           GRAPH ?g {
-            ?mod a <https://dataid.dbpedia.org/moss#SimpleAnnotationMod> .
+            ?mod a <http://dataid.dbpedia.org/ns/moss#DatabusMetadataLayer> .
             ?_ <http://purl.org/dc/elements/1.1/subject> ?annotation .
           }
           #VALUES#
@@ -19,7 +19,7 @@ indexFields:
     query: >
       SELECT DISTINCT ?mod ?used WHERE {
           GRAPH ?g {
-            ?mod a <https://dataid.dbpedia.org/moss#SimpleAnnotationMod> .
+            ?mod a <http://dataid.dbpedia.org/ns/moss#DatabusMetadataLayer> .
             ?mod <http://www.w3.org/ns/prov#used> ?used .
           }
           #VALUES#

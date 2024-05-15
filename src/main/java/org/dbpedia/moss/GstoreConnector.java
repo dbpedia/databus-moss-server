@@ -18,7 +18,6 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFParser;
-import org.dbpedia.moss.utils.MossEnvironment;
 
 public class GstoreConnector {
 
@@ -36,12 +35,9 @@ public class GstoreConnector {
     private static final String THE_G = "/g/";
 
     private String gstoreBaseURL;
-    private MossEnvironment environment;
 
     public GstoreConnector(String baseURL) {
         this.gstoreBaseURL = baseURL;
-        
-        environment = MossEnvironment.Get();
     }
 
     public Model read(String targetURI) throws URISyntaxException, UnsupportedEncodingException {

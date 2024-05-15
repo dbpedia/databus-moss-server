@@ -131,10 +131,10 @@ public class IndexerManager {
     }
 
     
-    public void updateIndices(String modType, String modURI) {
-        List<ModIndexer> correspondingIndexers = indexerMappings.get(modType);
+    public void updateIndices(String layerUri, String layerName) {
+        List<ModIndexer> correspondingIndexers = indexerMappings.get(layerName);
         for (ModIndexer indexer : correspondingIndexers) {
-            indexer.addTodo(modURI);
+            indexer.addTodo(layerUri);
             System.out.println("Indexer " + indexer.getId() + "hat jetzt todos: " + indexer.getTodos());
         }
     }

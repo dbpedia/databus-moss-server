@@ -1,17 +1,25 @@
 
 package org.dbpedia.moss;
 
-import org.dbpedia.moss.utils.MossUtils;
 
 public class DatabusMetadataLayerData {
 
     private String databusURI;
     private String name;
     private String version;
+    private String uri;
 
-    public DatabusMetadataLayerData() {
-
+    public String getUri() {
+        return uri;
     }
+
+    public void setUri(String uri) {
+        this.uri = uri;
+    }
+
+    public DatabusMetadataLayerData(String uri) {
+        this.uri = uri;
+    }   
 
     public DatabusMetadataLayerData(String name, String version, String databusURI) {
         this.databusURI = databusURI;
@@ -43,19 +51,11 @@ public class DatabusMetadataLayerData {
         this.version = version;
     }
 
-    public String GetDocumentURI(String mossBaseURL) {
-
-        String uriFragments = MossUtils.getMossDocumentUriFragments(databusURI);
-        return MossUtils.getMossDocumentUri(mossBaseURL, uriFragments, name, "jsonld");
-    }
-
-    public String GetURI(String mossBaseURL) {
-
-        String uriFragments = MossUtils.getMossDocumentUriFragments(databusURI);
-        return MossUtils.getMossDocumentUri(mossBaseURL, uriFragments, name, "jsonld") + "#layer";
-    }
-
     public boolean isValid() {
+        if(uri == null) {
+            return false;
+        }
+
         if(name == null) {
             return false;
         }

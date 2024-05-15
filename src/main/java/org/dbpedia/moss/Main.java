@@ -149,32 +149,5 @@ public class Main {
         server.join();
     }
 
-    private static void testingThings() {
-        
-        String isna = """
-            {
-                "@context" : "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context2.jsonld",
-                "wasGeneratedBy" :  {
-                    "@id" : "#layer",
-                    "@type" : "DatabusMetadataLayer",
-                    "version" : "1.0.0",
-                    "name": "simple",
-                    "created" : "2024-03-01 14:37:32",
-                    "used" : "https://databus.dbpedia.org/lrec2024/linguistics/wordnet/2023#wordnet_lang=en.ttl.gz"
-                },
-                "subject" : [ "oeo:OEO_00020033" ]
-              }            
-                """;
-
-        InputStream inputStream = new ByteArrayInputStream(isna.getBytes());
-
-        // Create an empty model
-        Model model = ModelFactory.createDefaultModel();
-
-        // Parse JSON-LD into the model
-        RDFDataMgr.read(model, inputStream, "http://tmp.org/", Lang.JSONLD);
-            
-        model.write(System.out, "Turtle");
-    }
 
 }

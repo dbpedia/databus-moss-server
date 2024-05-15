@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
-import java.net.http.HttpRequest;
 import java.nio.charset.StandardCharsets;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -108,7 +107,7 @@ public class MetadataWriteServlet extends HttpServlet {
             metadataLayerStatements.close();
 
             Resource resource = statement.getSubject();
-            DatabusMetadataLayerData layerData = new DatabusMetadataLayerData();
+            DatabusMetadataLayerData layerData = new DatabusMetadataLayerData(resource.toString());
             
             // Do something with the resource
             System.out.println("Resource of type " + metadataLayerType + ": " + resource);
@@ -123,6 +122,7 @@ public class MetadataWriteServlet extends HttpServlet {
 
                 // Do something with the triple
                 System.out.println("Triple: " + triple);
+
 
                     // Check the predicate of the triple and set the corresponding field in layerData
                 if (predicateURI.equals(RDFUris.MOSS_NAME)) {
@@ -147,7 +147,7 @@ public class MetadataWriteServlet extends HttpServlet {
                 gstoreConnector.write(requestBaseURL, repo, path, jsonString);
                 
                 // Update indices
-                indexerManager.updateIndices(layerData.getName(), layerData.GetURI(configuration.getMossBaseUrl()));
+                indexerManager.updateIndices(layerData.getUri(), layerData.getName());
 
             } else {
                 System.out.println("Invalid layer data: " + layerData.toString());
