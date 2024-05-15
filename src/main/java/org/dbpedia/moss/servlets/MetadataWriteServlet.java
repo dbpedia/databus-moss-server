@@ -86,7 +86,6 @@ public class MetadataWriteServlet extends HttpServlet {
                 }
             }
 
-
             // PATH sein wie: /janni/dbpedia-databus/meta1.jsonld
 
             // Read stream to string

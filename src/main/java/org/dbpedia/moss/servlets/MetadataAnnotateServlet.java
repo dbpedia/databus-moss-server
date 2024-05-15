@@ -27,7 +27,7 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.vocabulary.RDF;
 import org.dbpedia.moss.Main;
-import org.dbpedia.moss.requests.DatabusMetadataLayerData;
+import org.dbpedia.moss.DatabusMetadataLayerData;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.utils.MossUtils;
 import org.dbpedia.moss.utils.RDFUris;
@@ -51,11 +51,8 @@ public class MetadataAnnotateServlet extends HttpServlet {
 	final static Logger logger = LoggerFactory.getLogger(MetadataAnnotateServlet.class);
 
 	private MossEnvironment configuration;
-   //  private MetadataService metadataService;
 
-    public MetadataAnnotateServlet() {
-        // this.metadataService = service;
-    }
+    public MetadataAnnotateServlet() { }
 
 	@Override
 	public void init() throws ServletException {
@@ -103,8 +100,7 @@ public class MetadataAnnotateServlet extends HttpServlet {
             return;
         }
 
-        logInput(layerName, layerVersion, databusURI, documentStream);
-
+        this.logInput(layerName, layerVersion, databusURI, documentStream);
 
         // TASKS:
         
@@ -113,15 +109,34 @@ public class MetadataAnnotateServlet extends HttpServlet {
         RDFDataMgr.read(model, documentStream, Lang.JSONLD);
 
         // 2 - Create layer/mod header
-
         // a) Check if header info already there
-        // TODO:
+        // TODO: Done possibly?
+
         Resource metadataLayerType = ResourceFactory.createResource(RDFUris.MOSS_DATABUS_METADATA_LAYER);
+        Boolean layerContained = this.checkForHeader(model, metadataLayerType);
+
+        // FIXME: this case never evaluates to True, potential bug?
+        if (layerContained) {
+            resp.getWriter().println("Data already present");
+            resp.getWriter().println(model.toString());
+            return;
+        }
+
+        // b) If not - add annotation mod header to model
+        this.addLayerHeader(model, layerName, databusURI, layerVersion);
+
+        // Send response
+        resp.getWriter().println("Data annotated successfully.");
+        resp.getWriter().println(model.toString());
+    }
+
+    private boolean checkForHeader(Model model, Resource metadataLayerType) {
+        Boolean layerContained = false;
+
         ExtendedIterator<Statement> metadataLayerStatements = model.listStatements(null, RDF.type, metadataLayerType);
 
         if(!metadataLayerStatements.hasNext()) {
-            resp.setStatus(400);
-            return;
+            return layerContained;
         }
 
         Statement statement = metadataLayerStatements.next();
@@ -134,7 +149,6 @@ public class MetadataAnnotateServlet extends HttpServlet {
 
         // Read all triples that have this resource as a subject
         StmtIterator stmtIterator = model.listStatements(resource, null, (RDFNode) null);
-        Boolean layerContained = false;
 
         while (stmtIterator.hasNext()) {
             Statement triple = stmtIterator.next();
@@ -152,32 +166,7 @@ public class MetadataAnnotateServlet extends HttpServlet {
         }
 
         stmtIterator.close();
-        if (layerContained) {
-            resp.getWriter().println("Data already present");
-            resp.getWriter().println(model.toString());
-            return;
-        }
-
-
-        // b) If not - add annotation mod header to model
-        addLayerHeader(model, layerName, databusURI, layerVersion);
-
-
-        /*
-        RDFAnnotationRequest request = new RDFAnnotationRequest(
-            databusURI,
-            modType,
-            model,
-            modVersion
-        );
-
-        RDFAnnotationModData modData = createRDFAnnotation(request);
-        // this.metadataService.getIndexerManager().updateIndices(modData.getModType(), modData.getModURI());
-        */
-
-        // Send response
-        resp.getWriter().println("Data annotated successfully.");
-        resp.getWriter().println(model.toString());
+        return layerContained;
     }
 
 

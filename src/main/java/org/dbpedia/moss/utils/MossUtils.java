@@ -187,6 +187,8 @@ public final class MossUtils {
 
     public static String getMossDocumentUriFragments(String databusDistributionUri) {
         // TODO
+        // databusDistributionUri = "https://databus.dbpedia.org/kikiriki/jenkins/jenkins/2024-05-07-15#jenkins.txt";
+        // databusDistributionUri = "https://databus.dbpedia.org/kikiriki/jenkins/jenkins/2024-05-07-15";
 
         // Mache aus
         // "https://databus.dbpedia.org/kikiriki/jenkins/jenkins/2024-05-07-15#jenkins.txt"
@@ -195,16 +197,33 @@ public final class MossUtils {
         // "databus.dbpedia.org/kikiriki/jenkins/jenkins/2024-05-07-15/jenkins.txt"
 
         // Also z.B: Als URI parsen, protocol weg-cutten, '#' ersetzen mit '/'
-        throw new UnsupportedOperationException("Unimplemented method 'getMOSSDocumentUriFragments'");
+        URL databusDistributionURL = null;
+        try {
+            databusDistributionURL = new URI(databusDistributionUri).toURL();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        String host = databusDistributionURL.getHost();
+        String path = databusDistributionURL.getPath();
+        String fragment = databusDistributionURL.getRef();
+
+        String url = host + path;
+
+        if (fragment == null) {
+            return url;
+        }
+
+        return url + "/" + fragment;
     }
 
 
     public static String getMossDocumentUri(String mossBaseUrl, String databusDistributionUriFragments,
-            String modType, String string) {
+            String modType, String fileExtension) {
         // TODO
-
         // --> Besteht aus: MOSS-Base-URI + "/g/" + databusDistributionUriFragments + lowercase(modType) + fileEnding
-        throw new UnsupportedOperationException("Unimplemented method 'getMOSSDocumentUri'");
+        // throw new UnsupportedOperationException("Unimplemented method 'getMOSSDocumentUri'");
+        return mossBaseUrl + "/g/" + databusDistributionUriFragments + modType.toLowerCase() + fileExtension;
     }
 
     public static String readToString(InputStream inputStream) throws IOException {
