@@ -1,7 +1,9 @@
 package org.dbpedia.moss.servlets;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Calendar;
 import java.util.Collection;
 
@@ -26,6 +28,8 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.vocabulary.RDF;
+import org.dbpedia.moss.GstoreConnector;
+import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.utils.MossUtils;
 import org.dbpedia.moss.utils.RDFUris;
@@ -50,11 +54,19 @@ public class MetadataAnnotateServlet extends HttpServlet {
 
 	private MossEnvironment configuration;
 
-    public MetadataAnnotateServlet() { }
+
+    private GstoreConnector gstoreConnector;
+
+    private IndexerManager indexerManager;
+
+    public MetadataAnnotateServlet(IndexerManager indexerManager) {
+        this.indexerManager = indexerManager;
+    }
 
 	@Override
 	public void init() throws ServletException {
 		configuration = MossEnvironment.Get();
+        gstoreConnector = new GstoreConnector(configuration.getGstoreBaseURL());
 	}
 
 	@Override
@@ -75,7 +87,7 @@ public class MetadataAnnotateServlet extends HttpServlet {
         for (Part part : parts) {
             // Extract name from form field
             if (part.getName().equals("layerName")) {
-                layerName = req.getParameter("layerName");
+                layerName = req.getParameter("layerName").toLowerCase();
             }
 
             if (part.getName().equals("databusURI")) {
@@ -120,6 +132,27 @@ public class MetadataAnnotateServlet extends HttpServlet {
 
         // b) If not - add annotation mod header to model
         this.addLayerHeader(model, layerName, databusURI, layerVersion);
+
+
+        // Write json string
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        RDFDataMgr.write(outputStream, model, Lang.JSONLD);
+        System.out.println(outputStream);
+        String jsonString = outputStream.toString();
+        String repo = "databus.openenergyplatform.org";
+        String path = "my/custom/path/oemetadatalayer.jsonld";
+
+        try {
+            //FIXME: what is the correct baseURL?
+            gstoreConnector.write(gstoreConnector.getBaseURL(), repo, path, jsonString);
+        } catch (Exception e) {
+            System.out.println("error while writing to gstore");
+            e.printStackTrace();
+        }
+
+        //TODO: implement this...
+        // Update indices
+        // indexerManager.updateIndices(layerData.getUri(), layerData.getName());
 
         // Send response
         resp.getWriter().println("Data annotated successfully.");
@@ -203,7 +236,7 @@ public class MetadataAnnotateServlet extends HttpServlet {
         Resource mossDocumentResource = ResourceFactory.createResource(mossDocumentURI);
        
         String provNamespace = "http://www.w3.org/ns/prov#";
-        String modNamespace = "http://dataid.dbpedia.org/ns/mod#";
+        String modNamespace = "http://dataid.dbpedia.org/ns/moss#";
 
         // model.setNsPrefixes(this.nameSpaces);
         Literal time = ResourceFactory.createTypedLiteral(new XSDDateTime(Calendar.getInstance()));

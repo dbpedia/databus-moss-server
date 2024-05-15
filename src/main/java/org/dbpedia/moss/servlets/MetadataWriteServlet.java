@@ -124,7 +124,7 @@ public class MetadataWriteServlet extends HttpServlet {
                 System.out.println("Triple: " + triple);
 
 
-                    // Check the predicate of the triple and set the corresponding field in layerData
+                // Check the predicate of the triple and set the corresponding field in layerData
                 if (predicateURI.equals(RDFUris.MOSS_NAME)) {
                     layerData.setName(object.toString());
                     continue;

@@ -109,7 +109,7 @@ public class Main {
 
         MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
 
-        ServletHolder metadataAnnotateServletHolder = new ServletHolder(new MetadataAnnotateServlet());
+        ServletHolder metadataAnnotateServletHolder = new ServletHolder(new MetadataAnnotateServlet(indexerManager));
         metadataAnnotateServletHolder.setInitOrder(0);
         metadataAnnotateServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
