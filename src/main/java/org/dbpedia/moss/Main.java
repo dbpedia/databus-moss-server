@@ -20,15 +20,18 @@ import org.eclipse.jetty.security.openid.OpenIdLoginService;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.security.Constraint;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.MultipartConfigElement;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Collections;
+import java.util.EnumSet;
 
 /**
  * Run to start a jetty server that hosts the moss servlet and makes it
@@ -64,6 +67,8 @@ public class Main {
 
         // Logger log = LoggerFactory.getLogger(Main.class);
         MossEnvironment config = MossEnvironment.Get();
+
+        
 
         IndexerManager indexerManager = new IndexerManager(config);
         
@@ -106,7 +111,7 @@ public class Main {
         String lookup = "http://localhost:2003";
         String context = "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context.jsonld";
         */
-
+        FilterHolder corsFilterHolder = new FilterHolder(new CorsFilter());
         MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
 
         ServletHolder metadataAnnotateServletHolder = new ServletHolder(new MetadataAnnotateServlet());
@@ -115,12 +120,14 @@ public class Main {
 
         // Context handler for the unprotected routes
         ServletContextHandler openContext = new ServletContextHandler();
+        openContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
         openContext.setContextPath("/g");
         openContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
         // Context handler for the protected routes
         ServletContextHandler protectedContext = new ServletContextHandler();
         protectedContext.setContextPath("/*");
+        protectedContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
         protectedContext.addServlet(new ServletHolder(new LogoutServlet(loginService)), "/auth/logout");
 
         ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager));
