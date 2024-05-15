@@ -1,17 +1,27 @@
 package org.dbpedia.moss.servlets;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.apache.commons.io.FilenameUtils;
 import org.dbpedia.moss.utils.MossEnvironment;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,9 +50,21 @@ public class MetadataReadServlet extends HttpServlet {
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		// Construct the URL for the request
 		String requestURL = this.configuration.getGstoreBaseURL() + req.getRequestURI();
-		
-		// Create a new HTTP client
-		HttpClient httpClient = HttpClient.newHttpClient();
+
+		// Check file extension
+		String fileExtension = FilenameUtils.getExtension(requestURL);
+		Boolean noFileExtension = false;
+
+		// if requesting folder change to /file url
+		noFileExtension = fileExtension.isEmpty();
+		if (noFileExtension) {
+			requestURL = requestURL.replace("/g/", "/file/");
+		}
+
+		HttpClient httpClient = HttpClient.newBuilder()
+			.followRedirects(HttpClient.Redirect.ALWAYS)
+			.build();
+
 		
 		// Create a GET request
 		HttpRequest httpRequest = HttpRequest.newBuilder().GET().uri(URI.create(requestURL)).build();
@@ -53,7 +75,11 @@ public class MetadataReadServlet extends HttpServlet {
 			
 			// Get the response body
 			String responseBody = httpResponse.body();
-			
+
+			if (noFileExtension) {
+				responseBody = this.parseFolderRequest(responseBody);
+			}
+
 			// Get the content type from the HTTP response headers
 			String contentType = httpResponse.headers().firstValue("Content-Type").orElse("application/json");
 		
@@ -69,5 +95,20 @@ public class MetadataReadServlet extends HttpServlet {
 			e.printStackTrace();
 			resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "An error occurred while processing the request.");
 		}
+	}
+
+	public String parseFolderRequest(String responseBody) {
+		Document doc = Jsoup.parse(responseBody);
+		Elements tableData = doc.getElementsByTag("a");
+
+		ArrayList<String> folderList = tableData.stream()
+												.filter(element -> !element.text().equals(".git/") &&!element.text().equals("Parent Directory"))
+												.map(Element::text)
+												.collect(Collectors.toCollection(ArrayList::new));
+
+		folderList.stream().forEach(System.out::println);
+		JSONObject jsonObject = new JSONObject();
+		jsonObject.put("folders", folderList);
+		return jsonObject.toString();
 	}
 }
