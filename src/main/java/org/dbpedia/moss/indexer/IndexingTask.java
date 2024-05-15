@@ -12,6 +12,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class IndexingTask implements Runnable {
 
@@ -29,7 +30,7 @@ public class IndexingTask implements Runnable {
     @SuppressWarnings({ "deprecation" })
     @Override
     public void run() {
-        System.out.println("Ich bims der runner auf thread " + Thread.currentThread().getId());
+        System.out.println("Starting indexing runner on thread " + Thread.currentThread().getId());
 
         try {
             File configFile = new File(configPath);
@@ -55,8 +56,14 @@ public class IndexingTask implements Runnable {
                 Files.copy(configFile.toPath(), outputStream);
                 outputStream.flush();
 
-                // Write closing boundary
+                // Write the todos as a comma-separated string
+                String todosString = todos.stream().collect(Collectors.joining(","));
+                writer.println("--" + boundary);
+                writer.println("Content-Disposition: form-data; name=\"values\"");
                 writer.println();
+                writer.println(todosString);
+
+                // Write closing boundary
                 writer.println("--" + boundary + "--");
             }
 
@@ -75,15 +82,13 @@ public class IndexingTask implements Runnable {
             }
 
         } catch (IOException e) {
-            System.out.println("gefahr");
+            System.out.println("indexing error");
             e.printStackTrace();
         } catch (Exception e) {
-            System.out.println("gefahr");
+            System.out.println("indexing error");
             e.printStackTrace();
         }
 
-        System.out.println("Fertig auf " + Thread.currentThread().getId());
+        System.out.println("Done on thread " + Thread.currentThread().getId());
     }
-
-    
 }
