@@ -251,23 +251,6 @@ public class MetadataAnnotateServlet extends HttpServlet {
         // model.add(modTypeResource, RDFS.subClassOf, ResourceFactory.createResource(modNamespace + "DatabusMod"));
     }
 
-    /*
-    public RDFAnnotationModData createRDFAnnotation(RDFAnnotationRequest request) {
-
-        RDFAnnotationModData modData = new RDFAnnotationModData(MossUtils.baseURI, request);
-        String modURI = request.getModPath();
-        String saveURLRAW = modURI != null ? modURI : modData.getFileURI();
-
-        try {
-            MossUtils.saveModel(modData.toModel(), MossUtils.createSaveURL(saveURLRAW));
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
-        }
-
-        return modData;
-    }
-
- */
     public void logInput(String modType, String modVersion, String databusURI, InputStream annotationGraph) {
         // Handle the received data
         System.out.println("modType: " + modType);

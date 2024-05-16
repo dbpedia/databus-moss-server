@@ -2,7 +2,6 @@ package org.dbpedia.moss.servlets;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
@@ -12,7 +11,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
-import java.util.stream.Collectors;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -100,15 +98,22 @@ public class MetadataReadServlet extends HttpServlet {
 	public String parseFolderRequest(String responseBody) {
 		Document doc = Jsoup.parse(responseBody);
 		Elements tableData = doc.getElementsByTag("a");
+		ArrayList<String> files = new ArrayList<>();
+		ArrayList<String> folders = new ArrayList<>();
 
-		ArrayList<String> folderList = tableData.stream()
-												.filter(element -> !element.text().equals(".git/") &&!element.text().equals("Parent Directory"))
-												.map(Element::text)
-												.collect(Collectors.toCollection(ArrayList::new));
+		tableData.forEach(element -> {
+			String fileName = element.text();
+			String fileExtension = FilenameUtils.getExtension(fileName);
+			if ("jsonld".equals(fileExtension)) {
+				files.add(fileName);
+				return;
+			}
+			folders.add(fileName);
+		});
 
-		folderList.stream().forEach(System.out::println);
 		JSONObject jsonObject = new JSONObject();
-		jsonObject.put("folders", folderList);
+		jsonObject.put("files", files);
+		jsonObject.put("folders", folders);
 		return jsonObject.toString();
 	}
 }
