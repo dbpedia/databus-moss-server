@@ -2,6 +2,7 @@ package org.dbpedia.moss.servlets;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
@@ -48,16 +49,7 @@ public class MetadataReadServlet extends HttpServlet {
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		// Construct the URL for the request
 		String requestURL = this.configuration.getGstoreBaseURL() + req.getRequestURI();
-
-		// Check file extension
-		String fileExtension = FilenameUtils.getExtension(requestURL);
-		Boolean noFileExtension = false;
-
-		// if requesting folder change to /file url
-		noFileExtension = fileExtension.isEmpty();
-		if (noFileExtension) {
-			requestURL = requestURL.replace("/g/", "/file/");
-		}
+		requestURL = requestURL.replace("/g/", "/file/");
 
 		HttpClient httpClient = HttpClient.newBuilder()
 			.followRedirects(HttpClient.Redirect.ALWAYS)
@@ -73,19 +65,19 @@ public class MetadataReadServlet extends HttpServlet {
 			
 			// Get the response body
 			String responseBody = httpResponse.body();
+			// Get the content type from the HTTP response headers
+			String contentType = httpResponse.headers().firstValue("Content-Type").orElse("application/json");
 
-			if (noFileExtension) {
+			if (contentType.contains("text/html")) {
 				responseBody = this.parseFolderRequest(responseBody);
 			}
 
-			// Get the content type from the HTTP response headers
-			String contentType = httpResponse.headers().firstValue("Content-Type").orElse("application/json");
-		
 			// Set the content type of the servlet response
 			resp.setContentType(contentType);
 			
 			// Write the response body to the servlet response
 			PrintWriter writer = resp.getWriter();
+			System.out.println(responseBody);
 			writer.println(responseBody);
 
 		} catch (IOException | InterruptedException e) {
@@ -97,6 +89,12 @@ public class MetadataReadServlet extends HttpServlet {
 
 	public String parseFolderRequest(String responseBody) {
 		Document doc = Jsoup.parse(responseBody);
+		Elements removeParentTag = doc.select("a:contains(Parent Directory)");
+
+		for (Element element : removeParentTag) {
+			element.remove();
+		}
+
 		Elements tableData = doc.getElementsByTag("a");
 		ArrayList<String> files = new ArrayList<>();
 		ArrayList<String> folders = new ArrayList<>();
@@ -106,6 +104,12 @@ public class MetadataReadServlet extends HttpServlet {
 			String fileExtension = FilenameUtils.getExtension(fileName);
 			if ("jsonld".equals(fileExtension)) {
 				files.add(fileName);
+				return;
+			}
+			if ("Parent Directory".equals(fileName)) {
+				return;
+			}
+			if (".git/".equals(fileName)) {
 				return;
 			}
 			folders.add(fileName);
