@@ -120,7 +120,7 @@ public class Main {
 
         // Context handler for the unprotected routes
         ServletContextHandler openContext = new ServletContextHandler();
-        openContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
+        openContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         openContext.setContextPath("/g");
         openContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 

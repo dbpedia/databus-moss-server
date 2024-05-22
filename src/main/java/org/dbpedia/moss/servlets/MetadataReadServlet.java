@@ -66,14 +66,17 @@ public class MetadataReadServlet extends HttpServlet {
 			// Get the response body
 			String responseBody = httpResponse.body();
 			// Get the content type from the HTTP response headers
-			String contentType = httpResponse.headers().firstValue("Content-Type").orElse("application/json");
+			String contentType = httpResponse.headers().firstValue("Content-Type").orElse("application/ld+json");
 
 			if (contentType.contains("text/html")) {
 				responseBody = this.parseFolderRequest(responseBody);
+				resp.setContentType("application/json");
+			}
+			else {
+				// Set the content type of the servlet response
+				resp.setContentType(contentType);
 			}
 
-			// Set the content type of the servlet response
-			resp.setContentType(contentType);
 			
 			// Write the response body to the servlet response
 			PrintWriter writer = resp.getWriter();
