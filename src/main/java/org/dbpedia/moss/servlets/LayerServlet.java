@@ -46,21 +46,14 @@ public class LayerServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		// Path to the JSON file in resources
-			System.out.println(req.getRequestURI());
+		System.out.println(req.getRequestURI());
 		String requestURI = req.getRequestURI();
 		String layerName = requestURI.replace(layerPrefix, "");
 
-		if(layerName.endsWith("/")) {
-			layerName = layerName.substring(0, layerName.length() - 1);
-		}
+		layerName =	MossUtils.pruneSlashes(layerName);
 
 		if(layerName.length() == 0) {
 			sendLayerList(req, resp);
-			return;
-		}
-
-		if(!requestURI.contains(layerPrefix)) {
-			resp.sendError(404);
 			return;
 		}
 

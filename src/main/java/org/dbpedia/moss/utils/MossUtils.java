@@ -259,4 +259,17 @@ public final class MossUtils {
 
           return baseURL;
     }
+
+
+    public static String pruneSlashes(String value) {
+        while(value.endsWith("/")) {
+			value = value.substring(0, value.length() - 1);
+		}
+
+        while(value.startsWith("/")) {
+            value = value.substring(1);
+        }
+
+        return value;
+    }
 }
