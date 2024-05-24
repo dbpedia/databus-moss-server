@@ -37,13 +37,13 @@ public class DataLoader {
 
     private GstoreConnector gstoreConnector;
     private String collectionURI;
-    private ModIndexer indexer;
+    private LayerIndexer indexer;
 
     public DataLoader(DataLoaderConfig config, GstoreConnector gstoreConnector,
             String configRootPath, String lookupBaseURL) {
         this.gstoreConnector = gstoreConnector;
         this.collectionURI = config.getCollectionURI();
-        this.indexer = new ModIndexer(config.getIndexer(), configRootPath, lookupBaseURL);
+        this.indexer = new LayerIndexer(config.getIndexer(), configRootPath, lookupBaseURL);
     }
 
     private String[] loadCollectionFileURIs() throws URISyntaxException {

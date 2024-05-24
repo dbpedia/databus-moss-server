@@ -8,6 +8,8 @@ import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.writer.JsonLDWriter;
 import org.apache.jena.sparql.core.DatasetGraph;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -237,5 +239,24 @@ public final class MossUtils {
 
         reader.close();
         return stringBuilder.toString();
+    }
+
+    public static String getRequestBaseURL(HttpServletRequest req) {
+          // Get the protocol (http or https)
+          String protocol = req.getScheme();
+        
+          // Get the server name
+          String serverName = req.getServerName();
+          
+          // Get the server port
+          int serverPort = req.getServerPort();
+          
+          // Construct the base URL
+          String baseURL = protocol + "://" + serverName;
+          if ((protocol.equals("http") && serverPort != 80) || (protocol.equals("https") && serverPort != 443)) {
+              baseURL += ":" + serverPort;
+          }
+
+          return baseURL;
     }
 }

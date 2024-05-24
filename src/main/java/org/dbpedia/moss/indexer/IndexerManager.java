@@ -19,9 +19,9 @@ import java.util.HashMap;
 public class IndexerManager {
 
     // Alle indexer
-    private List<ModIndexer> indexers;
+    private List<LayerIndexer> indexers;
     //Ein mod kann in 1 oder mehreren Indexern vorkommen -> rebuild index for entsprechenden indexern für die der mod wichtig ist
-    private HashMap<String, List<ModIndexer>> indexerMappings;
+    private HashMap<String, List<LayerIndexer>> indexerMappings;
     
     private ThreadPoolExecutor worker;
 
@@ -37,8 +37,8 @@ public class IndexerManager {
 
         MossConfiguration config = MossConfiguration.fromJson(configFile);
 
-        this.indexers = new ArrayList<ModIndexer>();
-        this.indexerMappings = new HashMap<String, List<ModIndexer>>();
+        this.indexers = new ArrayList<LayerIndexer>();
+        this.indexerMappings = new HashMap<String, List<LayerIndexer>>();
 
         for(DataLoaderConfig loaderConfig : config.getLoaders()) {
             DataLoader loader = new DataLoader(loaderConfig, gstoreConnector, configRootPath, environment.GetLookupBaseURL());
@@ -46,9 +46,9 @@ public class IndexerManager {
             loader.load();
         }
 
-        for(ModIndexerConfiguration indexerConfig : config.getIndexers()) {
+        for(LayerIndexerConfiguration indexerConfig : config.getIndexers()) {
 
-            ModIndexer modIndexer = new ModIndexer(indexerConfig, configRootPath, environment.GetLookupBaseURL());
+            LayerIndexer modIndexer = new LayerIndexer(indexerConfig, configRootPath, environment.GetLookupBaseURL());
 
             this.indexers.add(modIndexer);
             System.out.println("Created indexer with id " + modIndexer.getId());
@@ -58,10 +58,10 @@ public class IndexerManager {
         0L, TimeUnit.MILLISECONDS,
         new LinkedBlockingQueue<Runnable>());
 
-        for(ModIndexer indexer : this.indexers) {
+        for(LayerIndexer indexer : this.indexers) {
             for(String modType : indexer.getConfig().getLayers()) {
                 if(!this.indexerMappings.containsKey(modType)) {
-                    this.indexerMappings.put(modType, new ArrayList<ModIndexer>());
+                    this.indexerMappings.put(modType, new ArrayList<LayerIndexer>());
                 }
 
                 this.indexerMappings.get(modType).add(indexer);
@@ -90,11 +90,11 @@ public class IndexerManager {
         }
     }
 
-    public HashMap<String,List<ModIndexer>> getIndexerMappings() {
+    public HashMap<String,List<LayerIndexer>> getIndexerMappings() {
         return this.indexerMappings;
     }
 
-    public void setIndexerMappings(HashMap<String,List<ModIndexer>> indexerMappings) {
+    public void setIndexerMappings(HashMap<String,List<LayerIndexer>> indexerMappings) {
         this.indexerMappings = indexerMappings;
     }
 
@@ -104,7 +104,7 @@ public class IndexerManager {
     public void rebuildIndices() {
 
         // System.out.println("Ich manage auf thread " + Thread.currentThread().threadId());
-        for(ModIndexer indexer : indexers) {
+        for(LayerIndexer indexer : indexers) {
           
             if(indexer.getTodos().size() == 0) {
                 // System.out.println("Nothing to do");
@@ -132,8 +132,8 @@ public class IndexerManager {
 
     
     public void updateIndices(String layerUri, String layerName) {
-        List<ModIndexer> correspondingIndexers = indexerMappings.get(layerName);
-        for (ModIndexer indexer : correspondingIndexers) {
+        List<LayerIndexer> correspondingIndexers = indexerMappings.get(layerName);
+        for (LayerIndexer indexer : correspondingIndexers) {
             indexer.addTodo(layerUri);
             System.out.println("Indexer " + indexer.getId() + "hat jetzt todos: " + indexer.getTodos());
         }

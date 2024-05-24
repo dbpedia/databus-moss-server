@@ -8,18 +8,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 
-public class ModIndexer {
+public class LayerIndexer {
     private String id;
     private HashSet<String> todos;
     // private ExecutorService worker;
-    private ModIndexerConfiguration config;
+    private LayerIndexerConfiguration config;
     @SuppressWarnings("rawtypes")
     private Future indexingFuture;
     private String configRootPath;
     private String lookupBaseURL;
     // private final int fixedPoolSize = 1;
 
-    public ModIndexer(ModIndexerConfiguration config, String configRootPath, String lookupBaseURL) {
+    public LayerIndexer(LayerIndexerConfiguration config, String configRootPath, String lookupBaseURL) {
         this.config = config;
         this.configRootPath = configRootPath;
         this.todos = new HashSet<String>();
@@ -43,11 +43,11 @@ public class ModIndexer {
         return id;
     }
 
-    public ModIndexerConfiguration getConfig() {
+    public LayerIndexerConfiguration getConfig() {
         return this.config;
     }
 
-    public void setConfig(ModIndexerConfiguration config) {
+    public void setConfig(LayerIndexerConfiguration config) {
         this.config = config;
     }
 

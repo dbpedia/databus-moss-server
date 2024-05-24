@@ -3,7 +3,8 @@ package org.dbpedia.moss;
 import java.util.List;
 
 import org.dbpedia.moss.indexer.DataLoaderConfig;
-import org.dbpedia.moss.indexer.ModIndexerConfiguration;
+import org.dbpedia.moss.indexer.LayerIndexerConfiguration;
+import org.dbpedia.moss.indexer.MossLayer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -14,15 +15,24 @@ import java.io.IOException;
 
 
 public class MossConfiguration {
+    private List<MossLayer> layers;
     private List<DataLoaderConfig> loaders;
-    private List<ModIndexerConfiguration> indexers;
+    private List<LayerIndexerConfiguration> indexers;
 
-    public List<ModIndexerConfiguration> getIndexers() {
+    public List<LayerIndexerConfiguration> getIndexers() {
         return indexers;
     }
 
-    public void setIndexers(List<ModIndexerConfiguration> indexerConfigs) {
+    public void setIndexers(List<LayerIndexerConfiguration> indexerConfigs) {
         this.indexers = indexerConfigs;
+    }
+
+    public List<MossLayer> getLayers() {
+        return layers;
+    }
+
+    public void setLayers(List<MossLayer> layers) {
+        this.layers = layers;
     }
 
 

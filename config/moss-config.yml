@@ -1,3 +1,5 @@
+layers:
+  - name: simple
 loaders:
   - collectionURI: https://databus.dbpedia.org/janfo/collections/moss-ontologies
     indexer:

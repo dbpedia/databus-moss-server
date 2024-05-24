@@ -49,7 +49,8 @@ public class MetadataReadServlet extends HttpServlet {
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		// Construct the URL for the request
 		String requestURL = this.configuration.getGstoreBaseURL() + req.getRequestURI();
-		requestURL = requestURL.replace("/g/", "/file/");
+		requestURL = requestURL.replace(this.configuration.getGstoreBaseURL() + "/g", 
+			this.configuration.getGstoreBaseURL() + "/file");
 
 		HttpClient httpClient = HttpClient.newBuilder()
 			.followRedirects(HttpClient.Redirect.ALWAYS)

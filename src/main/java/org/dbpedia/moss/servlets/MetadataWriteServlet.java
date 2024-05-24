@@ -70,7 +70,7 @@ public class MetadataWriteServlet extends HttpServlet {
 
         try {
 
-            String requestBaseURL = getRequestBaseURL(req);
+            String requestBaseURL = MossUtils.getRequestBaseURL(req);
             // PATH sein wie: /janni/dbpedia-databus/meta1.jsonld
             String repo = req.getParameter(REQ_REPO);
             String path = req.getParameter(REQ_PARAM_PATH);
@@ -184,22 +184,5 @@ public class MetadataWriteServlet extends HttpServlet {
         return base + "/g/" + repo + "/" + path;   
     }
 
-    private String getRequestBaseURL(HttpServletRequest req) {
-          // Get the protocol (http or https)
-          String protocol = req.getScheme();
-        
-          // Get the server name
-          String serverName = req.getServerName();
-          
-          // Get the server port
-          int serverPort = req.getServerPort();
-          
-          // Construct the base URL
-          String baseURL = protocol + "://" + serverName;
-          if ((protocol.equals("http") && serverPort != 80) || (protocol.equals("https") && serverPort != 443)) {
-              baseURL += ":" + serverPort;
-          }
-
-          return baseURL;
-    }
+    
 }

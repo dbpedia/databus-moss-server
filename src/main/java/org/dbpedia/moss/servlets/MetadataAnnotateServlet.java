@@ -52,7 +52,6 @@ public class MetadataAnnotateServlet extends HttpServlet {
 
 	private MossEnvironment configuration;
 
-
     private GstoreConnector gstoreConnector;
 
     private IndexerManager indexerManager;

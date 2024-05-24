@@ -9,7 +9,7 @@ import java.io.File;
 import java.io.IOException;
 
 
-public class ModIndexerConfiguration {
+public class LayerIndexerConfiguration {
     private String configPath;
     private List<String> layers;
 
@@ -29,9 +29,9 @@ public class ModIndexerConfiguration {
         this.layers = layers;
     }
 
-    public static ModIndexerConfiguration fromJson(File file) throws IOException {
+    public static LayerIndexerConfiguration fromJson(File file) throws IOException {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
-        return mapper.readValue(file, ModIndexerConfiguration.class);
+        return mapper.readValue(file, LayerIndexerConfiguration.class);
     }
 
 }

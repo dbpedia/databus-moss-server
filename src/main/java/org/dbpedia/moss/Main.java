@@ -9,6 +9,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.dbpedia.moss.indexer.IndexerManager;
+import org.dbpedia.moss.servlets.LayerServlet;
 import org.dbpedia.moss.servlets.LogoutServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.ConstraintSecurityHandler;
@@ -121,8 +122,9 @@ public class Main {
         // Context handler for the unprotected routes
         ServletContextHandler openContext = new ServletContextHandler();
         openContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        openContext.setContextPath("/g");
-        openContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
+        openContext.setContextPath("/*");
+        openContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/g/*");
+        openContext.addServlet(new ServletHolder(new LayerServlet()), "/layer/*");
 
         // Context handler for the protected routes
         ServletContextHandler protectedContext = new ServletContextHandler();

@@ -1,0 +1,7 @@
+{
+    "@id": "",
+    "@type": "owl:Class",
+    "rdfs:subClassOf": {
+        "@id": "DatabusMetadataLayer"
+    }
+}

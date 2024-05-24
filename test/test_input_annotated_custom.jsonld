@@ -1,13 +1,20 @@
 {
   "@context" : "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context2.jsonld",
-  "@id" : "",
-  "wasGeneratedBy" :  {
+  "@graph" : [
+    {
+    "@id" : "https://databus.dbpedia.org/lrec2024/langu-ru",
+    "isExtendedBy" :  {
       "@id" : "#layer",
       "@type" : "DatabusMetadataLayer",
-      "version" : "1.0.0",
-      "name": "simple",
-      "created" : "2024-03-01 14:37:32",
-      "used" : "https://databus.dbpedia.org/lrec2024/linguistics/wordnet/2023#wordnet_lang=en.ttl.gz"
-  },
-  "subject" : [ "oeo:OEO_00020033" ]
+      "moss:layerName": "simple",
+      "created" : "2024-03-01 14:37:32"
+    },
+    "subject" : "oeo:1234"
+    },
+    {
+      "@id" : "SimpleLayer",
+      "subClassOf" : "DatabusMetadataLayer"
+    }
+  ]
 }
+
