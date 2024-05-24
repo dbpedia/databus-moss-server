@@ -120,11 +120,16 @@ public class Main {
         metadataAnnotateServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
         // Context handler for the unprotected routes
-        ServletContextHandler openContext = new ServletContextHandler();
-        openContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        openContext.setContextPath("/*");
-        openContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/g/*");
-        openContext.addServlet(new ServletHolder(new LayerServlet()), "/layer/*");
+        ServletContextHandler layerContext = new ServletContextHandler();
+        layerContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        layerContext.setContextPath("/layer/*");
+        layerContext.addServlet(new ServletHolder(new LayerServlet()), "/*");
+
+        // Context handler for the unprotected routes
+        ServletContextHandler readContext = new ServletContextHandler();
+        readContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        readContext.setContextPath("/g/*");
+        readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
         // Context handler for the protected routes
         ServletContextHandler protectedContext = new ServletContextHandler();
@@ -150,7 +155,7 @@ public class Main {
 
         // Set up handler collection
         HandlerList  handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { openContext, protectedContext  });
+        handlers.setHandlers(new Handler[] { readContext, layerContext, protectedContext  });
 
         server.setHandler(handlers);
 
