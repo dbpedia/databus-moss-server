@@ -5,9 +5,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -26,6 +29,8 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdf.model.StmtIterator;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFParser;
 import org.dbpedia.moss.GstoreConnector;
 
 import com.google.gson.JsonParser;
@@ -34,6 +39,8 @@ import com.google.gson.JsonParser;
  * Loads data into the database and runs an indexer on startup
  */
 public class DataLoader {
+
+    private static final String REQ_METHOD_GET = "GET";
 
     private GstoreConnector gstoreConnector;
     private String collectionURI;
@@ -104,6 +111,24 @@ public class DataLoader {
         return fileUris.toArray(new String[0]);
     }
 
+    public Model read(String targetURI) throws URISyntaxException, UnsupportedEncodingException {
+        Model model = ModelFactory.createDefaultModel();
+
+        try {
+            URL url = new URI(targetURI).toURL();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod(REQ_METHOD_GET);
+            InputStream inputStream = connection.getInputStream();
+            RDFParser.source(inputStream).forceLang(Lang.TURTLE).parse(model);
+            inputStream.close();
+            connection.disconnect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return model;
+    }
+
     public void load() {
 
         // get collection file uris
@@ -114,7 +139,7 @@ public class DataLoader {
 
                 for (int i = 0; i < fileURIs.length; i++) {
                     System.out.println("Loading " + fileURIs[i]);
-                    Model model = cleanModel(gstoreConnector.read(fileURIs[i]));
+                    Model model = cleanModel(read(fileURIs[i]));
                     URI fileURI = new URI(fileURIs[i]);
 
                     String filePath = fileURI.getPath();
