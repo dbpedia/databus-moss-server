@@ -60,10 +60,6 @@ public class DatabusMetadataLayerData {
             return false;
         }
 
-        if(version == null) {
-            return false;
-        }
-        
         if(databusURI == null) {
             return false;
         }
