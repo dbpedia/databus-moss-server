@@ -26,7 +26,6 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.vocabulary.RDF;
-import org.dbpedia.moss.GstoreConnector;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.utils.MossUtils;
@@ -52,18 +51,12 @@ public class MetadataAnnotateServlet extends HttpServlet {
 
 	private MossEnvironment configuration;
 
-    private GstoreConnector gstoreConnector;
-
-    private IndexerManager indexerManager;
-
     public MetadataAnnotateServlet(IndexerManager indexerManager) {
-        this.indexerManager = indexerManager;
     }
 
 	@Override
 	public void init() throws ServletException {
 		configuration = MossEnvironment.Get();
-        gstoreConnector = new GstoreConnector(configuration.getGstoreBaseURL());
 	}
 
 	@Override
