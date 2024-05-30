@@ -123,17 +123,13 @@ public class MetadataWriteServlet extends HttpServlet {
                 // Do something with the triple
                 System.out.println("Triple: " + triple);
 
-
                 // Check the predicate of the triple and set the corresponding field in layerData
-                if (predicateURI.equals(RDFUris.MOSS_NAME)) {
+                if (predicateURI.equals(RDFUris.MOSS_LAYERNAME)) {
                     layerData.setName(object.toString());
                     continue;
                 }
-                if (predicateURI.equals(RDFUris.MOSS_VERSION)) {
-                    layerData.setVersion(object.toString());
-                    continue;
-                }
-                if (predicateURI.equals(RDFUris.PROV_USED)) {
+
+                if (predicateURI.equals(RDFUris.MOSS_EXTENDS)) {
                     layerData.setDatabusURI(object.toString());
                     continue;
                 }
@@ -161,6 +157,10 @@ public class MetadataWriteServlet extends HttpServlet {
         } catch (URISyntaxException e) {
             e.printStackTrace();
             resp.setStatus(400);
+            return;
+        } catch (Exception e) {
+            e.printStackTrace();
+            resp.setStatus(500);
             return;
         }
         
