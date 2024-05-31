@@ -13,8 +13,8 @@
             "env": {
                 "CONFIG_PATH": "./config/moss-config.yml",
                 "MOSS_BASE_URL": "http://localhost:8080",
-                "GSTORE_BASE_URL": "http://localhost:2001",
-                "LOOKUP_BASE_URL": "http://localhost:2003"
+                "GSTORE_BASE_URL": "http://localhost:5003",
+                "LOOKUP_BASE_URL": "http://localhost:5002"
             }
         }
     ]
