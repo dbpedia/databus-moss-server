@@ -10,6 +10,7 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.sparql.function.library.leviathan.sec;
 import org.dbpedia.moss.indexer.IndexerManager;
+import org.dbpedia.moss.jwt.JwtAuthenticator;
 import org.dbpedia.moss.servlets.LayerServlet;
 import org.dbpedia.moss.servlets.LogoutServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
@@ -79,7 +80,7 @@ public class Main {
 
         String ISSUER = "https://auth.dbpedia.org/realms/dbpedia";
         String CLIENT_ID = "moss-dev";
-        String CLIENT_SECRET = "";
+        String CLIENT_SECRET = "6Tpn32E2OKn33G001WupjMmLzXLnnkyx";
  
         IdentityService identityService = new DefaultIdentityService();
         server.addBean(identityService);
@@ -89,6 +90,7 @@ public class Main {
         constraint.setName("Lalala");
         constraint.setRoles(new String[] { Constraint.ANY_ROLE });
         constraint.setAuthenticate(true);
+        // constraint.setDataConstraint(Constraint.DC_CONFIDENTIAL);
 
         ConstraintMapping mapping = new ConstraintMapping();
         mapping.setPathSpec("/*");
@@ -97,14 +99,18 @@ public class Main {
         OpenIdConfiguration openIdConfiguration = new OpenIdConfiguration(ISSUER, CLIENT_ID, CLIENT_SECRET);
         openIdConfiguration.addScopes("openid", "email", "profile");
         
-        OpenIdAuthenticator openidAuthenticator = new OpenIdAuthenticator(openIdConfiguration, null);
+        // OpenIdAuthenticator openidAuthenticator = new OpenIdAuthenticator(openIdConfiguration, null);
 
         OpenIdLoginService loginService = new OpenIdLoginService(openIdConfiguration);
         
+        JwtAuthenticator authenticator = new JwtAuthenticator();
+        authenticator.setIssuer(ISSUER);
+        authenticator.setSecret(CLIENT_SECRET);
+
         ConstraintSecurityHandler security = new ConstraintSecurityHandler();
         security.setConstraintMappings(Collections.singletonList(mapping));
         security.setLoginService(loginService);
-        security.setAuthenticator(openidAuthenticator);
+        security.setAuthenticator(authenticator);
 
         /*
         String base = "http://localhost:2000";
@@ -148,8 +154,8 @@ public class Main {
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
 
-        protectedContext.setSessionHandler(sessionHandler);
-        protectedContext.setSecurityHandler(security);
+        // protectedContext.setSessionHandler(sessionHandler);
+        // protectedContext.setSecurityHandler(security);
 
         // String configPath, String baseURI, String contextURL, String gstoreBaseURL, String lookupBaseURL
 
