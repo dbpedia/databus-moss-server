@@ -8,6 +8,7 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.sparql.function.library.leviathan.sec;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.LayerServlet;
 import org.dbpedia.moss.servlets.LogoutServlet;
@@ -67,10 +68,8 @@ public class Main {
      */
     public static void main(String[] args) throws Exception {
 
-        // Logger log = LoggerFactory.getLogger(Main.class);
         MossEnvironment config = MossEnvironment.Get();
 
-        
 
         IndexerManager indexerManager = new IndexerManager(config);
         
@@ -80,7 +79,7 @@ public class Main {
 
         String ISSUER = "https://auth.dbpedia.org/realms/dbpedia";
         String CLIENT_ID = "moss-dev";
-        String CLIENT_SECRET = "AEvDnimPffljolDr3EQ3AwbjvkO2kwac";
+        String CLIENT_SECRET = "";
  
         IdentityService identityService = new DefaultIdentityService();
         server.addBean(identityService);
@@ -88,7 +87,7 @@ public class Main {
         
         Constraint constraint = new Constraint();
         constraint.setName("Lalala");
-        constraint.setRoles(new String[] { Constraint.ANY_AUTH });
+        constraint.setRoles(new String[] { Constraint.ANY_ROLE });
         constraint.setAuthenticate(true);
 
         ConstraintMapping mapping = new ConstraintMapping();

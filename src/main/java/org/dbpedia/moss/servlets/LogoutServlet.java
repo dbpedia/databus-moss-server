@@ -27,7 +27,7 @@ public class LogoutServlet extends HttpServlet {
     }
 
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("text/html");
         resp.getWriter().println("<h1>This is another protected route</h1>");
         
@@ -50,6 +50,6 @@ public class LogoutServlet extends HttpServlet {
         
 
         // Redirect the user to a logout confirmation page or any other appropriate page
-        resp.sendRedirect("/unprotected");
+        resp.sendRedirect("/g");
     }
 }

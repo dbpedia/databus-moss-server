@@ -87,7 +87,7 @@ public class MetadataReadServlet extends HttpServlet {
 				writer.println("Not Found");
 				return;
 			}
-			
+				
 			// Write the response body to the servlet response
 			writer.println(responseBody);
 
