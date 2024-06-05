@@ -78,10 +78,17 @@ public class MetadataReadServlet extends HttpServlet {
 				resp.setContentType(contentType);
 			}
 
-			
-			// Write the response body to the servlet response
 			PrintWriter writer = resp.getWriter();
 			System.out.println(responseBody);
+
+			if(responseBody.startsWith("Requesting")) {
+				resp.setStatus(404);
+				resp.setContentType("text/html");
+				writer.println("Not Found");
+				return;
+			}
+			
+			// Write the response body to the servlet response
 			writer.println(responseBody);
 
 		} catch (IOException | InterruptedException e) {

@@ -21,6 +21,7 @@ import org.eclipse.jetty.security.openid.OpenIdLoginService;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -75,7 +76,7 @@ public class Main {
         
         Server server = new Server(8080);
 
-        // SessionHandler sessionHandler = new SessionHandler();
+        SessionHandler sessionHandler = new SessionHandler();
 
         String ISSUER = "https://auth.dbpedia.org/realms/dbpedia";
         String CLIENT_ID = "moss-dev";
@@ -148,8 +149,8 @@ public class Main {
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
 
-        // protectedContext.setSessionHandler(sessionHandler);
-        // protectedContext.setSecurityHandler(security);
+        protectedContext.setSessionHandler(sessionHandler);
+        protectedContext.setSecurityHandler(security);
 
         // String configPath, String baseURI, String contextURL, String gstoreBaseURL, String lookupBaseURL
 
