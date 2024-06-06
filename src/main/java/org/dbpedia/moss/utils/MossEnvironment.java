@@ -29,6 +29,17 @@ public class MossEnvironment {
 		return configuration;
 	}
 
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("GSTORE_BASE_URL: " + gstoreBaseURL + "\n");
+        sb.append("CONFIG_PATH: " + configPath + "\n");
+        sb.append("LOOKUP_BASE_URL: " + lookupBaseURL + "\n");
+        sb.append("MOSS_BASE_URL: " + mossBaseURL + "\n");
+        return sb.toString();
+    }
+
     public String getMossBaseUrl() {
         return mossBaseURL;
     }

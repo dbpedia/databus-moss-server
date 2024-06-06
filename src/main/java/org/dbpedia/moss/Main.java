@@ -4,11 +4,11 @@ import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.servlets.MetadataAnnotateServlet;
+import org.apache.jena.query.ARQ;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.sparql.function.library.leviathan.sec;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.jwt.JwtAuthenticator;
 import org.dbpedia.moss.servlets.LayerServlet;
@@ -17,7 +17,6 @@ import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.ConstraintSecurityHandler;
 import org.eclipse.jetty.security.DefaultIdentityService;
 import org.eclipse.jetty.security.IdentityService;
-import org.eclipse.jetty.security.openid.OpenIdAuthenticator;
 import org.eclipse.jetty.security.openid.OpenIdConfiguration;
 import org.eclipse.jetty.security.openid.OpenIdLoginService;
 import org.eclipse.jetty.server.Handler;
@@ -33,7 +32,12 @@ import jakarta.servlet.DispatcherType;
 import jakarta.servlet.MultipartConfigElement;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Collections;
 import java.util.EnumSet;
 
@@ -69,8 +73,14 @@ public class Main {
      */
     public static void main(String[] args) throws Exception {
 
-        MossEnvironment config = MossEnvironment.Get();
+        ARQ.init();
 
+        
+        MossEnvironment config = MossEnvironment.Get();
+        System.out.println(config.toString());
+        
+        waitForGstore(config.getGstoreBaseURL());
+        
 
         IndexerManager indexerManager = new IndexerManager(config);
         
@@ -169,5 +179,39 @@ public class Main {
         server.join();
     }
 
+    private static void waitForGstore(String targetUrl) throws URISyntaxException, InterruptedException {
+        while (true) {
+            try {
+                // Create a URL object from the target URL
+                URL url = new URI(targetUrl).toURL();
+
+                // Open a connection to the URL
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+                // Set the request method to "GET"
+                connection.setRequestMethod("GET");
+
+                // Connect to the URL
+                connection.connect();
+
+                // Get the response code
+                int responseCode = connection.getResponseCode();
+
+                // Print the response code
+                System.out.println("Gstore detected: status code " + responseCode);
+
+                // Disconnect the connection
+                connection.disconnect();
+
+                break;
+
+            } catch (IOException e) {
+                System.out.println("Error connecting to gstore: " + e.getMessage() + ". Trying again in 1 second.");
+            }
+
+
+            Thread.sleep(1000);
+        }
+    }
 
 }
