@@ -22,10 +22,10 @@ import org.eclipse.jetty.security.openid.OpenIdLoginService;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.eclipse.jetty.util.security.Constraint;
 
 import jakarta.servlet.DispatcherType;
@@ -86,7 +86,7 @@ public class Main {
         
         Server server = new Server(8080);
 
-        SessionHandler sessionHandler = new SessionHandler();
+        // SessionHandler sessionHandler = new SessionHandler();
 
         String ISSUER = "https://auth.dbpedia.org/realms/dbpedia";
         String CLIENT_ID = "moss-dev";
@@ -129,7 +129,16 @@ public class Main {
         String context = "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context.jsonld";
         */
         FilterHolder corsFilterHolder = new FilterHolder(new CorsFilter());
+
+        FilterHolder corsHolder = new FilterHolder(CrossOriginFilter.class);
+        corsHolder.setInitParameter(CrossOriginFilter.ALLOWED_ORIGINS_PARAM, "*");
+        corsHolder.setInitParameter(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, "*");
+        corsHolder.setInitParameter(CrossOriginFilter.ALLOWED_METHODS_PARAM, "GET,POST,HEAD");
+        corsHolder.setInitParameter(CrossOriginFilter.ALLOWED_HEADERS_PARAM, "X-Requested-With,Content-Type,Accept,Origin");
+        corsHolder.setName("cross-origin");
+
         MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
+
 
         ServletHolder metadataAnnotateServletHolder = new ServletHolder(new MetadataAnnotateServlet(indexerManager));
         metadataAnnotateServletHolder.setInitOrder(0);
@@ -141,9 +150,10 @@ public class Main {
         layerContext.setContextPath("/layer/*");
         layerContext.addServlet(new ServletHolder(new LayerServlet()), "/*");
 
+
         // Context handler for the unprotected routes
         ServletContextHandler readContext = new ServletContextHandler();
-        readContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        readContext.addFilter(corsHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         readContext.setContextPath("/g/*");
         readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 

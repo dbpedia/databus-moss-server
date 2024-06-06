@@ -1,0 +1,414 @@
+{
+    "@context": "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context2.jsonld",
+    "@id": "https://databus.openenergy-platform.org/felixmaur/Steel_Industry_test_data/ind_steel_sinter_0/v01/ind_steel_sinter_0_type=data.csv",
+    "isExtendedBy": {
+       "@id": "#layer",
+       "@type": "DatabusMetadataLayer",
+       "layerName": "oemetadata",
+       "created": "2024-03-01 14:37:32"
+    },
+    "name": "ind_steel_sinter_0",
+    "title": "sedos_ind_steel_sinter_0",
+    "id": "https://openenergy-platform.org/dataedit/view/model_draft/ind_steel_sinter_0",
+    "description": "Dataset describes scalar techno-economic and scenario data of technology/process: IND.IIS.Sinter Production.00.",
+    "subject": [
+       {
+          "name": "Industry Sector",
+          "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00000227"
+       },
+       {
+          "name": "Industry Sub-sector",
+          "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00000227"
+       }
+    ],
+    "language": [
+       "en-GB"
+    ],
+    "keywords": [
+       "SEDOS",
+       "input_data",
+       "AP7",
+       "Industry",
+       "oedatamodel-parameter",
+       "steel"
+    ],
+    "publicationDate": "2024-06-05",
+    "context": {
+       "homepage": "https://sedos-project.github.io/.github/",
+       "documentation": "https://sedos-project.github.io/.github/",
+       "sourceCode": "https://github.com/sedos-project",
+       "contact": "ulrich.fahl@ier.uni-stuttgart.de",
+       "grantNo": null,
+       "fundingAgency": "Bundesministerium f?r Wirtschaft und Klimaschutz (BMWK)",
+       "fundingAgencyLogo": "https://en.wikipedia.org/wiki/Federal_Ministry_for_Economic_Affairs_and_Climate_Action#/media/File:BMWi_Logo_2021.svg",
+       "publisherLogo": null
+    },
+    "spatial": {
+       "location": "Germany",
+       "extent": "DE",
+       "resolution": "NUTS-0"
+    },
+    "temporal": {
+       "referenceDate": "2021",
+       "timeseries": [
+          {
+             "start": "2021-01-01",
+             "end": "2070-12-31",
+             "resolution": "yearly",
+             "alignment": null,
+             "aggregationType": null
+          }
+       ]
+    },
+    "sources": [
+       {
+          "title": "OEDatamodel-parameter",
+          "description": "Parameter data model for secondary input scalars and timeseries",
+          "@id": "https://github.com/sedos-project/oedatamodel/tree/main/oedatamodel-parameter",
+          "licenses": [
+             {
+                "instruction": "You are free: To Share, To Create, To Adapt",
+                "attribution": null,
+                "name": "CC0-1.0",
+                "title": "Creative Commons Zero v1.0 Universal",
+                "@id": "https://creativecommons.org/publicdomain/zero/1.0/legalcode"
+             }
+          ]
+       },
+       {
+          "title": "TAM Industry Model",
+          "description": "TAM Industry is based on TIMES and focuses on German industry energy system",
+          "licenses": [
+             {
+                "instruction": null,
+                "attribution": "@Energy Economics and Social Analysis(ESA), IER, University of Stuttgart",
+                "name": "Creative Commons Attribution 4.0 International",
+                "title": "CC BY 4.0",
+                "@id": "https://creativecommons.org/licenses/by/4.0/"
+             }
+          ]
+       }
+    ],
+    "licenses": [
+       {
+          "instruction": "You are free to: Share- copy and redistribute the material in any medium or format for any purpose, even commercially. Adapt - remix, transform, and build upon the material for any purpose, even commercially.",
+          "attribution": null,
+          "name": "CC-BY-4.0",
+          "title": "Creative Commons Attribution 4.0 International",
+          "@id": "https://creativecommons.org/licenses/by/4.0/?ref=chooser-v1"
+       }
+    ],
+    "contributors": [
+       {
+          "title": "Anik Islam",
+          "email": "md-anik.islam@ier.uni-stuttgart.de",
+          "object": "data and metadata for industry",
+          "comment": "Created data and metadata in specific format based on provided data",
+          "date": "2024-06-05"
+       },
+       {
+          "title": "Isela Bailey",
+          "email": "isela.bailey@ier.uni-stuttgart.de",
+          "object": "data and metadata for industry",
+          "comment": "Prepared and Provided data and necessary details of cement, glass, steel, aluminium and paper industry",
+          "date": "2024-06-05"
+       }
+    ],
+    "resources": [
+       {
+          "profile": "tabular-data-resource",
+          "name": "model_draft.ind_steel_sinter_0",
+          "@id": "https://openenergy-platform.org/dataedit/view/model_draft/ind_steel_sinter_0",
+          "format": "PostgreSQL",
+          "encoding": "UTF-8",
+          "schema": {
+             "primaryKey": [
+                "id"
+             ],
+             "foreignKeys": [],
+             "fields": [
+                {
+                   "name": "id",
+                   "description": "Unique identifier",
+                   "type": "bigint",
+                   "isAbout": [],
+                   "valueReference": [],
+                   "unit": null
+                },
+                {
+                   "name": "region",
+                   "description": "Country or regionx",
+                   "type": "text",
+                   "isAbout": [],
+                   "valueReference": [],
+                   "unit": null
+                },
+                {
+                   "name": "year",
+                   "description": "Year",
+                   "type": "integer",
+                   "isAbout": [],
+                   "valueReference": [],
+                   "unit": "a"
+                },
+                {
+                   "name": "type",
+                   "description": "Type of process",
+                   "type": "text",
+                   "isAbout": [],
+                   "valueReference": [],
+                   "unit": null
+                },
+                {
+                   "name": "conversion_factor_iip_steel_sinter",
+                   "description": "Commodity-specific conversion factor (multiplication of input and output factors yields the efficiency of the process).",
+                   "type": "float",
+                   "isAbout": [
+                      {
+                         "name": "energy conversion efficiency",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00140049"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "PJ, Mt"
+                },
+                {
+                   "name": "conversion_factor_pri_coal",
+                   "description": "Commodity-specific conversion factor (multiplication of input and output factors yields the efficiency of the process).",
+                   "type": "float",
+                   "isAbout": [
+                      {
+                         "name": "energy conversion efficiency",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00140049"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "PJ, Mt"
+                },
+                {
+                   "name": "conversion_factor_sec_elec_ind",
+                   "description": "Commodity-specific conversion factor (multiplication of input and output factors yields the efficiency of the process).",
+                   "type": "float",
+                   "isAbout": [
+                      {
+                         "name": "energy conversion efficiency",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00140049"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "PJ, Mt"
+                },
+                {
+                   "name": "ef_pri_coal_emi_ch4_f_ind",
+                   "description": "Emission factor for a process flow per output.",
+                   "type": "float",
+                   "isAbout": [
+                      {
+                         "name": "emission factor",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00000148"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "Kt/PJ"
+                },
+                {
+                   "name": "ef_sec_methane_emi_ch4_f_ind",
+                   "description": "Emission factor for a process flow per output.",
+                   "type": "float",
+                   "isAbout": [
+                      {
+                         "name": "emission factor",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00000148"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "Kt/PJ"
+                },
+                {
+                   "name": "ef_pri_coal_emi_co2_f_ind",
+                   "description": "Emission factor for a process flow per output.",
+                   "type": "text",
+                   "isAbout": [
+                      {
+                         "name": "emission factor",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00000148"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "Kt/PJ"
+                },
+                {
+                   "name": "ef_sec_methane_emi_co2_f_ind",
+                   "description": "Emission factor for a process flow per output.",
+                   "type": "text",
+                   "isAbout": [
+                      {
+                         "name": "emission factor",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00000148"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "Kt/PJ"
+                },
+                {
+                   "name": "ef_pri_coal_emi_n2o_f_ind",
+                   "description": "Emission factor for a process flow per output.",
+                   "type": "float",
+                   "isAbout": [
+                      {
+                         "name": "emission factor",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00000148"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "Kt/PJ"
+                },
+                {
+                   "name": "ef_sec_methane_emi_n2o_f_ind",
+                   "description": "Emission factor for a process flow per output.",
+                   "type": "float",
+                   "isAbout": [
+                      {
+                         "name": "emission factor",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00000148"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "Kt/PJ"
+                },
+                {
+                   "name": "flow_share_max_sec_hydrogen",
+                   "description": "Maximum share of flow commodity c based upon the sum of individual flows defined by the commodity group cg belonging to process p.",
+                   "type": "float",
+                   "isAbout": [
+                      {
+                         "name": "flow potential",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00140056"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "%"
+                },
+                {
+                   "name": "capacity_w_abs_new_max",
+                   "description": "Absolute upper bound on level of investment in new weight capacity for a period.",
+                   "type": "float",
+                   "isAbout": [],
+                   "valueReference": [],
+                   "unit": "Mt"
+                },
+                {
+                   "name": "lifetime",
+                   "description": "Technical lifetime of a process.",
+                   "type": "float",
+                   "isAbout": [
+                      {
+                         "name": "operational life time",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00020178"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "a"
+                },
+                {
+                   "name": "capacity_w_inst_0",
+                   "description": "Existing weight capacity of a process.",
+                   "type": "float",
+                   "isAbout": [],
+                   "valueReference": [],
+                   "unit": "Mt"
+                },
+                {
+                   "name": "conversion_factor_sec_methane",
+                   "description": "Commodity-specific conversion factor (multiplication of input and output factors yields the efficiency of the process).",
+                   "type": "float",
+                   "isAbout": [
+                      {
+                         "name": "energy conversion efficiency",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00140049"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "PJ, Mt"
+                },
+                {
+                   "name": "conversion_factor_sec_hydrogen",
+                   "description": "Commodity-specific conversion factor (multiplication of input and output factors yields the efficiency of the process).",
+                   "type": "float",
+                   "isAbout": [
+                      {
+                         "name": "energy conversion efficiency",
+                         "@id": "http://openenergy-platform.org/ontology/oeo/OEO_00140049"
+                      }
+                   ],
+                   "valueReference": [],
+                   "unit": "PJ, Mt"
+                },
+                {
+                   "name": "bandwidth_type",
+                   "description": "Bandwidth Type",
+                   "type": "json",
+                   "isAbout": [],
+                   "valueReference": [],
+                   "unit": null
+                },
+                {
+                   "name": "version",
+                   "description": "Version",
+                   "type": "text",
+                   "isAbout": [],
+                   "valueReference": [],
+                   "unit": null
+                },
+                {
+                   "name": "method",
+                   "description": "Method",
+                   "type": "json",
+                   "isAbout": [],
+                   "valueReference": [],
+                   "unit": null
+                },
+                {
+                   "name": "source",
+                   "description": "Source",
+                   "type": "json",
+                   "isAbout": [],
+                   "valueReference": [],
+                   "unit": null
+                },
+                {
+                   "name": "comment",
+                   "description": "Comment",
+                   "type": "json",
+                   "isAbout": [],
+                   "valueReference": [],
+                   "unit": null
+                }
+             ]
+          },
+          "dialect": {
+             "delimiter": ";",
+             "decimalSeparator": "."
+          }
+       }
+    ],
+    "review": {},
+    "metaMetadata": {
+       "metadataVersion": "OEP-1.5.2",
+       "metadataLicense": {
+          "name": "CC0-1.0",
+          "title": "Creative Commons Zero v1.0 Universal",
+          "@id": "https://creativecommons.org/publicdomain/zero/1.0/"
+       }
+    },
+    "_comment": {
+       "metadata": "Metadata documentation and explanation (https://github.com/openenergy-platform/oemetadata)",
+       "dates": "Dates and time must follow the ISO8601 including time zone (YYYY-MM-DD or YYYY-MM-DDThh:mm:ss?hh)",
+       "units": "Use a space between numbers and units (100 m)",
+       "languages": "Languages must follow the IETF (BCP47) format (en-GB, en-US, de-DE)",
+       "licenses": "License name must follow the SPDX License List (https://spdx.org/licenses/)",
+       "review": "Following the OEP Data Review (https://github.com/openenergy-platform/data-preprocessing/blob/master/data-review/manual/review_manual.md)",
+       "null": "If not applicable use: null",
+       "todo": "If a value is not yet available, use: todo"
+    }
+ }
