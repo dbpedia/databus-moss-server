@@ -9,6 +9,7 @@ public class MossEnvironment {
     private String configPath;
     private String lookupBaseURL;
     private String mossBaseURL;
+    private String userDatabasePath;
 
     /**
 	 * Loads the XML Configuration from file
@@ -25,6 +26,7 @@ public class MossEnvironment {
         configuration.configPath = System.getenv("CONFIG_PATH");
         configuration.lookupBaseURL = System.getenv("LOOKUP_BASE_URL");
         configuration.mossBaseURL = System.getenv("MOSS_BASE_URL");
+        configuration.userDatabasePath = System.getenv("USER_DATABASE_PATH");
 
 		return configuration;
 	}
@@ -37,6 +39,7 @@ public class MossEnvironment {
         sb.append("CONFIG_PATH: " + configPath + "\n");
         sb.append("LOOKUP_BASE_URL: " + lookupBaseURL + "\n");
         sb.append("MOSS_BASE_URL: " + mossBaseURL + "\n");
+        sb.append("USER_DATABASE_PATH: " + userDatabasePath + "\n");
         return sb.toString();
     }
 
@@ -54,5 +57,9 @@ public class MossEnvironment {
 
     public String getGstoreBaseURL() {
         return gstoreBaseURL;
+    }
+
+    public String getUserDatabasePath() {
+        return userDatabasePath;
     }
 }

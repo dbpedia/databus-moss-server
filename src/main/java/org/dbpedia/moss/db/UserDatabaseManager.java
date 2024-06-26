@@ -1,4 +1,4 @@
-package org.db;
+package org.dbpedia.moss.db;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -9,10 +9,21 @@ import java.sql.Statement;
 import java.sql.PreparedStatement;
 
 
-public class SqliteConnector {
+public class UserDatabaseManager {
 
-    static String prefix = "jdbc:sqlite:";
-    static String URL = "jdbc:sqlite:/home/john/Documents/workspace/whk/moss-jetty/devenv/sqlite/auth.db";
+    private static String prefix = "jdbc:sqlite:";
+    private String userDatabasePath = "/home/john/Documents/workspace/whk/moss-jetty/devenv/sqlite/auth.db";
+
+    public UserDatabaseManager(String userDatabasePath) {
+        this.userDatabasePath = userDatabasePath;
+
+        createUserTable();
+        createAPITable();
+    }
+
+    private String GetDatabaseURL() {
+        return prefix + userDatabasePath;
+    }
 
     public static void close(Connection connection) {
         try {
@@ -71,13 +82,13 @@ public class SqliteConnector {
         }
     }
 
-    private static void createTable(String sql) {
+    private void createTable(String sql) {
         Connection conn = null;
         boolean successful;
 
         try {
-            System.out.println(SqliteConnector.URL);
-            conn = DriverManager.getConnection(SqliteConnector.URL);
+            System.out.println(GetDatabaseURL());
+            conn = DriverManager.getConnection(GetDatabaseURL());
             System.out.println("Connection to SQLite has been established.");
             System.out.println(String.format("Executing Statement:\n%s", sql));
 
@@ -88,16 +99,16 @@ public class SqliteConnector {
             successful = false;
             System.out.println(sqlException.getMessage());
         } finally {
-            SqliteConnector.close(conn);
+            UserDatabaseManager.close(conn);
         }
         System.out.println(String.format("Successful: %s", successful));
     }
 
-    public static void createQuery(String sql) {
+    public void createQuery(String sql) {
         Connection conn = null;
 
         try {
-            conn = DriverManager.getConnection(SqliteConnector.URL);
+            conn = DriverManager.getConnection(GetDatabaseURL());
             System.out.println("Connection to SQLite has been established.");
             System.out.println(String.format("Executing Statement:\n%s", sql));
 
@@ -106,15 +117,15 @@ public class SqliteConnector {
         } catch (SQLException sqlException) {
             System.out.println(sqlException.getMessage());
         } finally {
-            SqliteConnector.close(conn);
+            UserDatabaseManager.close(conn);
         }
     }
 
-    public static void insertQuery(String sql, String sub, String username) {
+    public void insertQuery(String sql, String sub, String username) {
         Connection conn = null;
 
         try {
-            conn = DriverManager.getConnection(SqliteConnector.URL);
+            conn = DriverManager.getConnection(GetDatabaseURL());
             System.out.println("Connection to SQLite has been established.");
             System.out.println(String.format("Executing Statement:\n%s", sql));
 
@@ -123,18 +134,18 @@ public class SqliteConnector {
         } catch (SQLException sqlException) {
             System.out.println(sqlException.getMessage());
         } finally {
-            SqliteConnector.close(conn);
+            UserDatabaseManager.close(conn);
         }
     }
 
-    public static void getUsers() {
+    public void getUsers() {
         String sql = """
         SELECT sub, name FROM user
         """;
         createQuery(sql);
     }
 
-    public static void createUserTable() {
+    private void createUserTable() {
         String sql = """
         CREATE TABLE IF NOT EXISTS user(
             sub text PRIMARY KEY,
@@ -144,16 +155,16 @@ public class SqliteConnector {
         createTable(sql);
     }
 
-    public static void createAPITable() {
+    private void createAPITable() {
         String sql = """
-        CREATE TABLE IF NOT EXISTS api
+        CREATE TABLE IF NOT EXISTS api(
             key text PRIMARY KEY,
             sub text NOT NULL
-        """;
+        );""";
         createTable(sql);
     }
 
-    public static void insertUser(String sub, String username) {
+    public void insertUser(String sub, String username) {
         String sql = "INSERT INTO user(sub,name) VALUES(?, ?)";
         insertQuery(sql, sub, username);
     }

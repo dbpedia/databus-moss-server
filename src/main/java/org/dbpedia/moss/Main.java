@@ -9,17 +9,13 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
+import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.indexer.IndexerManager;
-import org.dbpedia.moss.jwt.JwtAuthenticator;
-import org.dbpedia.moss.servlets.DBServlet;
+import org.dbpedia.moss.servlets.UserDatabaseServlet;
 import org.dbpedia.moss.servlets.LayerServlet;
-import org.dbpedia.moss.servlets.LogoutServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
-import org.eclipse.jetty.security.ConstraintSecurityHandler;
 import org.eclipse.jetty.security.DefaultIdentityService;
 import org.eclipse.jetty.security.IdentityService;
-import org.eclipse.jetty.security.openid.OpenIdConfiguration;
-import org.eclipse.jetty.security.openid.OpenIdLoginService;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -30,6 +26,7 @@ import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.eclipse.jetty.util.security.Constraint;
 
 import jakarta.servlet.DispatcherType;
+import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
 
 import java.io.ByteArrayInputStream;
@@ -39,8 +36,8 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Collections;
 import java.util.EnumSet;
+
 
 /**
  * Run to start a jetty server that hosts the moss servlet and makes it
@@ -76,22 +73,16 @@ public class Main {
 
         ARQ.init();
 
+        MossEnvironment environment = MossEnvironment.Get();
+        System.out.println(environment.toString());
 
-        MossEnvironment config = MossEnvironment.Get();
-        System.out.println(config.toString());
-
-        waitForGstore(config.getGstoreBaseURL());
-
-
-        IndexerManager indexerManager = new IndexerManager(config);
+        waitForGstore(environment.getGstoreBaseURL());
+        
+        UserDatabaseManager sqliteConnector = new UserDatabaseManager(environment.getUserDatabasePath());
+        IndexerManager indexerManager = new IndexerManager(environment);
 
         Server server = new Server(8080);
 
-        // SessionHandler sessionHandler = new SessionHandler();
-
-        String ISSUER = "https://auth.dbpedia.org/realms/dbpedia";
-        String CLIENT_ID = "moss-dev";
-        String CLIENT_SECRET = "6Tpn32E2OKn33G001WupjMmLzXLnnkyx";
 
         IdentityService identityService = new DefaultIdentityService();
         server.addBean(identityService);
@@ -107,6 +98,8 @@ public class Main {
         mapping.setPathSpec("/*");
         mapping.setConstraint(constraint);
 
+
+        /*
         OpenIdConfiguration openIdConfiguration = new OpenIdConfiguration(ISSUER, CLIENT_ID, CLIENT_SECRET);
         openIdConfiguration.addScopes("openid", "email", "profile");
 
@@ -114,16 +107,13 @@ public class Main {
 
         OpenIdLoginService loginService = new OpenIdLoginService(openIdConfiguration);
 
-        JwtAuthenticator authenticator = new JwtAuthenticator();
-        authenticator.setIssuer(ISSUER);
-        authenticator.setSecret(CLIENT_SECRET);
-
+       
         ConstraintSecurityHandler security = new ConstraintSecurityHandler();
         security.setConstraintMappings(Collections.singletonList(mapping));
         security.setLoginService(loginService);
         security.setAuthenticator(authenticator);
 
-        /*
+      
         String base = "http://localhost:2000";
         String gstore = "http://localhost:2001";
         String lookup = "http://localhost:2003";
@@ -162,7 +152,7 @@ public class Main {
         ServletContextHandler protectedContext = new ServletContextHandler();
         protectedContext.setContextPath("/*");
         protectedContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
-        protectedContext.addServlet(new ServletHolder(new LogoutServlet(loginService)), "/auth/logout");
+        // protectedContext.addServlet(new ServletHolder(new LogoutServlet(loginService)), "/auth/logout");
 
         ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager));
         metadataWriteServletHolder.setInitOrder(0);
@@ -175,13 +165,19 @@ public class Main {
         ServletContextHandler dbContext = new ServletContextHandler();
         dbContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         dbContext.setContextPath("/db/*");
-        dbContext.addServlet(new ServletHolder(new DBServlet()), "/*");
+        dbContext.addServlet(new ServletHolder(new UserDatabaseServlet(sqliteConnector)), "/*");
 
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
 
-        // protectedContext.setSessionHandler(sessionHandler);
-        // protectedContext.setSecurityHandler(security);
+        /*
+        SessionHandler sessionHandler = new SessionHandler();
+        protectedContext.setSessionHandler(sessionHandler);
+        protectedContext.setSecurityHandler(security);
+        */
+
+        FilterHolder filterHolder = new FilterHolder((Filter) new AuthenticationFilter());
+        protectedContext.addFilter(filterHolder, "/*", null);
 
         // String configPath, String baseURI, String contextURL, String gstoreBaseURL, String lookupBaseURL
 
