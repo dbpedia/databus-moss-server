@@ -11,6 +11,7 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.jwt.JwtAuthenticator;
+import org.dbpedia.moss.servlets.DBServlet;
 import org.dbpedia.moss.servlets.LayerServlet;
 import org.dbpedia.moss.servlets.LogoutServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
@@ -67,7 +68,7 @@ public class Main {
      * Run to start a jetty server that hosts the moss servlet and makes it
      * accessible
      * via HTTP
-     * 
+     *
      * @param args
      * @throws Exception
      */
@@ -75,15 +76,15 @@ public class Main {
 
         ARQ.init();
 
-        
+
         MossEnvironment config = MossEnvironment.Get();
         System.out.println(config.toString());
-        
+
         waitForGstore(config.getGstoreBaseURL());
-        
+
 
         IndexerManager indexerManager = new IndexerManager(config);
-        
+
         Server server = new Server(8080);
 
         // SessionHandler sessionHandler = new SessionHandler();
@@ -91,11 +92,11 @@ public class Main {
         String ISSUER = "https://auth.dbpedia.org/realms/dbpedia";
         String CLIENT_ID = "moss-dev";
         String CLIENT_SECRET = "6Tpn32E2OKn33G001WupjMmLzXLnnkyx";
- 
+
         IdentityService identityService = new DefaultIdentityService();
         server.addBean(identityService);
-       
-        
+
+
         Constraint constraint = new Constraint();
         constraint.setName("Lalala");
         constraint.setRoles(new String[] { Constraint.ANY_ROLE });
@@ -108,11 +109,11 @@ public class Main {
 
         OpenIdConfiguration openIdConfiguration = new OpenIdConfiguration(ISSUER, CLIENT_ID, CLIENT_SECRET);
         openIdConfiguration.addScopes("openid", "email", "profile");
-        
+
         // OpenIdAuthenticator openidAuthenticator = new OpenIdAuthenticator(openIdConfiguration, null);
 
         OpenIdLoginService loginService = new OpenIdLoginService(openIdConfiguration);
-        
+
         JwtAuthenticator authenticator = new JwtAuthenticator();
         authenticator.setIssuer(ISSUER);
         authenticator.setSecret(CLIENT_SECRET);
@@ -170,6 +171,11 @@ public class Main {
         protectedContext.addServlet(metadataWriteServletHolder, "/api/save");
         protectedContext.addServlet(metadataAnnotateServletHolder, "/api/annotate");
 
+        // Context handler for the unprotected routes
+        ServletContextHandler dbContext = new ServletContextHandler();
+        dbContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        dbContext.setContextPath("/db/*");
+        dbContext.addServlet(new ServletHolder(new DBServlet()), "/*");
 
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
@@ -181,7 +187,7 @@ public class Main {
 
         // Set up handler collection
         HandlerList  handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { readContext, layerContext, protectedContext  });
+        handlers.setHandlers(new Handler[] { readContext, layerContext, dbContext, protectedContext });
 
         server.setHandler(handlers);
 
