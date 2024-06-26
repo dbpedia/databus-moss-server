@@ -41,7 +41,7 @@ public class UserDatabaseServlet extends HttpServlet {
 
         switch (requestURI) {
             case "/get-users":
-                sqliteConnector.getUsers();
+                // sqliteConnector.getUsers();
                 break;
             case "/insert-user":
                 sub = req.getParameter("sub");
@@ -55,10 +55,10 @@ public class UserDatabaseServlet extends HttpServlet {
                 //TODO: uncomment -> dynamically set the name
                 // String name = req.getParameter("name");
 
-                sqliteConnector.insertKey(key, sub, name);
+                sqliteConnector.insertAPIKey(key, sub, name);
                 break;
-            case "/get-key":
-                sqliteConnector.getKey(name);
+            case "/get-keys-by-sub":
+                sqliteConnector.getAPIKeysBySub(sub);
                 break;
             default:
                 System.out.println("DB Route!");

@@ -9,6 +9,7 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
+import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
@@ -26,7 +27,6 @@ import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.eclipse.jetty.util.security.Constraint;
 
 import jakarta.servlet.DispatcherType;
-import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
 
 import java.io.ByteArrayInputStream;
@@ -78,7 +78,7 @@ public class Main {
 
         waitForGstore(environment.getGstoreBaseURL());
         
-        UserDatabaseManager sqliteConnector = new UserDatabaseManager(environment.getUserDatabasePath());
+        UserDatabaseManager userDatabaseManager = new UserDatabaseManager(environment.getUserDatabasePath());
         IndexerManager indexerManager = new IndexerManager(environment);
 
         Server server = new Server(8080);
@@ -165,7 +165,7 @@ public class Main {
         ServletContextHandler dbContext = new ServletContextHandler();
         dbContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         dbContext.setContextPath("/db/*");
-        dbContext.addServlet(new ServletHolder(new UserDatabaseServlet(sqliteConnector)), "/*");
+        dbContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/*");
 
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
@@ -176,7 +176,8 @@ public class Main {
         protectedContext.setSecurityHandler(security);
         */
 
-        FilterHolder filterHolder = new FilterHolder((Filter) new AuthenticationFilter());
+        APIKeyValidator validator = new APIKeyValidator(userDatabaseManager);
+        FilterHolder filterHolder = new FilterHolder(new AuthenticationFilter(validator));
         protectedContext.addFilter(filterHolder, "/*", null);
 
         // String configPath, String baseURI, String contextURL, String gstoreBaseURL, String lookupBaseURL

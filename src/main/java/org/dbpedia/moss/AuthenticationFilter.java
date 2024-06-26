@@ -23,17 +23,18 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.dbpedia.moss.db.UserDatabaseManager;
+import org.dbpedia.moss.db.APIKeyValidator;
+import org.dbpedia.moss.db.UserInfo;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 
 public class AuthenticationFilter implements Filter {
 
-    private UserDatabaseManager userDatabaseManager;
+    private APIKeyValidator apiKeyValidator;
 
-    public AuthenticationFilter(UserDatabaseManager userDatabaseManager) {
-        this.userDatabaseManager = userDatabaseManager;
+    public AuthenticationFilter(APIKeyValidator apiKeyValidator) {
+        this.apiKeyValidator = apiKeyValidator;
     }
 
     @Override
@@ -52,8 +53,10 @@ public class AuthenticationFilter implements Filter {
         
         if (apiKeyHeader != null) {
 
-            boolean isValidApiKey = validateApiKey(apiKeyHeader); 
-            if (isValidApiKey) {
+            UserInfo userInfo = apiKeyValidator.getUserInfoForAPIKey(apiKeyHeader); 
+
+            if (userInfo != null) {
+                // TODO: Add user info to request
                 chain.doFilter(request, response); // API key is valid, proceed to the next filter or servlet
                 return;
             } else {
@@ -81,21 +84,6 @@ public class AuthenticationFilter implements Filter {
         }
     }
 
-    private boolean validateApiKey(String apiKeyHeader) {
-        // TODO Auto-generated method stub
-
-
-        /*
-         * API key design:
-         * includes the base64 encoded username separated by underscore,
-         * then the actual random API key
-         * 
-         * 
-         */
-
-        return false;
-        //userDatabaseManager.isValidApiKey(apiKeyHeader);
-    }
 
     @Override
     public void destroy() {
