@@ -36,15 +36,29 @@ public class UserDatabaseServlet extends HttpServlet {
 		System.out.println(req.getRequestURI());
 		String requestURI = req.getRequestURI();
         requestURI = requestURI.replace(dbPrefix, "");
+        String sub = "";
+        String name = "defaultName";
 
         switch (requestURI) {
             case "/get-users":
                 sqliteConnector.getUsers();
                 break;
             case "/insert-user":
+                sub = req.getParameter("sub");
                 String username = req.getParameter("user");
-                String sub = req.getParameter("sub");
+
                 sqliteConnector.insertUser(sub, username);
+                break;
+            case "/insert-key":
+                sub = req.getParameter("sub");
+                String key = req.getParameter("key");
+                //TODO: uncomment -> dynamically set the name
+                // String name = req.getParameter("name");
+
+                sqliteConnector.insertKey(key, sub, name);
+                break;
+            case "/get-key":
+                sqliteConnector.getKey(name);
                 break;
             default:
                 System.out.println("DB Route!");
