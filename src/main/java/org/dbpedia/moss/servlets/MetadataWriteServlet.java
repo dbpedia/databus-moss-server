@@ -84,7 +84,7 @@ public class MetadataWriteServlet extends HttpServlet {
 
             System.out.println("REQ Repo: " + repo);
             System.out.println("REQ Path: " + path);
-            System.out.println(jsonString);
+            // System.out.println(jsonString);
 
             String documentURL = CreateDocumentURI(requestBaseURL, repo, path); 
 

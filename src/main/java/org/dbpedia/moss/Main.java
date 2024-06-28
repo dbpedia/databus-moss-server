@@ -160,12 +160,12 @@ public class Main {
 
         protectedContext.addServlet(metadataWriteServletHolder, "/api/save");
         protectedContext.addServlet(metadataAnnotateServletHolder, "/api/annotate");
-
+        protectedContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/api/users/*");
+        
         // Context handler for the unprotected routes
-        ServletContextHandler dbContext = new ServletContextHandler();
-        dbContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        dbContext.setContextPath("/db/*");
-        dbContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/*");
+        // ServletContextHandler dbContext = new ServletContextHandler();
+        //dbContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        // dbContext.setContextPath("/api/users/*");
 
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
         // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
@@ -184,7 +184,7 @@ public class Main {
 
         // Set up handler collection
         HandlerList  handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { readContext, layerContext, dbContext, protectedContext });
+        handlers.setHandlers(new Handler[] { readContext, layerContext, protectedContext });
 
         server.setHandler(handlers);
 

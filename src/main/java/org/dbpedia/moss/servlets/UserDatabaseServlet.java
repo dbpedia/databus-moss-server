@@ -5,10 +5,19 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.sql.SQLException;
+import java.util.List;
 
+import org.dbpedia.moss.db.APIKeyInfo;
+import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
+import org.dbpedia.moss.db.UserInfo;
+import org.mindrot.jbcrypt.BCrypt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.servlet.ServletException;
 
 
@@ -18,12 +27,10 @@ public class UserDatabaseServlet extends HttpServlet {
 
 	final static Logger logger = LoggerFactory.getLogger(UserDatabaseServlet.class);
 
-	private final String dbPrefix = "/db";
-
-    private UserDatabaseManager sqliteConnector;
+    private UserDatabaseManager userDatabase;
 
     public UserDatabaseServlet(UserDatabaseManager sqliteConnector) {
-        this.sqliteConnector = sqliteConnector;
+        this.userDatabase = sqliteConnector;
     }
 
     @Override
@@ -31,40 +38,115 @@ public class UserDatabaseServlet extends HttpServlet {
 
 	}
 
-	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		// Path to the JSON file in resources
-		System.out.println(req.getRequestURI());
-		String requestURI = req.getRequestURI();
-        requestURI = requestURI.replace(dbPrefix, "");
-        String sub = "";
-        String name = "defaultName";
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+        String requestURI = req.getRequestURI();
+        String sub = (String)req.getAttribute("sub");
 
-        switch (requestURI) {
-            case "/get-users":
-                // sqliteConnector.getUsers();
+        System.out.println(requestURI);
+        String operation = getAPIOperation(requestURI);
+		
+        switch (operation) {
+            case "set-username":
+                handleSetUsername(sub, req, res);
                 break;
-            case "/insert-user":
-                sub = req.getParameter("sub");
-                String username = req.getParameter("user");
-
-                sqliteConnector.insertUser(sub, username);
+            case "create-apikey":
+                handleCreateAPIKey(sub, req, res);
                 break;
-            case "/insert-key":
-                sub = req.getParameter("sub");
-                String key = req.getParameter("key");
-                //TODO: uncomment -> dynamically set the name
-                // String name = req.getParameter("name");
-
-                sqliteConnector.insertAPIKey(key, sub, name);
-                break;
-            case "/get-keys-by-sub":
-                sqliteConnector.getAPIKeysBySub(sub);
-                break;
-            default:
-                System.out.println("DB Route!");
+            case "revoke-apikey":
+                handleRevokeAPIKey(sub, req, res);
                 break;
         }
+    }
 
-	}
+	private void handleRevokeAPIKey(String sub, HttpServletRequest req, HttpServletResponse res) throws IOException {
+        try {
+            String keyName = req.getParameter("name");
+            userDatabase.deleteAPIKey(sub, keyName);
+            res.setStatus(200);
+
+        } catch(SQLException exception) {
+            res.getWriter().write(exception.getMessage());
+            res.setStatus(400);
+        }
+    }
+
+    private void handleCreateAPIKey(String sub, HttpServletRequest req, HttpServletResponse res) throws IOException {
+        String apiKey = APIKeyValidator.createAPIKey(sub);
+        String hashedAPIKey = BCrypt.hashpw(apiKey, BCrypt.gensalt());
+        String keyName = req.getParameter("name");
+
+        try {
+            userDatabase.insertAPIKey(keyName, sub, hashedAPIKey);
+
+            APIKeyInfo apiKeyInfo = new APIKeyInfo();
+            apiKeyInfo.SetKey(apiKey);
+            apiKeyInfo.setName(keyName);
+    
+            ObjectMapper objectMapper = new ObjectMapper();
+            String json = objectMapper.writeValueAsString(apiKeyInfo);
+    
+            res.setContentType("application/json");
+            res.setCharacterEncoding("UTF-8");
+            res.getWriter().write(json);
+            res.setStatus(200);
+
+        } catch(SQLException exception) {
+            res.getWriter().write(exception.getMessage());
+            res.setStatus(400);
+        }
+
+      
+    }
+
+    private String getAPIOperation(String requestURI) {
+        String[] segments = requestURI.split(("/"));
+        return segments[segments.length - 1];
+    }
+
+    private void handleSetUsername(String sub, HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        try {
+            String username = req.getParameter("username");
+            System.out.println("SET USERNAME: " + sub + " // " + username);
+            userDatabase.updateUsername(sub, username);
+            resp.setStatus(200);
+        } catch (Exception e) {
+            resp.getWriter().write(e.getMessage());
+            resp.setStatus(400);
+        }
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+        String requestURI = req.getRequestURI();
+        String sub = (String)req.getAttribute("sub");
+
+        System.out.println(requestURI);
+        String operation = getAPIOperation(requestURI);
+		
+        switch (operation) {
+            case "get-user":
+                handleGetUser(sub, req, res);
+                break;
+        }
+    }
+
+    private void handleGetUser(String sub, HttpServletRequest req, HttpServletResponse res) throws IOException {
+        UserInfo userInfo = userDatabase.getUserInfoBySub(sub);
+        
+        if (userInfo != null) {
+            List<String> apiKeyNames = userDatabase.getAPIKeyNamesBySub(sub);
+            userInfo.setApiKeys(apiKeyNames.toArray(new String[0]));
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            String json = objectMapper.writeValueAsString(userInfo);
+
+            res.setContentType("application/json");
+            res.setCharacterEncoding("UTF-8");
+            res.getWriter().write(json);
+        } else {
+            res.sendError(HttpServletResponse.SC_NOT_FOUND, "User not found");
+        }
+    }
 
 }

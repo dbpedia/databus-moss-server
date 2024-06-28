@@ -5,7 +5,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.HashMap;
 
 import com.auth0.jwk.Jwk;
 import com.auth0.jwk.JwkException;
@@ -33,8 +35,11 @@ public class AuthenticationFilter implements Filter {
 
     private APIKeyValidator apiKeyValidator;
 
+    private HashMap<String, PublicKey> publicKeyCache;
+
     public AuthenticationFilter(APIKeyValidator apiKeyValidator) {
         this.apiKeyValidator = apiKeyValidator;
+        publicKeyCache = new HashMap<String, PublicKey>();
     }
 
     @Override
@@ -56,7 +61,7 @@ public class AuthenticationFilter implements Filter {
             UserInfo userInfo = apiKeyValidator.getUserInfoForAPIKey(apiKeyHeader); 
 
             if (userInfo != null) {
-                // TODO: Add user info to request
+                request.setAttribute("sub", userInfo.getSub());
                 chain.doFilter(request, response); // API key is valid, proceed to the next filter or servlet
                 return;
             } else {
@@ -70,27 +75,27 @@ public class AuthenticationFilter implements Filter {
         String authorizationHeader = httpRequest.getHeader("Authorization");
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7);
-            boolean isValid = validateToken(token);
+            String sub = validateToken(token);
 
-            if (isValid) {
+            if (sub != null) {
+                request.setAttribute("sub", sub);
                 chain.doFilter(request, response); // Token is valid, proceed to the next filter or servlet
             } else {
                 httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                httpResponse.getWriter().write("Invalid token");
+                httpResponse.getWriter().write("Authorization header is missing or invalid");
             }
         } else {
-            httpResponse.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             httpResponse.getWriter().write("Authorization header is missing or invalid");
         }
     }
-
 
     @Override
     public void destroy() {
         // Cleanup logic if needed
     }
 
-    private boolean validateToken(String token) {
+    private String validateToken(String token) {
         try {
             // Parse the token
             DecodedJWT jwt = JWT.decode(token);
@@ -101,26 +106,40 @@ public class AuthenticationFilter implements Filter {
             // Get the kid from the header
             String kid = jwt.getKeyId();
 
-            // Retrieve the well-known document for the JWKS URL
-            String wellKnownUrl = issuer + "/.well-known/openid-configuration";
-            String jwksUrl = getJwksUrl(wellKnownUrl);
+            String sub = jwt.getSubject();
 
-            // Retrieve the JWKS document
-            JwkProvider provider = new UrlJwkProvider(new URI(jwksUrl).toURL());
-            Jwk jwk = provider.get(kid);
+            // Create a cache key from issuer and kid (key id)
+            String cacheKey = issuer + CACHE_KEY_SEPARATOR + kid;
 
+            PublicKey publicKey;
+
+            if(publicKeyCache.containsKey(cacheKey)) {
+                publicKey = publicKeyCache.get(cacheKey);
+            } else {
+                // Retrieve the well-known document for the JWKS URL
+                String wellKnownUrl = issuer + "/.well-known/openid-configuration";
+                String jwksUrl = getJwksUrl(wellKnownUrl);
+
+                // Retrieve the JWKS document
+                JwkProvider provider = new UrlJwkProvider(new URI(jwksUrl).toURL());
+                Jwk jwk = provider.get(kid);
+
+                publicKey = jwk.getPublicKey();
+                publicKeyCache.put(cacheKey, publicKey);
+            }
+           
             // Get the algorithm from the header
-            Algorithm alg = getAlgorithmFromHeader(jwt.getAlgorithm(), (RSAPublicKey) jwk.getPublicKey());
+            Algorithm alg = getAlgorithmFromHeader(jwt.getAlgorithm(), (RSAPublicKey)publicKey);
 
             // Validate the token signature
             JWTVerifier verifier = JWT.require(alg).withIssuer(issuer).build();
             verifier.verify(token);
 
-            return true; // Token is valid
+            return sub; // Token is valid
 
         } catch (JWTVerificationException | JwkException | IOException | URISyntaxException e) {
             e.printStackTrace();
-            return false; // Token is invalid
+            return null; // Token is invalid
         }
     }
 
@@ -151,4 +170,6 @@ public class AuthenticationFilter implements Filter {
             response.close();
         }
     }
+
+    private final static String CACHE_KEY_SEPARATOR = "_____";
 }

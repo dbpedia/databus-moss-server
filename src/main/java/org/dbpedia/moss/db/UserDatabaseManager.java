@@ -17,20 +17,25 @@ public class UserDatabaseManager {
 
     public UserDatabaseManager(String userDatabasePath) {
         this.userDatabasePath = userDatabasePath;
+ 
+        try {
+            executeUpdate(new IStatementProvider() {
+                @Override
+                public PreparedStatement createStatement(Connection connection) throws SQLException {
+                    return connection.prepareStatement(QUERY_CREATE_USER_TABLE);
+                }
+            });
 
-        executeUpdate(new IStatementProvider() {
-            @Override
-            public PreparedStatement createStatement(Connection connection) throws SQLException {
-                return connection.prepareStatement(QUERY_CREATE_USER_TABLE);
-            }
-        });
-
-        executeUpdate(new IStatementProvider() {
-            @Override
-            public PreparedStatement createStatement(Connection connection) throws SQLException {
-                return connection.prepareStatement(QUERY_CREATE_API_KEYS);
-            }
-        });
+            executeUpdate(new IStatementProvider() {
+                @Override
+                public PreparedStatement createStatement(Connection connection) throws SQLException {
+                    return connection.prepareStatement(QUERY_CREATE_API_KEYS);
+                }
+            });
+        } catch(SQLException sqlException) {
+            // Error initializing
+            System.out.println(sqlException.getMessage());
+        }
     }
 
     /**
@@ -72,8 +77,25 @@ public class UserDatabaseManager {
         return userInfo[0];
     }
 
+    public List<String> getAPIKeyNamesBySub(String sub) {
+
+        final ArrayList<String> apiKeyNames = new ArrayList<>();
+
+        executeSelect(QUERY_SELECT_API_KEYS_BY_SUB, new IResultSetCallback() {
+            @Override
+            public void process(ResultSet rs) throws SQLException {
+                while (rs.next()) {
+                    apiKeyNames.add(rs.getString("name"));
+                }
+            }
+        }, sub);
+
+        return apiKeyNames;
+    }
+
+
    
-    public void insertUser(String sub, String username) throws IOException {
+    public void updateUsername(String sub, String username) throws SQLException {
         executeUpdate(new IStatementProvider() {
             @Override
             public PreparedStatement createStatement(Connection connection) throws SQLException {
@@ -85,16 +107,28 @@ public class UserDatabaseManager {
         });
     }
 
-    public void insertAPIKey(String key, String sub, String name) throws IOException {
+    public void insertAPIKey(String name, String sub, String key) throws SQLException {
         executeUpdate(new IStatementProvider() {
             @Override
             public PreparedStatement createStatement(Connection connection) throws SQLException {
                 String saltedHashedKey = BCrypt.hashpw(key, BCrypt.gensalt());
               
                 PreparedStatement preparedStmt = connection.prepareStatement(QUERY_INSERT_API_KEY);
-                preparedStmt.setString(1, saltedHashedKey);
-                preparedStmt.setString(2, sub);
-                preparedStmt.setString(3, name);
+                preparedStmt.setString(1, name);
+                preparedStmt.setString(2, sub);         
+                preparedStmt.setString(3, saltedHashedKey);
+                return preparedStmt;
+            }
+        });
+    }
+
+    public void deleteAPIKey( String sub, String name) throws SQLException {
+        executeUpdate(new IStatementProvider() {
+            @Override
+            public PreparedStatement createStatement(Connection connection) throws SQLException {
+                PreparedStatement preparedStmt = connection.prepareStatement(QUERY_DELETE_API_KEY);
+                preparedStmt.setString(1, sub);
+                preparedStmt.setString(2, name);   
                 return preparedStmt;
             }
         });
@@ -103,7 +137,7 @@ public class UserDatabaseManager {
     /**
      * Update query helper function
      */
-    public void executeUpdate(IStatementProvider statementProvider) {
+    public void executeUpdate(IStatementProvider statementProvider) throws SQLException {
         Connection conn = null;
 
         try {
@@ -115,7 +149,8 @@ public class UserDatabaseManager {
             System.out.println(String.format("Inserted rows %s", updatedRows));
 
         } catch (SQLException sqlException) {
-            System.out.println(sqlException.getMessage());
+            close(conn);
+            throw sqlException;
         } finally {
             close(conn);
         }
@@ -183,21 +218,24 @@ public class UserDatabaseManager {
 
     private static String QUERY_CREATE_API_KEYS = """
         CREATE TABLE IF NOT EXISTS api(
-            key text PRIMARY KEY,
+            name text PRIMARY KEY,
             sub text NOT NULL,
-            name text NOT NULL
+            key text NOT NULL
         );""";
 
+    private static String QUERY_DELETE_API_KEY = """
+        DELETE FROM api WHERE  sub = ? AND name = ?;""";
+
     private static String QUERY_INSERT_API_KEY = """
-        INSERT INTO api(key, sub, name) VALUES(?, ?, ?);
+        INSERT INTO api(name, sub, key) VALUES(?, ?, ?);
             """;
 
     private static String QUERY_INSERT_USER = """
-        INSERT INTO user(sub, username) VALUES(?, ?);
+        INSERT OR REPLACE  INTO user (sub, username) VALUES (?, ?)
             """;
 
     private static String QUERY_SELECT_API_KEYS_BY_SUB = """
-        SELECT key FROM api WHERE sub = ?;
+        SELECT key, name FROM api WHERE sub = ?;
             """;
 
     private static String QUERY_SELECT_USER_BY_SUB = """
