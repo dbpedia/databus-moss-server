@@ -111,12 +111,10 @@ public class UserDatabaseManager {
         executeUpdate(new IStatementProvider() {
             @Override
             public PreparedStatement createStatement(Connection connection) throws SQLException {
-                String saltedHashedKey = BCrypt.hashpw(key, BCrypt.gensalt());
-              
                 PreparedStatement preparedStmt = connection.prepareStatement(QUERY_INSERT_API_KEY);
                 preparedStmt.setString(1, name);
                 preparedStmt.setString(2, sub);         
-                preparedStmt.setString(3, saltedHashedKey);
+                preparedStmt.setString(3, key);
                 return preparedStmt;
             }
         });

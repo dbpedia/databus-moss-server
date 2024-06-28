@@ -73,7 +73,11 @@ public class UserDatabaseServlet extends HttpServlet {
 
     private void handleCreateAPIKey(String sub, HttpServletRequest req, HttpServletResponse res) throws IOException {
         String apiKey = APIKeyValidator.createAPIKey(sub);
-        String hashedAPIKey = BCrypt.hashpw(apiKey, BCrypt.gensalt());
+        String salt = BCrypt.gensalt();
+
+        System.out.println("Why so salty: " + salt);
+        String hashedAPIKey = BCrypt.hashpw(apiKey, salt);
+        
         String keyName = req.getParameter("name");
 
         try {
