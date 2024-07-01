@@ -42,7 +42,7 @@ public class MetadataReadServlet extends HttpServlet {
 
 	@Override
 	public void init() throws ServletException {
-		configuration = MossEnvironment.Get();
+		configuration = MossEnvironment.get();
 	}
 
 	@Override

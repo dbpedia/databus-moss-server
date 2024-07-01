@@ -2,6 +2,8 @@ package org.dbpedia.moss.servlets;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.util.Calendar;
 import java.util.Collection;
 
@@ -56,7 +58,7 @@ public class MetadataAnnotateServlet extends HttpServlet {
 
 	@Override
 	public void init() throws ServletException {
-		configuration = MossEnvironment.Get();
+		configuration = MossEnvironment.get();
 	}
 
 	@Override
@@ -121,7 +123,15 @@ public class MetadataAnnotateServlet extends HttpServlet {
         }
 
         // b) If not - add annotation mod header to model
-        this.addLayerHeader(model, layerName, databusURI, layerVersion);
+        try {
+            this.addLayerHeader(model, layerName, databusURI, layerVersion);
+        } catch (MalformedURLException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (URISyntaxException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
 
 
         // Write json string
@@ -190,7 +200,7 @@ public class MetadataAnnotateServlet extends HttpServlet {
     }
 
 
-    private void addLayerHeader(Model model, String layerName, String databusDistributionUri, String modVersion) {
+    private void addLayerHeader(Model model, String layerName, String databusDistributionUri, String modVersion) throws MalformedURLException, URISyntaxException {
 
         // Eintrag auf Databus
         // --> hat distributions == Databus-Distribution-URI

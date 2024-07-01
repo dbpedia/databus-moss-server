@@ -37,7 +37,7 @@ public class LayerServlet extends HttpServlet {
 
 	@Override
 	public void init() throws ServletException {
-		MossEnvironment environment = MossEnvironment.Get();
+		MossEnvironment environment = MossEnvironment.get();
 
 		File configFile = new File(environment.GetConfigPath());
         mossConfiguration = MossConfiguration.fromJson(configFile);

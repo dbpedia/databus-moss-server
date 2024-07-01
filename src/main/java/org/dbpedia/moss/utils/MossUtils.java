@@ -110,7 +110,7 @@ public final class MossUtils {
 
 
     public static URL createSaveURL(String annotationFileURI) throws MalformedURLException {
-        MossEnvironment config = MossEnvironment.Get();
+        MossEnvironment config = MossEnvironment.get();
         String path = annotationFileURI.replaceAll(MossUtils.baseURI, "");
         String gStoreBaseURL = config.getGstoreBaseURL();
         String uriString = gStoreBaseURL + path;
@@ -187,45 +187,22 @@ public final class MossUtils {
     }
 
 
-    public static String getMossDocumentUriFragments(String databusDistributionUri) {
-        // TODO
-        // databusDistributionUri = "https://databus.dbpedia.org/kikiriki/jenkins/jenkins/2024-05-07-15#jenkins.txt";
-        // databusDistributionUri = "https://databus.dbpedia.org/kikiriki/jenkins/jenkins/2024-05-07-15";
+    public static String getMossDocumentUriFragments(String resourceURI) throws MalformedURLException, URISyntaxException  {
+        resourceURI = resourceURI.replace("#", "%23");
 
-        // Mache aus
-        // "https://databus.dbpedia.org/kikiriki/jenkins/jenkins/2024-05-07-15#jenkins.txt"
-
-        // Den da
-        // "databus.dbpedia.org/kikiriki/jenkins/jenkins/2024-05-07-15/jenkins.txt"
-
-        // Also z.B: Als URI parsen, protocol weg-cutten, '#' ersetzen mit '/'
-        URL databusDistributionURL = null;
-        try {
-            databusDistributionURL = new URI(databusDistributionUri).toURL();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        String host = databusDistributionURL.getHost();
-        String path = databusDistributionURL.getPath();
-        String fragment = databusDistributionURL.getRef();
-
+        URL resourceURL = null;
+        resourceURL = new URI(resourceURI).toURL();
+        String host = resourceURL.getHost();
+        String path = resourceURL.getPath();
         String url = host + path;
 
-        if (fragment == null) {
-            return url;
-        }
-
-        return url + "/" + fragment;
+        return url;
     }
 
 
     public static String getMossDocumentUri(String mossBaseUrl, String databusDistributionUriFragments,
-            String modType, String fileExtension) {
-        // TODO
-        // --> Besteht aus: MOSS-Base-URI + "/g/" + databusDistributionUriFragments + lowercase(modType) + fileEnding
-        // throw new UnsupportedOperationException("Unimplemented method 'getMOSSDocumentUri'");
-        return mossBaseUrl + "/g/" + databusDistributionUriFragments + modType.toLowerCase() + fileExtension;
+            String layerName, String fileExtension) {
+        return mossBaseUrl + "/g/" + databusDistributionUriFragments + layerName.toLowerCase() + fileExtension;
     }
 
     public static String readToString(InputStream inputStream) throws IOException {
@@ -271,5 +248,31 @@ public final class MossUtils {
         }
 
         return value;
+    }
+
+
+    public static boolean isValidResourceURI(String resourceUri) {
+        try {
+            new URI(resourceUri).toURL();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+
+    public static String getGStoreRepo(String resourceUri) throws MalformedURLException, URISyntaxException {
+        URL resourceURL = new URI(resourceUri).toURL();
+        return resourceURL.getHost();
+    }
+
+
+    public static String getGStorePath(String resourceURI, String layerName) 
+    throws MalformedURLException, URISyntaxException {
+        resourceURI = resourceURI.replace("#", "%23");
+        URL resourceURL = null;
+        resourceURL = new URI(resourceURI).toURL();
+        String path = resourceURL.getPath();
+        return path + "/" + layerName;
     }
 }

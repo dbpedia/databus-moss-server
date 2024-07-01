@@ -24,6 +24,7 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
+import org.eclipse.jetty.proxy.ProxyServlet;
 import org.eclipse.jetty.util.security.Constraint;
 
 import jakarta.servlet.DispatcherType;
@@ -73,7 +74,7 @@ public class Main {
 
         ARQ.init();
 
-        MossEnvironment environment = MossEnvironment.Get();
+        MossEnvironment environment = MossEnvironment.get();
         System.out.println(environment.toString());
 
         waitForGstore(environment.getGstoreBaseURL());
@@ -98,27 +99,6 @@ public class Main {
         mapping.setPathSpec("/*");
         mapping.setConstraint(constraint);
 
-
-        /*
-        OpenIdConfiguration openIdConfiguration = new OpenIdConfiguration(ISSUER, CLIENT_ID, CLIENT_SECRET);
-        openIdConfiguration.addScopes("openid", "email", "profile");
-
-        // OpenIdAuthenticator openidAuthenticator = new OpenIdAuthenticator(openIdConfiguration, null);
-
-        OpenIdLoginService loginService = new OpenIdLoginService(openIdConfiguration);
-
-       
-        ConstraintSecurityHandler security = new ConstraintSecurityHandler();
-        security.setConstraintMappings(Collections.singletonList(mapping));
-        security.setLoginService(loginService);
-        security.setAuthenticator(authenticator);
-
-      
-        String base = "http://localhost:2000";
-        String gstore = "http://localhost:2001";
-        String lookup = "http://localhost:2003";
-        String context = "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context.jsonld";
-        */
         FilterHolder corsFilterHolder = new FilterHolder(new CorsFilter());
 
         FilterHolder corsHolder = new FilterHolder(CrossOriginFilter.class);
@@ -131,16 +111,12 @@ public class Main {
         MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
 
 
-        ServletHolder metadataAnnotateServletHolder = new ServletHolder(new MetadataAnnotateServlet(indexerManager));
-        metadataAnnotateServletHolder.setInitOrder(0);
-        metadataAnnotateServletHolder.getRegistration().setMultipartConfig(multipartConfig);
-
+     
         // Context handler for the unprotected routes
         ServletContextHandler layerContext = new ServletContextHandler();
         layerContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         layerContext.setContextPath("/layer/*");
         layerContext.addServlet(new ServletHolder(new LayerServlet()), "/*");
-
 
         // Context handler for the unprotected routes
         ServletContextHandler readContext = new ServletContextHandler();
@@ -148,43 +124,34 @@ public class Main {
         readContext.setContextPath("/g/*");
         readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
-        // Context handler for the protected routes
-        ServletContextHandler protectedContext = new ServletContextHandler();
-        protectedContext.setContextPath("/*");
-        protectedContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
-        // protectedContext.addServlet(new ServletHolder(new LogoutServlet(loginService)), "/auth/logout");
-
         ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager));
         metadataWriteServletHolder.setInitOrder(0);
         metadataWriteServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
-        protectedContext.addServlet(metadataWriteServletHolder, "/api/save");
-        protectedContext.addServlet(metadataAnnotateServletHolder, "/api/annotate");
-        protectedContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/api/users/*");
+        ServletHolder metadataAnnotateServletHolder = new ServletHolder(new MetadataAnnotateServlet(indexerManager));
+        metadataAnnotateServletHolder.setInitOrder(0);
+        metadataAnnotateServletHolder.getRegistration().setMultipartConfig(multipartConfig);
         
-        // Context handler for the unprotected routes
-        // ServletContextHandler dbContext = new ServletContextHandler();
-        //dbContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        // dbContext.setContextPath("/api/users/*");
+        ServletHolder proxyServlet = new ServletHolder(ProxyServlet.Transparent.class);
+        proxyServlet.setInitParameter("proxyTo", environment.GetLookupBaseURL() + "/api");
 
-        // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
-        // ServletHolder servletHolder = protectedContext.addServlet(MetadataAnnotateServlet.class, "/api/annotate");
-
-        /*
-        SessionHandler sessionHandler = new SessionHandler();
-        protectedContext.setSessionHandler(sessionHandler);
-        protectedContext.setSecurityHandler(security);
-        */
-
-        APIKeyValidator validator = new APIKeyValidator(userDatabaseManager);
-        FilterHolder filterHolder = new FilterHolder(new AuthenticationFilter(validator));
-        protectedContext.addFilter(filterHolder, "/*", null);
-
-        // String configPath, String baseURI, String contextURL, String gstoreBaseURL, String lookupBaseURL
+        FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
+       
+        // Context handler for the protected api routes
+        ServletContextHandler apiContext = new ServletContextHandler();
+        apiContext.setContextPath("/api");
+        apiContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
+        apiContext.addServlet(metadataWriteServletHolder, "/save");
+        apiContext.addServlet(metadataAnnotateServletHolder, "/annotate");
+        apiContext.addServlet(proxyServlet, "/search");
+        apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
+        apiContext.addFilter(authFilterHolder, "/save", null);
+        apiContext.addFilter(authFilterHolder, "/annotate", null);
+        apiContext.addFilter(authFilterHolder, "/users/*", null);
 
         // Set up handler collection
         HandlerList  handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { readContext, layerContext, protectedContext });
+        handlers.setHandlers(new Handler[] { readContext, layerContext, apiContext });
 
         server.setHandler(handlers);
 
