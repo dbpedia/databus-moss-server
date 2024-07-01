@@ -65,7 +65,7 @@ public class MetadataAnnotateServlet extends HttpServlet {
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		
         // Set content type
-        resp.setContentType("application/ld+json");
+            resp.setContentType("application/ld+json");
 
         // Create variables to store form data
         String layerName = null;

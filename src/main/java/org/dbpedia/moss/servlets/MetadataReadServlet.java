@@ -18,7 +18,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.apache.commons.io.FilenameUtils;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -70,7 +69,7 @@ public class MetadataReadServlet extends HttpServlet {
 			String contentType = httpResponse.headers().firstValue("Content-Type").orElse("application/ld+json");
 
 			if (contentType.contains("text/html")) {
-				responseBody = this.parseFolderRequest(responseBody);
+				responseBody = this.parseFolderRequest(requestURL, responseBody);
 				resp.setContentType("application/json");
 			}
 			else {
@@ -98,7 +97,12 @@ public class MetadataReadServlet extends HttpServlet {
 		}
 	}
 
-	public String parseFolderRequest(String responseBody) {
+	public String parseFolderRequest(String baseUrl, String responseBody) throws IOException, InterruptedException   {
+		
+		HttpClient httpClient = HttpClient.newBuilder()
+			.followRedirects(HttpClient.Redirect.ALWAYS)
+			.build();
+
 		Document doc = Jsoup.parse(responseBody);
 		Elements removeParentTag = doc.select("a:contains(Parent Directory)");
 
@@ -110,21 +114,30 @@ public class MetadataReadServlet extends HttpServlet {
 		ArrayList<String> files = new ArrayList<>();
 		ArrayList<String> folders = new ArrayList<>();
 
-		tableData.forEach(element -> {
+		for(Element element : tableData) {
+
 			String fileName = element.text();
-			String fileExtension = FilenameUtils.getExtension(fileName);
-			if ("jsonld".equals(fileExtension)) {
-				files.add(fileName);
-				return;
-			}
+
 			if ("Parent Directory".equals(fileName)) {
-				return;
+				continue;
 			}
 			if (".git/".equals(fileName)) {
-				return;
+				continue;
 			}
-			folders.add(fileName);
-		});
+
+			String url = baseUrl + "/" + fileName;
+			HttpRequest httpRequest = HttpRequest.newBuilder().HEAD().uri(URI.create(url)).build();
+	
+			HttpResponse<Void> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.discarding());
+            String contentType = response.headers().firstValue("Content-Type").orElse("");
+
+            if (contentType.contains("text/html")) {
+                folders.add(fileName);
+            } else {
+                files.add(fileName);
+            }
+		}
+
 
 		JSONObject jsonObject = new JSONObject();
 		jsonObject.put("files", files);

@@ -1,5 +1,5 @@
 <configuration>
-    <!--logger name="org.eclipse.jetty.proxy" level="DEBUG" />-->
+    <logger name="org.eclipse.jetty.proxy" level="DEBUG" />
     <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
         <target>System.err</target>
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
@@ -47,8 +47,8 @@
         </encoder>
     </appender>
     <root level="INFO">
-        <appender-ref ref="STDOUT" />
-        <appender-ref ref="STDERR" />
+        <!--appender-ref ref="STDOUT" /-->
+        <!--appender-ref ref="STDERR" /-->
         <appender-ref ref="FILE" />
     </root>
     <root level="DEBUG">

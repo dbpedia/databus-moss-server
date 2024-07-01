@@ -2,6 +2,7 @@ package org.dbpedia.moss;
 
 import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
+import org.dbpedia.moss.servlets.MossProxyServlet;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.servlets.MetadataAnnotateServlet;
 import org.apache.jena.query.ARQ;
@@ -24,7 +25,6 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
-import org.eclipse.jetty.proxy.ProxyServlet;
 import org.eclipse.jetty.util.security.Constraint;
 
 import jakarta.servlet.DispatcherType;
@@ -132,8 +132,7 @@ public class Main {
         metadataAnnotateServletHolder.setInitOrder(0);
         metadataAnnotateServletHolder.getRegistration().setMultipartConfig(multipartConfig);
         
-        ServletHolder proxyServlet = new ServletHolder(ProxyServlet.Transparent.class);
-        proxyServlet.setInitParameter("proxyTo", environment.GetLookupBaseURL() + "/api");
+        ServletHolder proxyServlet = new ServletHolder(new MossProxyServlet(environment.GetLookupBaseURL()));
 
         FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
        
