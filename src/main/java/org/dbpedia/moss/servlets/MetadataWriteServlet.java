@@ -75,7 +75,6 @@ public class MetadataWriteServlet extends HttpServlet {
         try {
 
             String requestBaseURL = MossUtils.getRequestBaseURL(req);
-
          
             // Read stream to string
             String jsonString = MossUtils.readToString(req.getInputStream());

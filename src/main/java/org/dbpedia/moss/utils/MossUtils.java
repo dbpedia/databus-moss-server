@@ -1,5 +1,6 @@
 package org.dbpedia.moss.utils;
 
+import org.apache.hc.core5.http.NotImplementedException;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Model;
@@ -7,6 +8,7 @@ import org.apache.jena.riot.JsonLDWriteContext;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.writer.JsonLDWriter;
 import org.apache.jena.sparql.core.DatasetGraph;
+import org.dbpedia.moss.DatabusMetadataLayerData;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -274,5 +276,10 @@ public final class MossUtils {
         resourceURL = new URI(resourceURI).toURL();
         String path = resourceURL.getPath();
         return path + "/" + layerName;
+    }
+
+    // TODO
+    public static DatabusMetadataLayerData getLayerData(InputStream stream) throws NotImplementedException {
+        throw new NotImplementedException("isna");
     }
 }
