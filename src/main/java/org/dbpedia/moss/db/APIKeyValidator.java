@@ -48,8 +48,17 @@ public class APIKeyValidator {
 
             // Compare the provided API key with the stored ones using BCrypt
             for (String hashedApiKey : storedApiKeys) {
+
                 if (BCrypt.checkpw(apiKey, hashedApiKey)) {
-                    return userDatabaseManager.getUserInfoBySub(sub); 
+
+                    UserInfo userInfo = userDatabaseManager.getUserInfoBySub(sub); 
+
+                    if(userInfo == null) {
+                        userInfo = new UserInfo();
+                        userInfo.setSub(sub);
+                    }
+
+                    return userInfo;
                 }
             }
 

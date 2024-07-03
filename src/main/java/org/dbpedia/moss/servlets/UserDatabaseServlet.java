@@ -137,20 +137,20 @@ public class UserDatabaseServlet extends HttpServlet {
 
     private void handleGetUser(String sub, HttpServletRequest req, HttpServletResponse res) throws IOException {
         UserInfo userInfo = userDatabase.getUserInfoBySub(sub);
-        
-        if (userInfo != null) {
-            List<String> apiKeyNames = userDatabase.getAPIKeyNamesBySub(sub);
-            userInfo.setApiKeys(apiKeyNames.toArray(new String[0]));
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            String json = objectMapper.writeValueAsString(userInfo);
-
-            res.setContentType("application/json");
-            res.setCharacterEncoding("UTF-8");
-            res.getWriter().write(json);
-        } else {
-            res.sendError(HttpServletResponse.SC_NOT_FOUND, "User not found");
+        if(userInfo == null) {
+            userInfo = new UserInfo();
+            userInfo.setSub(sub);
         }
-    }
+        
+        List<String> apiKeyNames = userDatabase.getAPIKeyNamesBySub(sub);
+        userInfo.setApiKeys(apiKeyNames.toArray(new String[0]));
 
+        ObjectMapper objectMapper = new ObjectMapper();
+        String json = objectMapper.writeValueAsString(userInfo);
+
+        res.setContentType("application/json");
+        res.setCharacterEncoding("UTF-8");
+        res.getWriter().write(json);
+    }
 }
