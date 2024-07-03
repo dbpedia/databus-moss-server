@@ -43,9 +43,11 @@ public class MetadataWriteServlet extends HttpServlet {
 	 */
 	private static final long serialVersionUID = 102831973239L;
     
-    private static final String REQ_LAYER_NAME = "layer";
+    // private static final String REQ_LAYER_NAME = "layer";
 
-    private static final String REQ_RESOURCE_URI = "resource";
+    // private static final String REQ_RESOURCE_URI = "resource";
+
+    private static final String TMP_BASE_URL = "http://example.org/tmp";
 
 
 	final static Logger logger = LoggerFactory.getLogger(MetadataWriteServlet.class);
@@ -70,51 +72,17 @@ public class MetadataWriteServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-         
         try {
 
             String requestBaseURL = MossUtils.getRequestBaseURL(req);
-            // PATH sein wie: /janni/dbpedia-databus/meta1.jsonld
 
-            String layerName = req.getParameter(REQ_LAYER_NAME);
-            String resourceUri = req.getParameter(REQ_RESOURCE_URI);
-
-            if(layerName == null || layerName.length() == 0) {
-                resp.getWriter().write("Invalid layer name.");
-                resp.setStatus(400);
-                return;
-            }
-
-            if(resourceUri == null || !MossUtils.isValidResourceURI(resourceUri)) {
-                resp.getWriter().write("Invalid resource URI.");
-                resp.setStatus(400);
-                return;
-            }
-
-            String repo = MossUtils.getGStoreRepo(resourceUri);
-            String path = MossUtils.getGStorePath(resourceUri, layerName);
-
+         
             // Read stream to string
             String jsonString = MossUtils.readToString(req.getInputStream());
 
-            System.out.println("REQ Repo: " + repo);
-            System.out.println("REQ Path: " + path);
-            // System.out.println(jsonString);
-
-            if(repo == null || path == null) {
-                resp.setStatus(400);
-                return;
-
-            }
-
-            String documentURL = CreateDocumentURI(requestBaseURL, repo, path); 
-
-            System.out.println("Future doc URL: " + documentURL);
-
             InputStream inputStream = new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8));
-
             Model model = ModelFactory.createDefaultModel();
-            RDFDataMgr.read(model, inputStream, documentURL, Lang.JSONLD);
+            RDFDataMgr.read(model, inputStream, TMP_BASE_URL, Lang.JSONLD);
         
             Resource metadataLayerType = ResourceFactory.createResource(RDFUris.MOSS_DATABUS_METADATA_LAYER);
             ExtendedIterator<Statement> metadataLayerStatements = model.listStatements(null, RDF.type, metadataLayerType);
@@ -161,6 +129,36 @@ public class MetadataWriteServlet extends HttpServlet {
             stmtIterator.close();
 
             if(layerData.isValid()) {
+
+                String layerName = layerData.getName();
+                String resourceUri = layerData.getDatabusURI();
+    
+                if(layerName == null || layerName.length() == 0) {
+                    resp.getWriter().write("Invalid layer name.");
+                    resp.setStatus(400);
+                    return;
+                }
+    
+                if(resourceUri == null || !MossUtils.isValidResourceURI(resourceUri)) {
+                    resp.getWriter().write("Invalid resource URI.");
+                    resp.setStatus(400);
+                    return;
+                }
+    
+                String repo = MossUtils.getGStoreRepo(resourceUri);
+                String path = MossUtils.getGStorePath(resourceUri, layerName);
+    
+                System.out.println("REQ Repo: " + repo);
+                System.out.println("REQ Path: " + path);
+                // System.out.println(jsonString);
+    
+                if(repo == null || path == null) {
+                    resp.setStatus(400);
+                    return;
+                }
+    
+                String documentURL = CreateDocumentURI(requestBaseURL, repo, path); 
+                System.out.println("Future doc URL: " + documentURL);
 
                 // Write unchanged json string
                 gstoreConnector.write(requestBaseURL, repo, path, jsonString);
