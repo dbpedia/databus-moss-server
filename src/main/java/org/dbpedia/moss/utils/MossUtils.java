@@ -46,7 +46,7 @@ public final class MossUtils {
             return str_array[0];
         }
     }
-    
+
 
     public static String createAnnotationFileURI(String baseURL, String modType, String databusIdentifier) {
         List<String> pathSegments = new ArrayList<String>();
@@ -129,7 +129,7 @@ public final class MossUtils {
         String jsonLDContext = null;
         try {
             jsonLDContext = MossUtils.fetchJSON(MossUtils.contextURL);
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -223,13 +223,13 @@ public final class MossUtils {
     public static String getRequestBaseURL(HttpServletRequest req) {
           // Get the protocol (http or https)
           String protocol = req.getScheme();
-        
+
           // Get the server name
           String serverName = req.getServerName();
-          
+
           // Get the server port
           int serverPort = req.getServerPort();
-          
+
           // Construct the base URL
           String baseURL = protocol + "://" + serverName;
           if ((protocol.equals("http") && serverPort != 80) || (protocol.equals("https") && serverPort != 443)) {
@@ -269,7 +269,7 @@ public final class MossUtils {
     }
 
 
-    public static String getGStorePath(String resourceURI, String layerName) 
+    public static String getGStorePath(String resourceURI, String layerName)
     throws MalformedURLException, URISyntaxException {
         resourceURI = resourceURI.replace("#", "%23");
         URL resourceURL = null;
@@ -282,4 +282,22 @@ public final class MossUtils {
     public static DatabusMetadataLayerData getLayerData(InputStream stream) throws NotImplementedException {
         throw new NotImplementedException("isna");
     }
+
+    public static String createDocumentURI(String base, String repo, String path) {
+
+        if(repo.startsWith("/")) {
+            repo = repo.substring(1);
+        }
+
+        if(repo.endsWith("/")) {
+            repo.substring(0, repo.length() - 1);
+        }
+
+        if(path.startsWith("/")) {
+            path = path.substring(1);
+        }
+
+        return base + "/g/" + repo + "/" + path;
+    }
+
 }

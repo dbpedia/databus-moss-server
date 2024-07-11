@@ -11,11 +11,10 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.apache.jena.riot.RiotException;
 import org.dbpedia.moss.DatabusMetadataLayerData;
 import org.dbpedia.moss.GstoreConnector;
 import org.dbpedia.moss.indexer.IndexerManager;
-import org.dbpedia.moss.servlets.MetadataValidateServlet.Tuple2;
-import org.dbpedia.moss.servlets.MetadataValidateServlet.ValidationException;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.utils.MossUtils;
 import org.slf4j.Logger;
@@ -71,21 +70,16 @@ public class MetadataWriteServlet extends HttpServlet {
             String jsonString = MossUtils.readToString(req.getInputStream());
 
             InputStream inputStream = new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8));
+            DatabusMetadataLayerData layerData = DatabusMetadataLayerData.parse(requestBaseURL, inputStream);
 
-            DatabusMetadataLayerData layerData = this.vadlidateServlet.validateInputStream(inputStream);
-            Tuple2<String, String> result = this.vadlidateServlet.validateLayerData(layerData);
-
-            String repo = result.getRepo();
-            String path = result.getPath();
-
-            String documentURL = CreateDocumentURI(requestBaseURL, repo, path);
-            System.out.println("Future doc URL: " + documentURL);
+            // String documentURL = MossUtils.createDocumentURI(requestBaseURL, repo, path);
+            // System.out.println("Future doc URL: " + documentURL);
 
             // Write unchanged json string
-            gstoreConnector.write(requestBaseURL, repo, path, jsonString);
+            gstoreConnector.write(requestBaseURL, layerData.getRepo(), layerData.getPath(), jsonString);
 
             // Update indices
-            indexerManager.updateIndices(layerData.getUri(), layerData.getName());
+            indexerManager.updateIndices(layerData.getUri(), layerData.getLayerName());
 
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
@@ -99,6 +93,10 @@ public class MetadataWriteServlet extends HttpServlet {
             e.printStackTrace();
             resp.setStatus(400);
             return;
+        } catch (RiotException e) {
+            e.printStackTrace();
+            resp.setStatus(400);
+            return;
         } catch (Exception e) {
             e.printStackTrace();
             resp.setStatus(500);
@@ -107,24 +105,6 @@ public class MetadataWriteServlet extends HttpServlet {
 
         resp.setStatus(200);
     }
-
-    private String CreateDocumentURI(String base, String repo, String path) {
-
-        if(repo.startsWith("/")) {
-            repo = repo.substring(1);
-        }
-
-        if(repo.endsWith("/")) {
-            repo.substring(0, repo.length() - 1);
-        }
-
-        if(path.startsWith("/")) {
-            path = path.substring(1);
-        }
-
-        return base + "/g/" + repo + "/" + path;
-    }
-
 
 }
 

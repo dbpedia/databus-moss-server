@@ -1,6 +1,7 @@
 package org.dbpedia.moss;
 
 import org.dbpedia.moss.servlets.MetadataReadServlet;
+import org.dbpedia.moss.servlets.MetadataValidateServlet;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
 import org.dbpedia.moss.servlets.MossProxyServlet;
 import org.dbpedia.moss.utils.MossEnvironment;
@@ -78,7 +79,7 @@ public class Main {
         System.out.println(environment.toString());
 
         waitForGstore(environment.getGstoreBaseURL());
-        
+
         UserDatabaseManager userDatabaseManager = new UserDatabaseManager(environment.getUserDatabasePath());
         IndexerManager indexerManager = new IndexerManager(environment);
 
@@ -111,7 +112,7 @@ public class Main {
         MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
 
 
-     
+
         // Context handler for the unprotected routes
         ServletContextHandler layerContext = new ServletContextHandler();
         layerContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
@@ -131,11 +132,11 @@ public class Main {
         ServletHolder metadataAnnotateServletHolder = new ServletHolder(new MetadataAnnotateServlet(indexerManager));
         metadataAnnotateServletHolder.setInitOrder(0);
         metadataAnnotateServletHolder.getRegistration().setMultipartConfig(multipartConfig);
-        
+
         ServletHolder proxyServlet = new ServletHolder(new MossProxyServlet(environment.GetLookupBaseURL()));
 
         FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
-       
+
         // Context handler for the protected api routes
         ServletContextHandler apiContext = new ServletContextHandler();
         apiContext.setContextPath("/api");
@@ -143,6 +144,7 @@ public class Main {
         apiContext.addServlet(metadataWriteServletHolder, "/save");
         apiContext.addServlet(metadataAnnotateServletHolder, "/annotate");
         apiContext.addServlet(proxyServlet, "/search");
+        apiContext.addServlet(new ServletHolder(new MetadataValidateServlet()), "/validate");
         // TODO: add validate servlet here (pathSpec: /validate)
         apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
         apiContext.addFilter(authFilterHolder, "/save", null);

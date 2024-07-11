@@ -12,11 +12,11 @@ import java.sql.PreparedStatement;
 public class UserDatabaseManager {
 
     private static String prefix = "jdbc:sqlite:";
-    private String userDatabasePath = "/home/john/Documents/workspace/whk/moss-jetty/devenv/sqlite/auth.db";
+    private String userDatabasePath = "";
 
     public UserDatabaseManager(String userDatabasePath) {
         this.userDatabasePath = userDatabasePath;
- 
+
         try {
             executeUpdate(new IStatementProvider() {
                 @Override
@@ -45,7 +45,7 @@ public class UserDatabaseManager {
      */
     public List<String> getAPIKeysBySub(String sub) {
         List<String> apiKeys = new ArrayList<>();
-    
+
         executeSelect(QUERY_SELECT_API_KEYS_BY_SUB, new IResultSetCallback() {
             @Override
             public void process(ResultSet rs) throws SQLException {
@@ -54,7 +54,7 @@ public class UserDatabaseManager {
                 }
             }
         }, sub);
-    
+
         return apiKeys;
     }
 
@@ -93,7 +93,7 @@ public class UserDatabaseManager {
     }
 
 
-   
+
     public void updateUsername(String sub, String username) throws SQLException {
         executeUpdate(new IStatementProvider() {
             @Override
@@ -112,7 +112,7 @@ public class UserDatabaseManager {
             public PreparedStatement createStatement(Connection connection) throws SQLException {
                 PreparedStatement preparedStmt = connection.prepareStatement(QUERY_INSERT_API_KEY);
                 preparedStmt.setString(1, name);
-                preparedStmt.setString(2, sub);         
+                preparedStmt.setString(2, sub);
                 preparedStmt.setString(3, key);
                 return preparedStmt;
             }
@@ -125,7 +125,7 @@ public class UserDatabaseManager {
             public PreparedStatement createStatement(Connection connection) throws SQLException {
                 PreparedStatement preparedStmt = connection.prepareStatement(QUERY_DELETE_API_KEY);
                 preparedStmt.setString(1, sub);
-                preparedStmt.setString(2, name);   
+                preparedStmt.setString(2, name);
                 return preparedStmt;
             }
         });
@@ -139,7 +139,7 @@ public class UserDatabaseManager {
 
         try {
             conn = DriverManager.getConnection(getDatabaseURL());
-            
+
             PreparedStatement statement = statementProvider.createStatement(conn);
             int updatedRows = statement.executeUpdate();
             System.out.println(String.format("Prepared statement:\n%s", statement.toString()));
