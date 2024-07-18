@@ -27,8 +27,8 @@ public class GstoreConnector {
     private static final String HEADER_ACCEPT = "Accept";
     private static final String HEADER_CONTENT_TYPE = "Content-Type";
     private static final String APPLICATION_LD_JSON = "application/ld+json";
-    private static final String GRAPH_READ_ENDPOINT = "/graph/read";
-    private static final String GRAPH_SAVE_ENDPOINT = "/graph/save";
+    private static final String GRAPH_READ_ENDPOINT = "/document/read";
+    private static final String GRAPH_SAVE_ENDPOINT = "/document/save";
     private static final String REQ_PARAM_PREFIX = "prefix";
     private static final String REQ_PARAM_REPO = "repo";
     private static final String REQ_PARAM_PATH = "path";
@@ -105,7 +105,7 @@ public class GstoreConnector {
             }
             reader.close();
             System.out.println("Response Body: " + response.toString());
-         
+
             connection.disconnect();
         } catch (Exception e) {
             e.printStackTrace();
