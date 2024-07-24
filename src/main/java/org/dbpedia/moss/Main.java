@@ -6,6 +6,7 @@ import org.dbpedia.moss.servlets.MetadataWriteServlet;
 import org.dbpedia.moss.servlets.MossProxyServlet;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.servlets.MetadataAnnotateServlet;
+import org.dbpedia.moss.servlets.MetadataBrowseServlet;
 import org.apache.jena.query.ARQ;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -125,6 +126,12 @@ public class Main {
         readContext.setContextPath("/g/*");
         readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
+        // Context handler for the unprotected routes
+        ServletContextHandler browseContext = new ServletContextHandler();
+        browseContext.addFilter(corsHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        browseContext.setContextPath("/browse/*");
+        browseContext.addServlet(new ServletHolder(new MetadataBrowseServlet()), "/*");
+
         ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager));
         metadataWriteServletHolder.setInitOrder(0);
         metadataWriteServletHolder.getRegistration().setMultipartConfig(multipartConfig);
@@ -153,7 +160,7 @@ public class Main {
 
         // Set up handler collection
         HandlerList  handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { readContext, layerContext, apiContext });
+        handlers.setHandlers(new Handler[] { readContext, browseContext, layerContext, apiContext });
 
         server.setHandler(handlers);
 

@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
  * Post-processes requests and sends the query to the LuceneLookupSearcher,
  * which translates requests into lucene queries
  */
-public class MetadataReadServlet extends HttpServlet {
+public class MetadataBrowseServlet extends HttpServlet {
 
 	/**
 	 *
@@ -48,11 +48,8 @@ public class MetadataReadServlet extends HttpServlet {
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		// Construct the URL for the request
 		String requestURL = this.configuration.getGstoreBaseURL() + req.getRequestURI();
-
-		requestURL = requestURL.replace(this.configuration.getGstoreBaseURL() + "/g/",
-			this.configuration.getGstoreBaseURL() + "/document/read");
-
-		requestURL += "?repo=" + req.getParameter("repo") + "&path=" + req.getParameter("path");
+		requestURL = requestURL.replace(this.configuration.getGstoreBaseURL() + "/browse",
+			this.configuration.getGstoreBaseURL() + "/file");
 
 		HttpClient httpClient = HttpClient.newBuilder()
 			.followRedirects(HttpClient.Redirect.ALWAYS)
@@ -70,7 +67,15 @@ public class MetadataReadServlet extends HttpServlet {
 			// Get the content type from the HTTP response headers
 			String contentType = httpResponse.headers().firstValue("Content-Type").orElse("application/ld+json");
 
-			resp.setContentType(contentType);
+			if (contentType.contains("text/html")) {
+				responseBody = this.parseFolderRequest(requestURL, responseBody);
+				resp.setContentType("application/json");
+			}
+			else {
+				// Set the content type of the servlet response
+				resp.setContentType(contentType);
+			}
+
 			PrintWriter writer = resp.getWriter();
 			System.out.println(responseBody);
 
