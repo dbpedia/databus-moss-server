@@ -194,6 +194,11 @@ public class DatabusMetadataLayerData {
             throw new ValidationException("Empty path.");
         }
 
+        String extension = ".jsonld";
+        if(!path.endsWith(extension)) {
+            path += extension;
+        }
+
         String documentURL = MossUtils.createDocumentURI(baseURL, repo, path);
         Model model = ModelFactory.createDefaultModel();
         inputStream.reset();

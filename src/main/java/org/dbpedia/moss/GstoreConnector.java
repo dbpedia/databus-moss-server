@@ -29,7 +29,7 @@ public class GstoreConnector {
     private static final String APPLICATION_LD_JSON = "application/ld+json";
     private static final String GRAPH_READ_ENDPOINT = "/document/read";
     private static final String GRAPH_SAVE_ENDPOINT = "/document/save";
-    private static final String REQ_PARAM_PREFIX = "prefix";
+    // private static final String REQ_PARAM_PREFIX = "prefix";
     private static final String REQ_PARAM_REPO = "repo";
     private static final String REQ_PARAM_PATH = "path";
     private static final String THE_G = "/g/";
@@ -72,8 +72,7 @@ public class GstoreConnector {
         try {
 
             String uri = gstoreBaseURL + GRAPH_SAVE_ENDPOINT;
-            uri += "?" + REQ_PARAM_PREFIX + "=" + URLEncoder.encode(baseURL + THE_G, CHAR_ENCODING_UTF8);
-            uri += "&" + REQ_PARAM_REPO + "=" + URLEncoder.encode( repo, CHAR_ENCODING_UTF8);
+            uri += "?" + REQ_PARAM_REPO + "=" + URLEncoder.encode( repo, CHAR_ENCODING_UTF8);
             uri += "&" + REQ_PARAM_PATH + "=" +  URLEncoder.encode(path, CHAR_ENCODING_UTF8);
 
             System.out.println("SAVING " + json);
