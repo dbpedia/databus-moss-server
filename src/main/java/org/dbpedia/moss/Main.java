@@ -132,7 +132,7 @@ public class Main {
         browseContext.setContextPath("/browse/*");
         browseContext.addServlet(new ServletHolder(new MetadataBrowseServlet()), "/*");
 
-        ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager));
+        ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager, userDatabaseManager));
         metadataWriteServletHolder.setInitOrder(0);
         metadataWriteServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
@@ -152,7 +152,6 @@ public class Main {
         apiContext.addServlet(metadataAnnotateServletHolder, "/annotate");
         apiContext.addServlet(proxyServlet, "/search");
         apiContext.addServlet(new ServletHolder(new MetadataValidateServlet()), "/validate");
-        // TODO: add validate servlet here (pathSpec: /validate)
         apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
         apiContext.addFilter(authFilterHolder, "/save", null);
         apiContext.addFilter(authFilterHolder, "/annotate", null);
