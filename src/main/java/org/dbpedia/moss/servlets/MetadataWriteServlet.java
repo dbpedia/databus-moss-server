@@ -11,15 +11,16 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.dbpedia.moss.DatabusMetadataLayerData;
-import org.dbpedia.moss.GstoreConnector;
-import org.dbpedia.moss.indexer.IndexerManager;
-import org.dbpedia.moss.servlets.MetadataValidateServlet.Tuple2;
-import org.dbpedia.moss.servlets.MetadataValidateServlet.ValidationException;
-import org.dbpedia.moss.utils.MossEnvironment;
-import org.dbpedia.moss.utils.MossUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.jena.riot.RiotException;
+import org.dbpedia.moss.DatabusMetadataLayerData;
+import org.dbpedia.moss.GstoreConnector;
+import org.dbpedia.moss.db.UserDatabaseManager;
+import org.dbpedia.moss.db.UserInfo;
+import org.dbpedia.moss.indexer.IndexerManager;
+import org.dbpedia.moss.utils.MossEnvironment;
+import org.dbpedia.moss.utils.MossUtils;
 
 /**
  * HTTP Servlet with handlers for the single lookup API request "/api/search"
@@ -46,11 +47,11 @@ public class MetadataWriteServlet extends HttpServlet {
 
     private IndexerManager indexerManager;
 
-    private MetadataValidateServlet vadlidateServlet;
+    private UserDatabaseManager userDatabaseManager;
 
-	public MetadataWriteServlet(IndexerManager indexerManager) {
+	public MetadataWriteServlet(IndexerManager indexerManager, UserDatabaseManager userDatabaseManager) {
         this.indexerManager = indexerManager;
-        this.vadlidateServlet = new MetadataValidateServlet();
+        this.userDatabaseManager = userDatabaseManager;
     }
 
     @Override
@@ -64,28 +65,21 @@ public class MetadataWriteServlet extends HttpServlet {
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         try {
-
+            UserInfo userInfo = this.getUserInfo(req);
             String requestBaseURL = MossUtils.getRequestBaseURL(req);
-
-            // Read stream to string
             String jsonString = MossUtils.readToString(req.getInputStream());
 
             InputStream inputStream = new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8));
+            DatabusMetadataLayerData layerData = DatabusMetadataLayerData.parse(requestBaseURL, inputStream);
 
-            DatabusMetadataLayerData layerData = this.vadlidateServlet.validateInputStream(inputStream);
-            Tuple2<String, String> result = this.vadlidateServlet.validateLayerData(layerData);
-
-            String repo = result.getRepo();
-            String path = result.getPath();
-
-            String documentURL = CreateDocumentURI(requestBaseURL, repo, path);
-            System.out.println("Future doc URL: " + documentURL);
+            System.out.println("\ninputt");
+            System.out.println(jsonString);
 
             // Write unchanged json string
-            gstoreConnector.write(requestBaseURL, repo, path, jsonString);
+            gstoreConnector.write(requestBaseURL, layerData.getRepo(), layerData.getPath(), jsonString, userInfo.getUsername());
 
             // Update indices
-            indexerManager.updateIndices(layerData.getUri(), layerData.getName());
+            indexerManager.updateIndices(layerData.getUri(), layerData.getLayerName());
 
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
@@ -99,6 +93,10 @@ public class MetadataWriteServlet extends HttpServlet {
             e.printStackTrace();
             resp.setStatus(400);
             return;
+        } catch (RiotException e) {
+            e.printStackTrace();
+            resp.setStatus(400);
+            return;
         } catch (Exception e) {
             e.printStackTrace();
             resp.setStatus(500);
@@ -108,128 +106,21 @@ public class MetadataWriteServlet extends HttpServlet {
         resp.setStatus(200);
     }
 
-    private String CreateDocumentURI(String base, String repo, String path) {
+    private UserInfo getUserInfo(HttpServletRequest request) throws ValidationException {
+            Object sub = request.getAttribute("sub");
 
-        if(repo.startsWith("/")) {
-            repo = repo.substring(1);
-        }
+            if (sub == null) {
+                throw new ValidationException("sub zero.");
+            }
 
-        if(repo.endsWith("/")) {
-            repo.substring(0, repo.length() - 1);
-        }
+            UserInfo userInfo = userDatabaseManager.getUserInfoBySub(sub.toString());
+            System.out.println(userInfo);
 
-        if(path.startsWith("/")) {
-            path = path.substring(1);
-        }
+            if (userInfo == null || userInfo.getUsername().isEmpty()) {
+                throw new ValidationException("User null or username missing");
+            }
 
-        return base + "/g/" + repo + "/" + path;
+            return userInfo;
     }
-
 
 }
-
-/**
- *   try {
-
-            String requestBaseURL = MossUtils.getRequestBaseURL(req);
-            // PATH sein wie: /janni/dbpedia-databus/meta1.jsonld
-            String repo = req.getParameter(REQ_REPO);
-            String path = req.getParameter(REQ_PARAM_PATH);
-
-            // TODO: Validate path (darf nicht mit / enden usw);
-
-            // Read stream to string
-            String jsonString = MossUtils.readToString(req.getInputStream());
-
-            System.out.println("REQ Repo: " + repo);
-            System.out.println("REQ Path: " + path);
-            // System.out.println(jsonString);
-
-            if(repo == null || path == null) {
-                resp.setStatus(400);
-                return;
-
-            }
-
-            String documentURL = CreateDocumentURI(requestBaseURL, repo, path);
-
-            System.out.println("Future doc URL: " + documentURL);
-
-            InputStream inputStream = new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8));
-
-            Model model = ModelFactory.createDefaultModel();
-            RDFDataMgr.read(model, inputStream, documentURL, Lang.JSONLD);
-
-            Resource metadataLayerType = ResourceFactory.createResource(RDFUris.MOSS_DATABUS_METADATA_LAYER);
-            ExtendedIterator<Statement> metadataLayerStatements = model.listStatements(null, RDF.type, metadataLayerType);
-
-            if(!metadataLayerStatements.hasNext()) {
-                resp.setStatus(400);
-                return;
-            }
-
-            Statement statement = metadataLayerStatements.next();
-
-            // Remember to close the iterator
-            metadataLayerStatements.close();
-
-            Resource resource = statement.getSubject();
-            DatabusMetadataLayerData layerData = new DatabusMetadataLayerData(resource.toString());
-
-            // Do something with the resource
-            System.out.println("Resource of type " + metadataLayerType + ": " + resource);
-
-            // Read all triples that have this resource as a subject
-            StmtIterator stmtIterator = model.listStatements(resource, null, (RDFNode) null);
-
-            while (stmtIterator.hasNext()) {
-                Statement triple = stmtIterator.next();
-                RDFNode object = triple.getObject();
-                String predicateURI = triple.getPredicate().getURI();
-
-                // Do something with the triple
-                System.out.println("Triple: " + triple);
-
-                // Check the predicate of the triple and set the corresponding field in layerData
-                if (predicateURI.equals(RDFUris.MOSS_LAYERNAME)) {
-                    layerData.setName(object.toString());
-                    continue;
-                }
-
-                if (predicateURI.equals(RDFUris.MOSS_EXTENDS)) {
-                    layerData.setDatabusURI(object.toString());
-                    continue;
-                }
-            }
-
-            stmtIterator.close();
-
-            if(layerData.isValid()) {
-
-                // Write unchanged json string
-                gstoreConnector.write(requestBaseURL, repo, path, jsonString);
-
-                // Update indices
-                indexerManager.updateIndices(layerData.getUri(), layerData.getName());
-
-            } else {
-                System.out.println("Invalid layer data: " + layerData.toString());
-                resp.setStatus(400);
-            }
-
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-            resp.setStatus(400);
-            return;
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-            resp.setStatus(400);
-            return;
-        } catch (Exception e) {
-            e.printStackTrace();
-            resp.setStatus(500);
-            return;
-        }
-
-        resp.setStatus(200);
- */

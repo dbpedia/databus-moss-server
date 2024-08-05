@@ -15,7 +15,7 @@
                 "MOSS_BASE_URL": "http://localhost:8080",
                 "GSTORE_BASE_URL": "http://localhost:5003",
                 "LOOKUP_BASE_URL": "http://localhost:5002",
-                "USER_DATABASE_PATH": "./devenv/users.db",
+                "USER_DATABASE_PATH": "./devenv/sqlite/users.db",
                 "JWT_VERBOSE": true
             }
         }

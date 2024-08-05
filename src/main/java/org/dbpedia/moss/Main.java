@@ -1,10 +1,12 @@
 package org.dbpedia.moss;
 
 import org.dbpedia.moss.servlets.MetadataReadServlet;
+import org.dbpedia.moss.servlets.MetadataValidateServlet;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
 import org.dbpedia.moss.servlets.MossProxyServlet;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.servlets.MetadataAnnotateServlet;
+import org.dbpedia.moss.servlets.MetadataBrowseServlet;
 import org.apache.jena.query.ARQ;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -78,7 +80,7 @@ public class Main {
         System.out.println(environment.toString());
 
         waitForGstore(environment.getGstoreBaseURL());
-        
+
         UserDatabaseManager userDatabaseManager = new UserDatabaseManager(environment.getUserDatabasePath());
         IndexerManager indexerManager = new IndexerManager(environment);
 
@@ -111,7 +113,7 @@ public class Main {
         MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
 
 
-     
+
         // Context handler for the unprotected routes
         ServletContextHandler layerContext = new ServletContextHandler();
         layerContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
@@ -124,18 +126,24 @@ public class Main {
         readContext.setContextPath("/g/*");
         readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
-        ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager));
+        // Context handler for the unprotected routes
+        ServletContextHandler browseContext = new ServletContextHandler();
+        browseContext.addFilter(corsHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        browseContext.setContextPath("/browse/*");
+        browseContext.addServlet(new ServletHolder(new MetadataBrowseServlet()), "/*");
+
+        ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager, userDatabaseManager));
         metadataWriteServletHolder.setInitOrder(0);
         metadataWriteServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
         ServletHolder metadataAnnotateServletHolder = new ServletHolder(new MetadataAnnotateServlet(indexerManager));
         metadataAnnotateServletHolder.setInitOrder(0);
         metadataAnnotateServletHolder.getRegistration().setMultipartConfig(multipartConfig);
-        
+
         ServletHolder proxyServlet = new ServletHolder(new MossProxyServlet(environment.GetLookupBaseURL()));
 
         FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
-       
+
         // Context handler for the protected api routes
         ServletContextHandler apiContext = new ServletContextHandler();
         apiContext.setContextPath("/api");
@@ -143,7 +151,7 @@ public class Main {
         apiContext.addServlet(metadataWriteServletHolder, "/save");
         apiContext.addServlet(metadataAnnotateServletHolder, "/annotate");
         apiContext.addServlet(proxyServlet, "/search");
-        // apiContext.addServlet(new ServletHolder(new MetadataValidateServlet());
+        apiContext.addServlet(new ServletHolder(new MetadataValidateServlet()), "/validate");
         apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
         apiContext.addFilter(authFilterHolder, "/save", null);
         apiContext.addFilter(authFilterHolder, "/annotate", null);
@@ -151,7 +159,7 @@ public class Main {
 
         // Set up handler collection
         HandlerList  handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { readContext, layerContext, apiContext });
+        handlers.setHandlers(new Handler[] { readContext, browseContext, layerContext, apiContext });
 
         server.setHandler(handlers);
 
