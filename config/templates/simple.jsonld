@@ -1,0 +1,10 @@
+{
+    "@context": "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context2.jsonld",
+    "@id": "%DATABUS_RESOURCE%",
+    "isExtendedBy": {
+       "@id": "#layer",
+       "@type": "DatabusMetadataLayer",
+       "layerName": "%LAYER_NAME%",
+       "created": "%CREATED_DATE%"
+    }
+ }

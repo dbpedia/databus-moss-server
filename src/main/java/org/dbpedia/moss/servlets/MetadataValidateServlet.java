@@ -2,7 +2,6 @@ package org.dbpedia.moss.servlets;
 
 import java.io.InputStream;
 
-import org.apache.jena.atlas.lib.tuple.Tuple2;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
@@ -17,6 +16,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.dbpedia.moss.DatabusMetadataLayerData;
 import org.dbpedia.moss.utils.MossUtils;
 import org.dbpedia.moss.utils.RDFUris;
+
 
 
 public class MetadataValidateServlet {

@@ -143,7 +143,7 @@ public class Main {
         apiContext.addServlet(metadataWriteServletHolder, "/save");
         apiContext.addServlet(metadataAnnotateServletHolder, "/annotate");
         apiContext.addServlet(proxyServlet, "/search");
-        // TODO: add validate servlet here (pathSpec: /validate)
+        // apiContext.addServlet(new ServletHolder(new MetadataValidateServlet());
         apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
         apiContext.addFilter(authFilterHolder, "/save", null);
         apiContext.addFilter(authFilterHolder, "/annotate", null);
