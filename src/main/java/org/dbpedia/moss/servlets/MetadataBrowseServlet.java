@@ -18,6 +18,8 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -42,6 +44,7 @@ public class MetadataBrowseServlet extends HttpServlet {
 	@Override
 	public void init() throws ServletException {
 		configuration = MossEnvironment.get();
+        // gstoreConnector = new GstoreConnector(configuration.getGstoreBaseURL());
 	}
 
 	@Override
@@ -49,7 +52,7 @@ public class MetadataBrowseServlet extends HttpServlet {
 		// Construct the URL for the request
 		String requestURL = this.configuration.getGstoreBaseURL() + req.getRequestURI();
 		requestURL = requestURL.replace(this.configuration.getGstoreBaseURL() + "/browse",
-			this.configuration.getGstoreBaseURL() + "/file");
+			this.configuration.getGstoreBaseURL() + "/file/content");
 
 		HttpClient httpClient = HttpClient.newBuilder()
 			.followRedirects(HttpClient.Redirect.ALWAYS)
@@ -65,19 +68,22 @@ public class MetadataBrowseServlet extends HttpServlet {
 			// Get the response body
 			String responseBody = httpResponse.body();
 			// Get the content type from the HTTP response headers
-			String contentType = httpResponse.headers().firstValue("Content-Type").orElse("application/ld+json");
+			String contentType = httpResponse.headers().firstValue("Content-Type").orElse(null);
 
-			if (contentType.contains("text/html")) {
+			if (contentType != null && contentType.contains("text/html")) {
 				responseBody = this.parseFolderRequest(requestURL, responseBody);
 				resp.setContentType("application/json");
-			}
-			else {
+			} else {
 				// Set the content type of the servlet response
-				resp.setContentType(contentType);
+				Lang lang =	RDFLanguages.resourceNameToLang(requestURL);
+
+				if(lang != null) {
+					resp.setContentType(lang.getContentType().toHeaderString());
+				}
 			}
 
 			PrintWriter writer = resp.getWriter();
-			System.out.println(responseBody);
+			// System.out.println(responseBody);
 
 			if(responseBody.startsWith("Requesting")) {
 				resp.setStatus(404);

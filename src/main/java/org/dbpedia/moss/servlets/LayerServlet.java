@@ -13,7 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.dbpedia.moss.MossConfiguration;
-import org.dbpedia.moss.indexer.MossLayer;
+import org.dbpedia.moss.indexer.MossLayerType;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.utils.MossUtils;
 import org.json.JSONObject;
@@ -57,10 +57,10 @@ public class LayerServlet extends HttpServlet {
 			return;
 		}
 
-		MossLayer layer = null;
+		MossLayerType layer = null;
 		
 		for(int i = 0; i < mossConfiguration.getLayers().size(); i++) {
-			MossLayer l = mossConfiguration.getLayers().get(i);
+			MossLayerType l = mossConfiguration.getLayers().get(i);
 
 			if(l.getName().equals(layerName)) {
 				layer = l;
@@ -107,11 +107,19 @@ public class LayerServlet extends HttpServlet {
 			ArrayList<JSONObject> layers = new ArrayList<>();
 
 			for(int i = 0; i < mossConfiguration.getLayers().size(); i++) {
-				MossLayer layer = mossConfiguration.getLayers().get(i);
+				MossLayerType layer = mossConfiguration.getLayers().get(i);
 				JSONObject layerObject = new JSONObject();
 
 				layerObject.put("name", layer.getName());
 				layerObject.put("uri", requestBaseURL + layerPrefix + "/" + layer.getName());
+
+				int dotIndex = layer.getTemplate().lastIndexOf(".");
+				
+				if(dotIndex >= 0) {
+					layerObject.put("format", layer.getTemplate().substring(dotIndex + 1));
+				}
+
+				layerObject.put("template", layer.getTemplateContent());
 				
 				layers.add(layerObject);
 			}

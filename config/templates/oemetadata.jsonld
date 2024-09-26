@@ -1,0 +1,5 @@
+{
+    "@context" : "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context2.jsonld",
+    "@id" : "%DATABUS_RESOURCE%",
+    "isAbout": "http://dbpedia.org/resource/Paris"      
+  }

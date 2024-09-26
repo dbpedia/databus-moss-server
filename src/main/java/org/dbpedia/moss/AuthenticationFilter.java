@@ -53,6 +53,12 @@ public class AuthenticationFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
+        if(httpRequest.getMethod() == "OPTIONS") {
+            chain.doFilter(request, response);
+            return;
+        }
+
+
         // Check for X-API-Key header first
         String apiKeyHeader = httpRequest.getHeader("X-API-Key");
         

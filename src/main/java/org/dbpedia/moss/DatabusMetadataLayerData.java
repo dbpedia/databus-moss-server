@@ -131,10 +131,11 @@ public class DatabusMetadataLayerData {
         return statement.getSubject();
     }
 
-    public static DatabusMetadataLayerData parse(String baseURL, InputStream inputStream) throws Exception {
+    public static DatabusMetadataLayerData parse(String baseURL, InputStream inputStream, Lang language) throws Exception {
         String TMP_BASE_URL = "http://example.org/tmp";
         Model tmpModel = ModelFactory.createDefaultModel();
-        RDFDataMgr.read(tmpModel, inputStream, TMP_BASE_URL, Lang.JSONLD);
+        RDFDataMgr.read(tmpModel, inputStream, TMP_BASE_URL, language);
+        inputStream.reset();
 
         Resource metadataLayerResource = getMetadataLayerURI(tmpModel);;
         String layerName = null;
@@ -147,9 +148,6 @@ public class DatabusMetadataLayerData {
             Statement triple = stmtIterator.next();
             RDFNode object = triple.getObject();
             String predicateURI = triple.getPredicate().getURI();
-
-            // Do something with the triple
-            System.out.println("Triple: " + triple);
 
             // Check the predicate of the triple and set the corresponding field in layerData
             if (predicateURI.equals(RDFUris.MOSS_LAYERNAME)) {
@@ -166,7 +164,6 @@ public class DatabusMetadataLayerData {
         }
 
         stmtIterator.close();
-
 
         if(layerName == null || layerName.length() == 0) {
             throw new ValidationException("Invalid layer name.");
@@ -194,15 +191,15 @@ public class DatabusMetadataLayerData {
             throw new ValidationException("Empty path.");
         }
 
-        String extension = ".jsonld";
+        String extension = language.getFileExtensions().get(0);
         if(!path.endsWith(extension)) {
-            path += extension;
+            path += "." + extension;
         }
 
         String documentURL = MossUtils.createDocumentURI(baseURL, repo, path);
         Model model = ModelFactory.createDefaultModel();
+        RDFDataMgr.read(model, inputStream, documentURL, language);
         inputStream.reset();
-        RDFDataMgr.read(model, inputStream, documentURL, Lang.JSONLD);
         metadataLayerResource = getMetadataLayerURI(model);
         DatabusMetadataLayerData layerData = new DatabusMetadataLayerData();
 

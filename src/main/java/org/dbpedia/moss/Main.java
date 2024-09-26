@@ -4,6 +4,7 @@ import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.dbpedia.moss.servlets.MetadataValidateServlet;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
 import org.dbpedia.moss.servlets.MossProxyServlet;
+import org.dbpedia.moss.servlets.SparqlProxyServlet;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.servlets.MetadataAnnotateServlet;
 import org.dbpedia.moss.servlets.MetadataBrowseServlet;
@@ -120,6 +121,11 @@ public class Main {
         layerContext.setContextPath("/layer/*");
         layerContext.addServlet(new ServletHolder(new LayerServlet()), "/*");
 
+        ServletContextHandler sparqlProxyContext = new ServletContextHandler();
+        sparqlProxyContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        sparqlProxyContext.setContextPath("/sparql/*");
+        sparqlProxyContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/*");
+
         // Context handler for the unprotected routes
         ServletContextHandler readContext = new ServletContextHandler();
         readContext.addFilter(corsHolder, "*", EnumSet.of(DispatcherType.REQUEST));
@@ -159,7 +165,7 @@ public class Main {
 
         // Set up handler collection
         HandlerList  handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { readContext, browseContext, layerContext, apiContext });
+        handlers.setHandlers(new Handler[] { readContext, browseContext, layerContext, sparqlProxyContext, apiContext });
 
         server.setHandler(handlers);
 

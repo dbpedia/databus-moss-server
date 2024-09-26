@@ -1,5 +1,6 @@
 package org.dbpedia.moss.db;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -17,6 +18,19 @@ public class UserDatabaseManager {
     public UserDatabaseManager(String userDatabasePath) {
         this.userDatabasePath = userDatabasePath;
 
+         File databaseFile = new File(userDatabasePath);
+        File databaseDir = databaseFile.getParentFile(); // Get the directory of the database file
+
+        if (databaseDir != null && !databaseDir.exists()) {
+            boolean dirsCreated = databaseDir.mkdirs(); // Create the directory if it doesn't exist
+            if (dirsCreated) {
+                System.out.println("Directory created: " + databaseDir.getAbsolutePath());
+            } else {
+                System.out.println("Failed to create directory: " + databaseDir.getAbsolutePath());
+            }
+        }
+
+        
         try {
             executeUpdate(new IStatementProvider() {
                 @Override

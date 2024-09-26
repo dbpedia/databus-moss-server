@@ -1,25 +1,21 @@
 package org.dbpedia.moss.servlets;
-
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
-
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.ArrayList;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.utils.MossEnvironment;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,95 +43,46 @@ public class MetadataReadServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		// Construct the URL for the request
-		String requestURL = this.configuration.getGstoreBaseURL() + req.getRequestURI();
+		String requestURI = configuration.getGstoreBaseURL() + req.getRequestURI();
 
-		requestURL = requestURL.replace(this.configuration.getGstoreBaseURL() + "/g/",
-			this.configuration.getGstoreBaseURL() + "/document/read");
-
-		requestURL += "?repo=" + req.getParameter("repo") + "&path=" + req.getParameter("path");
-
-		HttpClient httpClient = HttpClient.newBuilder()
-			.followRedirects(HttpClient.Redirect.ALWAYS)
-			.build();
-
-		// Create a GET request
-		HttpRequest httpRequest = HttpRequest.newBuilder().GET().uri(URI.create(requestURL)).build();
-
-		// Send the request and handle the response
 		try {
-			HttpResponse<String> httpResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
 
-			// Get the response body
-			String responseBody = httpResponse.body();
-			// Get the content type from the HTTP response headers
-			String contentType = httpResponse.headers().firstValue("Content-Type").orElse("application/ld+json");
+			URL url = new URI(requestURI).toURL();
+		
+			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			connection.setRequestMethod("GET");
 
-			resp.setContentType(contentType);
-			PrintWriter writer = resp.getWriter();
-			System.out.println(responseBody);
-
-			if(responseBody.startsWith("Requesting")) {
-				resp.setStatus(404);
-				resp.setContentType("text/html");
-				writer.println("Not Found");
+			// Get the response code
+			int responseCode = connection.getResponseCode();
+			if (responseCode != HttpURLConnection.HTTP_OK) {
+				resp.sendError(responseCode, "Failed to fetch the resource from the external server.");
 				return;
 			}
 
-			// Write the response body to the servlet response
-			writer.println(responseBody);
+			// Determine the content type based on the file extension of the request URI
+			String fileExtension = requestURI.substring(requestURI.lastIndexOf('.') + 1);
+			Lang language = RDFLanguages.fileExtToLang(fileExtension);
 
-		} catch (IOException | InterruptedException e) {
-			// Handle any exceptions
+			// Set the content type header for the response
+			if(language != null) {
+				resp.setContentType(language.getHeaderString());
+			}
+
+			// Read the response from the external server
+			try (InputStream inputStream = connection.getInputStream();
+				OutputStream outputStream = resp.getOutputStream()) {
+				byte[] buffer = new byte[4096];
+				int bytesRead;
+				while ((bytesRead = inputStream.read(buffer)) != -1) {
+					outputStream.write(buffer, 0, bytesRead);
+				}
+			}
+		} catch (MalformedURLException e) {
+			resp.sendError(400, "Failed to fetch the resource from the external server.");
 			e.printStackTrace();
-			resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "An error occurred while processing the request.");
+		} catch (URISyntaxException e) {
+			resp.sendError(400, "Failed to fetch the resource from the external server.");
+			e.printStackTrace();
 		}
-	}
-
-	public String parseFolderRequest(String baseUrl, String responseBody) throws IOException, InterruptedException   {
-
-		HttpClient httpClient = HttpClient.newBuilder()
-			.followRedirects(HttpClient.Redirect.ALWAYS)
-			.build();
-
-		Document doc = Jsoup.parse(responseBody);
-		Elements removeParentTag = doc.select("a:contains(Parent Directory)");
-
-		for (Element element : removeParentTag) {
-			element.remove();
-		}
-
-		Elements tableData = doc.getElementsByTag("a");
-		ArrayList<String> files = new ArrayList<>();
-		ArrayList<String> folders = new ArrayList<>();
-
-		for(Element element : tableData) {
-
-			String fileName = element.text();
-
-			if ("Parent Directory".equals(fileName)) {
-				continue;
-			}
-			if (".git/".equals(fileName)) {
-				continue;
-			}
-
-			String url = baseUrl + "/" + fileName;
-			HttpRequest httpRequest = HttpRequest.newBuilder().HEAD().uri(URI.create(url)).build();
-
-			HttpResponse<Void> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.discarding());
-            String contentType = response.headers().firstValue("Content-Type").orElse("");
-
-            if (contentType.contains("text/html")) {
-                folders.add(fileName);
-            } else {
-                files.add(fileName);
-            }
-		}
-
-
-		JSONObject jsonObject = new JSONObject();
-		jsonObject.put("files", files);
-		jsonObject.put("folders", folders);
-		return jsonObject.toString();
 	}
 }

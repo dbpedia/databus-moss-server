@@ -1,0 +1,9 @@
+@prefix moss: <https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context2.jsonld#> .
+@prefix dct: <http://purl.org/dc/terms/>
+
+<%LAYER_ID%> a moss:DatabusMetadataLayer ;
+    moss:layerName "%LAYER_NAME%" ;
+    moss:extends <%DATABUS_RESOURCE%> ;
+    moss:content <%CONTENT_DOCUMENT%> ;
+    dct:created "%CREATED_DATE%" ;
+    dct:modified "%UPDATED_DATE%" .

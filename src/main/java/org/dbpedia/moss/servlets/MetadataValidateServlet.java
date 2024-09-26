@@ -1,18 +1,18 @@
 package org.dbpedia.moss.servlets;
 
 import java.io.IOException;
-import java.io.InputStream;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.apache.jena.atlas.web.ContentType;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.DatabusMetadataLayerData;
 import org.dbpedia.moss.utils.MossUtils;
-import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 
 
 public class MetadataValidateServlet extends HttpServlet {
@@ -30,10 +30,16 @@ public class MetadataValidateServlet extends HttpServlet {
         try {
             String requestBaseURL = MossUtils.getRequestBaseURL(req);
             // Read stream to string
-            String jsonString = MossUtils.readToString(req.getInputStream());
 
-            InputStream inputStream = new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8));
-            DatabusMetadataLayerData.parse(requestBaseURL, inputStream);
+            String contentTypeHeader = req.getContentType();
+            ContentType contentType = ContentType.create(contentTypeHeader);
+            Lang language = RDFLanguages.contentTypeToLang(contentType);
+
+            if(language == null) {
+                throw new ValidationException("Unknown RDF format for content type " + contentType);
+            }
+ 
+            DatabusMetadataLayerData.parse(requestBaseURL, req.getInputStream(), language);
             resp.setStatus(200);
 
         } catch (UnsupportedEncodingException e) {

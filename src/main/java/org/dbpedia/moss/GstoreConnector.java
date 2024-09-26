@@ -10,6 +10,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -19,9 +20,15 @@ import java.util.List;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFParser;
+import org.apache.jena.shared.PropertyNotFoundException;
+import org.dbpedia.moss.indexer.MossLayerHeader;
+import org.dbpedia.moss.utils.MossUtils;
+import org.dbpedia.moss.utils.RDFUris;
+import org.dbpedia.moss.utils.RDFUtils;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -35,17 +42,88 @@ public class GstoreConnector {
     private static final String HEADER_ACCEPT = "Accept";
     private static final String HEADER_CONTENT_TYPE = "Content-Type";
     private static final String APPLICATION_LD_JSON = "application/ld+json";
+    private static final String TEXT_TURTLE = "text/turtle";
     private static final String DOCUMENT_READ_ENDPOINT = "/document/read";
     private static final String DOCUMENT_SAVE_ENDPOINT = "/document/save";
     private static final String DOCUMENT_HISTORY_ENDPOINT = "/document/history";
     private static final String REQ_PARAM_REPO = "repo";
     private static final String REQ_PARAM_PATH = "path";
+    private static final String REQ_PARAM_PREFIX = "prefix";
     private static final String REQ_AUTHOR_NAME = "author_name";
 
     private String gstoreBaseURL;
 
     public GstoreConnector(String baseURL) {
         this.gstoreBaseURL = baseURL;
+    }
+
+    /**
+     * Retrieves the layer header based on Databus resource URI and layer name
+     * @param layerName
+     * @param resource
+     * @return
+     * @throws URISyntaxException
+     * @throws IOException
+    
+    public MossLayerHeader getLayerHeader(String layerName, String resource)
+        throws URISyntaxException, IOException {
+
+        // Create the layer identifier from resource and layerName
+        String layerURI = MossUtils.GetLayerURI(resource, layerName);
+
+        // Create the location of the header document
+        String layerHeaderDocumentURL = MossUtils.GetHeaderDocumentURL(resource, layerName);
+
+        // Request the layer from the gstore
+        URL url = new URI(gstoreBaseURL + layerHeaderDocumentURL).toURL();
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod(REQ_METHOD_GET);
+        connection.setRequestProperty(HEADER_ACCEPT, TEXT_TURTLE);
+
+        // Parse the response to a Jena Model
+        Model model = ModelFactory.createDefaultModel();
+        RDFParser.source(connection.getInputStream()).forceLang(Lang.TURTLE).parse(model);
+      
+        MossLayerHeader layerHeader = MossLayerHeader.fromModel(layerURI, model);
+        return layerHeader;
+    } */
+
+    public MossLayerHeader getOrCreateLayerHeader(String requestBaseURL, String layerName, String resource) 
+        throws URISyntaxException, MalformedURLException {
+        
+        String layerURI = MossUtils.getLayerURI(requestBaseURL, resource, layerName);
+        String headerDocumentURL = MossUtils.getHeaderDocumentURL(requestBaseURL, resource, layerName);
+
+        MossLayerHeader header = new MossLayerHeader();
+        header.setUri(layerURI);
+        header.setHeaderDocumentURL(headerDocumentURL);
+        header.setDatabusResource(resource);
+        header.setLayerName(layerName);
+        header.setCreatedTime("CREATED");
+
+        try {
+            // Request the layer from the gstore
+            URL url = new URI(headerDocumentURL).toURL();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod(REQ_METHOD_GET);
+            connection.setRequestProperty(HEADER_ACCEPT, TEXT_TURTLE);
+
+            // Parse the response to a Jena Model
+            Model model = ModelFactory.createDefaultModel();
+            RDFParser.source(connection.getInputStream()).forceLang(Lang.TURTLE).parse(model);
+            
+            // Parse values from model
+            Resource layerResource = model.getResource(layerURI);
+            header.setCreatedTime(RDFUtils.getPropertyValue(model, layerResource, RDFUris.DCT_CREATED));
+            // TODO...
+
+        } catch (IOException e) {
+            // Layer might not exist yet.
+        } catch(PropertyNotFoundException e) {
+            
+        }
+
+        return header;
     }
 
     public Model read(String targetURI) throws URISyntaxException, UnsupportedEncodingException {
@@ -75,11 +153,11 @@ public class GstoreConnector {
         return read(targetURI);
     }
 
-    public void write(String baseURL, String repo, String path, String json, String author) throws UnsupportedEncodingException {
+    public void write(String baseURL, String repo, String path, String rdfString, String author) throws IOException, URISyntaxException {
 
         StringBuilder uri = new StringBuilder();
         uri.append(gstoreBaseURL)
-            .append(DOCUMENT_READ_ENDPOINT)
+            .append(DOCUMENT_SAVE_ENDPOINT)
             .append("?")
             .append(REQ_PARAM_REPO)
             .append("=")
@@ -88,77 +166,76 @@ public class GstoreConnector {
             .append(REQ_PARAM_PATH)
             .append("=")
             .append(URLEncoder.encode(path, CHAR_ENCODING_UTF8))
+            .append("&")
             .append(REQ_AUTHOR_NAME)
             .append("=")
             .append(URLEncoder.encode(author, CHAR_ENCODING_UTF8));
 
-        System.out.println("SAVING " + json);
-        String response = this.writeRequest(uri.toString(), json);
+        System.out.println("SAVING " + rdfString);
+        String response = this.sendWriteRequest(uri.toString(), rdfString);
+
+        
         System.out.println("Response body\n" + response);
     }
 
-    public void write(String baseURL, String repo, String path, String json) throws UnsupportedEncodingException {
+    public void writeContent(String prefix, String path, String rdf) throws IOException, URISyntaxException {
 
         StringBuilder uri = new StringBuilder();
         uri.append(gstoreBaseURL)
-            .append(DOCUMENT_READ_ENDPOINT)
+            .append(DOCUMENT_SAVE_ENDPOINT)
             .append("?")
             .append(REQ_PARAM_REPO)
             .append("=")
-            .append(URLEncoder.encode(repo, CHAR_ENCODING_UTF8))
+            .append(URLEncoder.encode("content", CHAR_ENCODING_UTF8))
             .append("&")
             .append(REQ_PARAM_PATH)
             .append("=")
-            .append(URLEncoder.encode(path, CHAR_ENCODING_UTF8));
+            .append(URLEncoder.encode(path, CHAR_ENCODING_UTF8)) 
+            .append("&")
+            .append(REQ_PARAM_PREFIX)
+            .append("=")
+            .append(URLEncoder.encode(prefix, CHAR_ENCODING_UTF8));
 
-        System.out.println("SAVING " + json);
-        String response = this.writeRequest(uri.toString(), json);
+        String response = this.sendWriteRequest(uri.toString(), rdf);
         System.out.println("Response body\n" + response);
     }
 
-    private String writeRequest(String uri, String json) {
-        try {
-            URL url = new URI(uri).toURL();
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod(REQ_METHOD_POST);
-            connection.setRequestProperty(HEADER_ACCEPT, APPLICATION_LD_JSON);
-            connection.setRequestProperty(HEADER_CONTENT_TYPE, APPLICATION_LD_JSON);
-            connection.setDoOutput(true);
+    private String sendWriteRequest(String uri, String rdfString) throws IOException, URISyntaxException {
+        
+        URL url = new URI(uri).toURL();
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod(REQ_METHOD_POST);
+        connection.setRequestProperty(HEADER_ACCEPT, APPLICATION_LD_JSON);
+        connection.setRequestProperty(HEADER_CONTENT_TYPE, APPLICATION_LD_JSON);
+        connection.setDoOutput(true);
 
-            OutputStream outputStream = connection.getOutputStream();
-            PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, CHAR_ENCODING_UTF8));
-            writer.write(json);
-            writer.flush();
-            writer.close();
+        OutputStream outputStream = connection.getOutputStream();
+        PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, CHAR_ENCODING_UTF8));
+        writer.write(rdfString);
+        writer.flush();
+        writer.close();
 
-            // Get response code
-            int responseCode = connection.getResponseCode();
-            System.out.println("Response Code: " + responseCode);
+        // Get response code
+        int responseCode = connection.getResponseCode();
+        System.out.println("Response Code: " + responseCode);
 
-            // Read response body
-            InputStream inputStream = connection.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, CHAR_ENCODING_UTF8));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-            reader.close();
-            connection.disconnect();
-
-            return response.toString();
-
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        } catch (URISyntaxException uriSyntaxException) {
-            uriSyntaxException.printStackTrace();
+        // Read response body
+        InputStream inputStream = connection.getInputStream();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, CHAR_ENCODING_UTF8));
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
         }
+        reader.close();
+        connection.disconnect();
 
-        return null;
+        return response.toString();
     }
 
 
     public void write(String repo, String path, Model model) throws UnsupportedEncodingException, URISyntaxException {
+        
         String targetURI = this.gstoreBaseURL + DOCUMENT_SAVE_ENDPOINT + "?repo=" + repo + "&path=" + path;
 
         try {
@@ -174,9 +251,15 @@ public class GstoreConnector {
             outputStream.flush();
             outputStream.close();
 
+          
             InputStream inputStream = connection.getInputStream();
-            inputStream.close();
-
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, CHAR_ENCODING_UTF8));
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                response.append(line);
+            }
+            reader.close();
             connection.disconnect();
         } catch (Exception e) {
             e.printStackTrace();
@@ -275,4 +358,45 @@ public class GstoreConnector {
 
         throw new IllegalArgumentException(inputStream.toString());
     }
+
+    public void writeHeader(String requestBaseURL, MossLayerHeader header) throws IOException, URISyntaxException {
+        
+        System.out.println("Saving header to: " + header.getHeaderDocumentURL());
+        String headerPath = MossUtils.getHeaderDocumentPath(header.getDatabusResource(),
+            header.getLayerName());
+
+        StringBuilder uri = new StringBuilder();
+        uri.append(gstoreBaseURL)
+            .append(DOCUMENT_SAVE_ENDPOINT)
+            .append("?")
+            .append(REQ_PARAM_REPO)
+            .append("=")
+            .append(URLEncoder.encode("header", CHAR_ENCODING_UTF8))
+            .append("&")
+            .append(REQ_PARAM_PATH)
+            .append("=")
+            .append(URLEncoder.encode(headerPath, CHAR_ENCODING_UTF8))
+            .append("&")
+            .append(REQ_PARAM_PREFIX)
+            .append("=")
+            .append(URLEncoder.encode(requestBaseURL, CHAR_ENCODING_UTF8));
+
+        URL url = new URI(uri.toString()).toURL();
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod(REQ_METHOD_POST);
+        connection.setRequestProperty(HEADER_CONTENT_TYPE, TEXT_TURTLE);
+        connection.setDoOutput(true);
+
+        OutputStream outputStream = connection.getOutputStream();
+        RDFDataMgr.write(outputStream, header.toModel(), Lang.TURTLE);
+        outputStream.flush();
+        outputStream.close();
+
+        // Get response code
+        int responseCode = connection.getResponseCode();
+        System.out.println("Response Code: " + responseCode);
+        connection.disconnect();
+    }
+
+    
 }

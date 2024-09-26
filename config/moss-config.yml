@@ -1,7 +1,8 @@
 layers:
   - name: simple
-    template: templates/simple.jsonld
+    template: templates/simple.ttl
   - name: oemetadata
+    template: templates/oemetadata.jsonld
 loaders:
   - collectionURI: https://databus.dbpedia.org/janfo/collections/moss-ontologies
     indexer:

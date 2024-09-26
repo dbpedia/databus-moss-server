@@ -4,7 +4,10 @@ import org.apache.hc.core5.http.NotImplementedException;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.riot.JsonLDWriteContext;
+import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.writer.JsonLDWriter;
 import org.apache.jena.sparql.core.DatasetGraph;
@@ -217,7 +220,9 @@ public final class MossUtils {
         }
 
         reader.close();
-        return stringBuilder.toString();
+
+        String result = stringBuilder.toString().replaceAll("^\\s+|\\s+$", "");
+        return result;
     }
 
     public static String getRequestBaseURL(HttpServletRequest req) {
@@ -268,6 +273,15 @@ public final class MossUtils {
         return resourceURL.getHost();
     }
 
+    public static String noTrailingSlash(String path) {
+
+        while(path.endsWith("/")) {
+            path = path.substring(0, path.length() - 1);
+        }
+
+        return path;
+    }
+
 
     public static String getGStorePath(String resourceURI, String layerName)
     throws MalformedURLException, URISyntaxException {
@@ -300,4 +314,57 @@ public final class MossUtils {
         return base + "/g/" + repo + "/" + path;
     }
 
+    /**
+     * Gets the URI of the layer header document
+     * @param resource
+     * @param layerName
+     * @return
+     * @throws URISyntaxException 
+     * @throws MalformedURLException 
+     */
+    public static String getHeaderDocumentURL(String baseUrl, String resource, String layerName) 
+    throws MalformedURLException, URISyntaxException {
+        return baseUrl + "/g/header/" + getHeaderDocumentPath(resource, layerName);
+    }
+    public static String getHeaderDocumentPath(String resource, String layerName) 
+    throws MalformedURLException, URISyntaxException {
+        String databusResourceURIFragments = MossUtils.getMossDocumentUriFragments(resource);
+        return databusResourceURIFragments + "/" + layerName + ".ttl";
+    }
+
+    public static String getLayerURI(String baseUrl, String resource, String layerName) 
+    throws MalformedURLException, URISyntaxException {
+        String databusResourceURIFragments = MossUtils.getMossDocumentUriFragments(resource);
+        return baseUrl + "/resource/" + databusResourceURIFragments + "/" + layerName;
+    }
+
+    public static String getContentDocumentPath(String resource, String layerName, 
+        Lang language)   throws MalformedURLException, URISyntaxException {
+        String extension = language.getFileExtensions().getFirst();  
+        String databusResourceURIFragments = MossUtils.getMossDocumentUriFragments(resource);
+       return databusResourceURIFragments + "/" + layerName + "." + extension;
+    }
+
+    public static String getContentDocumentURL(String baseUrl, 
+        String resource, String layerName, Lang language) 
+        throws MalformedURLException, URISyntaxException {
+        return baseUrl + "/g/content/" + getContentDocumentPath(resource, layerName, language);
+    }
+
+    public static String getPropertyValue(Model model, Resource resource, String propertyURI) {
+        // Get the statement corresponding to the property URI from the resource
+        Statement statement = resource.getProperty(model.createProperty(propertyURI));
+        
+        // Check if the statement exists and if the object is a resource (not a literal)
+        if (statement != null && statement.getObject().isResource()) {
+            // Return the URI of the resource object
+            return statement.getObject().asResource().getURI();
+        }
+    
+        // Return null if the property is not found or the object is not a resource
+        return null;
+    }
+
+
+    
 }
