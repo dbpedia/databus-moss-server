@@ -71,7 +71,7 @@ public class MetadataWriteServlet extends HttpServlet {
 
             UserInfo userInfo = this.getUserInfo(req);
             
-            String requestBaseURL = MossUtils.getRequestBaseURL(req);
+            String requestBaseURL = env.getMossBaseUrl(); // MossUtils.getRequestBaseURL(req);
             String rdfString = MossUtils.readToString(req.getInputStream());
             Lang language = getRDFLanguage(req);
 
