@@ -1,5 +1,6 @@
 package org.dbpedia.moss.indexer;
 
+import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
@@ -124,14 +125,15 @@ public class MossLayerHeader {
     
     layerResource.addProperty(
         DCTerms.created, 
-        model.createLiteral(createdTime));
+        model.createTypedLiteral(createdTime, XSDDatatype.XSDdateTime));
     
     layerResource.addProperty(
         DCTerms.modified, 
-        model.createLiteral(modifiedTime));
+        model.createTypedLiteral(modifiedTime, XSDDatatype.XSDdateTime));
 
     model.setNsPrefix("moss", RDFUris.NS_MOSS);
     model.setNsPrefix("dct", RDFUris.NS_DCT);
+    model.setNsPrefix("xsd", RDFUris.NS_XSD);
     return model;
 }
 

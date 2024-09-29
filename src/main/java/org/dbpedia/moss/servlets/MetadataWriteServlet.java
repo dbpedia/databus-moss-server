@@ -3,6 +3,9 @@ package org.dbpedia.moss.servlets;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -85,16 +88,18 @@ public class MetadataWriteServlet extends HttpServlet {
             System.out.println("Content document: " + contentDocumentURL);
             System.out.println("Language: " + language);
 
+            String currentTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
 
-            MossLayerHeader header = gstoreConnector.getOrCreateLayerHeader(requestBaseURL, layerName, resource);
-            header.setModifiedTime("NAOW!");
+            MossLayerHeader header = gstoreConnector.getOrCreateLayerHeader(requestBaseURL, layerName, resource, language);
+            header.setModifiedTime(currentTime);
             header.setLastModifiedBy(userInfo.getUsername());
             header.setContentDocumentURL(contentDocumentURL);
 
             // Save to gstore!
             String contentDocumentPath = MossUtils.getContentDocumentPath(resource, layerName, language);
-            gstoreConnector.writeContent(requestBaseURL + "/g/", contentDocumentPath, rdfString);
-            gstoreConnector.writeHeader(requestBaseURL + "/g/", header);
+
+            gstoreConnector.writeHeader(requestBaseURL + "/g/", header, language);
+            gstoreConnector.writeContent(requestBaseURL + "/g/", contentDocumentPath, rdfString, language);
 
             indexerManager.updateIndices(header.getUri(), header.getLayerName());
 

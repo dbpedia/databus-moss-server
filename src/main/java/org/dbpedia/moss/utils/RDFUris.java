@@ -20,5 +20,7 @@ public final class RDFUris {
     
     public static final String NS_DCT = "http://purl.org/dc/terms/";
 
+    public static final String NS_XSD = "http://www.w3.org/2001/XMLSchema#";
+
     public static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 }

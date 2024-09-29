@@ -322,14 +322,16 @@ public final class MossUtils {
      * @throws URISyntaxException 
      * @throws MalformedURLException 
      */
-    public static String getHeaderDocumentURL(String baseUrl, String resource, String layerName) 
+    public static String getHeaderDocumentURL(String baseUrl, String resource, String layerName, Lang language) 
     throws MalformedURLException, URISyntaxException {
-        return baseUrl + "/g/header/" + getHeaderDocumentPath(resource, layerName);
+        return baseUrl + "/g/header/" + getHeaderDocumentPath(resource, layerName, language);
     }
-    public static String getHeaderDocumentPath(String resource, String layerName) 
+
+    public static String getHeaderDocumentPath(String resource, String layerName, Lang language) 
     throws MalformedURLException, URISyntaxException {
+        String extension = language.getFileExtensions().getFirst();  
         String databusResourceURIFragments = MossUtils.getMossDocumentUriFragments(resource);
-        return databusResourceURIFragments + "/" + layerName + ".ttl";
+        return databusResourceURIFragments + "/" + layerName + "." + extension;
     }
 
     public static String getLayerURI(String baseUrl, String resource, String layerName) 

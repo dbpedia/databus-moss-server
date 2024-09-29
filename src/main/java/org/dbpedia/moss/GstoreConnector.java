@@ -15,6 +15,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,6 +52,7 @@ public class GstoreConnector {
     private static final String REQ_PARAM_PATH = "path";
     private static final String REQ_PARAM_PREFIX = "prefix";
     private static final String REQ_AUTHOR_NAME = "author_name";
+    private static final String LAYER_FRAGMENT = "#layer";
 
     private String gstoreBaseURL;
 
@@ -88,18 +91,21 @@ public class GstoreConnector {
         return layerHeader;
     } */
 
-    public MossLayerHeader getOrCreateLayerHeader(String requestBaseURL, String layerName, String resource) 
+    public MossLayerHeader getOrCreateLayerHeader(String requestBaseURL, String layerName, String resource, Lang language) 
         throws URISyntaxException, MalformedURLException {
         
-        String layerURI = MossUtils.getLayerURI(requestBaseURL, resource, layerName);
-        String headerDocumentURL = MossUtils.getHeaderDocumentURL(requestBaseURL, resource, layerName);
+        // String layerURI = MossUtils.getLayerURI(requestBaseURL, resource, layerName);
+        String headerDocumentURL = MossUtils.getHeaderDocumentURL(requestBaseURL, resource, layerName, language);
+        String layerURI = headerDocumentURL + LAYER_FRAGMENT;
 
         MossLayerHeader header = new MossLayerHeader();
         header.setUri(layerURI);
         header.setHeaderDocumentURL(headerDocumentURL);
         header.setDatabusResource(resource);
         header.setLayerName(layerName);
-        header.setCreatedTime("CREATED");
+
+        String currentTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
+        header.setCreatedTime(currentTime);
 
         try {
             // Request the layer from the gstore
@@ -178,8 +184,48 @@ public class GstoreConnector {
         System.out.println("Response body\n" + response);
     }
 
-    public void writeContent(String prefix, String path, String rdf) throws IOException, URISyntaxException {
+    public void writeHeader(String prefix, MossLayerHeader header, Lang language) throws IOException, URISyntaxException {
+        
+        System.out.println("Writing header to: " + header.getHeaderDocumentURL());
+        String headerPath = MossUtils.getHeaderDocumentPath(header.getDatabusResource(),
+            header.getLayerName(), language);
 
+        StringBuilder uri = new StringBuilder();
+        uri.append(gstoreBaseURL)
+            .append(DOCUMENT_SAVE_ENDPOINT)
+            .append("?")
+            .append(REQ_PARAM_REPO)
+            .append("=")
+            .append(URLEncoder.encode("header", CHAR_ENCODING_UTF8))
+            .append("&")
+            .append(REQ_PARAM_PATH)
+            .append("=")
+            .append(URLEncoder.encode(headerPath, CHAR_ENCODING_UTF8))
+            .append("&")
+            .append(REQ_PARAM_PREFIX)
+            .append("=")
+            .append(URLEncoder.encode(prefix, CHAR_ENCODING_UTF8));
+
+        URL url = new URI(uri.toString()).toURL();
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod(REQ_METHOD_POST);
+        connection.setRequestProperty(HEADER_CONTENT_TYPE, language.getHeaderString());
+        connection.setDoOutput(true);
+
+        OutputStream outputStream = connection.getOutputStream();
+        RDFDataMgr.write(outputStream, header.toModel(), language);
+        outputStream.flush();
+        outputStream.close();
+
+        // Get response code
+        int responseCode = connection.getResponseCode();
+        System.out.println("Response Code: " + responseCode);
+        connection.disconnect();
+    }
+
+    public void writeContent(String prefix, String path, String rdf, Lang language) throws IOException, URISyntaxException {
+
+        System.out.println("Writing content to: " + prefix + path);
         StringBuilder uri = new StringBuilder();
         uri.append(gstoreBaseURL)
             .append(DOCUMENT_SAVE_ENDPOINT)
@@ -196,9 +242,26 @@ public class GstoreConnector {
             .append("=")
             .append(URLEncoder.encode(prefix, CHAR_ENCODING_UTF8));
 
-        String response = this.sendWriteRequest(uri.toString(), rdf);
-        System.out.println("Response body\n" + response);
+        URL url = new URI(uri.toString()).toURL();
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod(REQ_METHOD_POST);
+        connection.setRequestProperty(HEADER_ACCEPT, APPLICATION_LD_JSON);
+        connection.setRequestProperty(HEADER_CONTENT_TYPE, APPLICATION_LD_JSON);
+        connection.setDoOutput(true);
+
+        OutputStream outputStream = connection.getOutputStream();
+        PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, CHAR_ENCODING_UTF8));
+        writer.write(rdf);
+        writer.flush();
+        writer.close();
+
+        // Get response code
+        int responseCode = connection.getResponseCode();
+        System.out.println("Response Code: " + responseCode);
+        // this.sendWriteRequest(uri.toString(), rdf);
+        // System.out.println("Response body\n" + response);
     }
+
 
     private String sendWriteRequest(String uri, String rdfString) throws IOException, URISyntaxException {
         
@@ -359,44 +422,7 @@ public class GstoreConnector {
         throw new IllegalArgumentException(inputStream.toString());
     }
 
-    public void writeHeader(String requestBaseURL, MossLayerHeader header) throws IOException, URISyntaxException {
-        
-        System.out.println("Saving header to: " + header.getHeaderDocumentURL());
-        String headerPath = MossUtils.getHeaderDocumentPath(header.getDatabusResource(),
-            header.getLayerName());
-
-        StringBuilder uri = new StringBuilder();
-        uri.append(gstoreBaseURL)
-            .append(DOCUMENT_SAVE_ENDPOINT)
-            .append("?")
-            .append(REQ_PARAM_REPO)
-            .append("=")
-            .append(URLEncoder.encode("header", CHAR_ENCODING_UTF8))
-            .append("&")
-            .append(REQ_PARAM_PATH)
-            .append("=")
-            .append(URLEncoder.encode(headerPath, CHAR_ENCODING_UTF8))
-            .append("&")
-            .append(REQ_PARAM_PREFIX)
-            .append("=")
-            .append(URLEncoder.encode(requestBaseURL, CHAR_ENCODING_UTF8));
-
-        URL url = new URI(uri.toString()).toURL();
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod(REQ_METHOD_POST);
-        connection.setRequestProperty(HEADER_CONTENT_TYPE, TEXT_TURTLE);
-        connection.setDoOutput(true);
-
-        OutputStream outputStream = connection.getOutputStream();
-        RDFDataMgr.write(outputStream, header.toModel(), Lang.TURTLE);
-        outputStream.flush();
-        outputStream.close();
-
-        // Get response code
-        int responseCode = connection.getResponseCode();
-        System.out.println("Response Code: " + responseCode);
-        connection.disconnect();
-    }
+   
 
     
 }

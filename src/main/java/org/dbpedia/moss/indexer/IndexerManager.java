@@ -125,17 +125,17 @@ public class IndexerManager {
                 continue;
             }
 
-            System.out.println("Ich würd denn mal losmachen mit todos: " + indexer.getTodos());
+            // System.out.println("Ich würd denn mal losmachen mit todos: " + indexer.getTodos());
             indexer.run(worker);
         }
     }
 
     
-    public void updateIndices(String layerUri, String layerName) {
+    public void updateIndices(String contentUri, String layerName) {
         List<LayerIndexer> correspondingIndexers = indexerMappings.get(layerName);
         for (LayerIndexer indexer : correspondingIndexers) {
-            indexer.addTodo(layerUri);
-            System.out.println("Indexer " + indexer.getId() + "hat jetzt todos: " + indexer.getTodos());
+            indexer.addTodo(contentUri);
+            System.out.println("Indexer " + indexer.getId() + " hat jetzt todos: " + indexer.getTodos());
         }
     }
 }
