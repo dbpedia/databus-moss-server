@@ -169,20 +169,20 @@ public class MetadataWriteServlet extends HttpServlet {
     }
 
     private UserInfo getUserInfo(HttpServletRequest request) throws ValidationException {
-            Object sub = request.getAttribute("sub");
+        Object sub = request.getAttribute("sub");
 
-            if (sub == null) {
-                throw new ValidationException("sub zero.");
-            }
+        if (sub == null) {
+            throw new ValidationException("sub zero.");
+        }
 
-            UserInfo userInfo = userDatabaseManager.getUserInfoBySub(sub.toString());
-            System.out.println(userInfo);
+        UserInfo userInfo = userDatabaseManager.getUserInfoBySub(sub.toString());
+        System.out.println(userInfo);
 
-            if (userInfo == null || userInfo.getUsername().isEmpty()) {
-                throw new ValidationException("User null or username missing");
-            }
+        if (userInfo == null || userInfo.getUsername().isEmpty()) {
+            throw new ValidationException("User null or username missing");
+        }
 
-            return userInfo;
+        return userInfo;
     }
 
 }

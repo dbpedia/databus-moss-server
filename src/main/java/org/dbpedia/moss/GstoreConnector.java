@@ -116,7 +116,7 @@ public class GstoreConnector {
 
             // Parse the response to a Jena Model
             Model model = ModelFactory.createDefaultModel();
-            RDFParser.source(connection.getInputStream()).forceLang(Lang.TURTLE).parse(model);
+            RDFParser.source(connection.getInputStream()).forceLang(language).parse(model); // forceLang(language)
             
             // Parse values from model
             Resource layerResource = model.getResource(layerURI);
