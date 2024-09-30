@@ -135,7 +135,7 @@ public class Main {
         // Context handler for the unprotected routes
         ServletContextHandler browseContext = new ServletContextHandler();
         browseContext.addFilter(corsHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        browseContext.setContextPath("/browse/*");
+        browseContext.setContextPath("/file/*");
         browseContext.addServlet(new ServletHolder(new MetadataBrowseServlet()), "/*");
 
         ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager, userDatabaseManager));

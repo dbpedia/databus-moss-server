@@ -51,7 +51,7 @@ public class MetadataBrowseServlet extends HttpServlet {
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		// Construct the URL for the request
 		String requestURL = this.configuration.getGstoreBaseURL() + req.getRequestURI();
-		requestURL = requestURL.replace(this.configuration.getGstoreBaseURL() + "/browse",
+		requestURL = requestURL.replace(this.configuration.getGstoreBaseURL() + "/file",
 			this.configuration.getGstoreBaseURL() + "/file/content");
 
 		HttpClient httpClient = HttpClient.newBuilder()
