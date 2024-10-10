@@ -1,6 +1,8 @@
 layers:
   - name: simple
     template: templates/simple.ttl
+  - name: helmholtz
+    template: templates/helmholtz.ttl
   - name: oemetadata
     template: templates/oemetadata.jsonld
 loaders:
@@ -18,3 +20,6 @@ indexers:
     layers:
       - oemetadata
       - simple
+  - configPath: ./indexers/helmholtz.yml
+    layers:
+      - helmholtz

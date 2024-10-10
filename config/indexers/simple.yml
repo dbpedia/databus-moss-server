@@ -11,9 +11,25 @@ indexFields:
             ?layer a <http://dataid.dbpedia.org/ns/moss#DatabusMetadataLayer> .
             ?layer <http://dataid.dbpedia.org/ns/moss#layerName> "simple" .
             ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
+            ?layer <http://dataid.dbpedia.org/ns/moss#extends> ?resource .
           }
           GRAPH ?content {
-            ?_ <https://saref.etsi.org/core/isAbout> ?annotation .
+            ?resource <https://saref.etsi.org/core/isAbout> ?annotation .
           }
           #VALUES#
       }
+  - fieldName: label
+    documentVariable: layer
+    query: >
+      SELECT DISTINCT ?layer ?label WHERE {
+          GRAPH ?g {
+            ?layer a <http://dataid.dbpedia.org/ns/moss#DatabusMetadataLayer> .
+            ?layer <http://dataid.dbpedia.org/ns/moss#layerName> "simple" .
+            ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
+          }
+          GRAPH ?content {
+            ?resource <http://www.w3.org/2000/01/rdf-schema#label> ?label .
+          }
+          #VALUES#
+      }
+      

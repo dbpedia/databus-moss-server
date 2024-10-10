@@ -122,7 +122,11 @@ public class MetadataWriteServlet extends HttpServlet {
                 rdfString, userInfo.getUsername());
             */
             // Update indices
-
+        } catch (IllegalArgumentException e) {
+            String message = e.getMessage();
+            resp.setHeader("Content-Type", "application/json");
+            resp.sendError(400, message);
+            return;
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
             resp.setStatus(400);

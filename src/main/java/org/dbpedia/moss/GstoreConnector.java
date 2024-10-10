@@ -32,6 +32,8 @@ import org.dbpedia.moss.utils.MossUtils;
 import org.dbpedia.moss.utils.RDFUris;
 import org.dbpedia.moss.utils.RDFUtils;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
@@ -257,9 +259,51 @@ public class GstoreConnector {
 
         // Get response code
         int responseCode = connection.getResponseCode();
+        
         System.out.println("Response Code: " + responseCode);
-        // this.sendWriteRequest(uri.toString(), rdf);
+       // this.sendWriteRequest(uri.toString(), rdf);
         // System.out.println("Response body\n" + response);
+
+        if(responseCode > 200 && responseCode < 500) {
+            String errorString = readGstoreError(connection);
+            connection.disconnect();
+            
+            throw new IllegalArgumentException(errorString);
+        }
+        
+        connection.disconnect();
+    }
+
+    private String readGstoreError(HttpURLConnection connection) throws IOException, UnsupportedEncodingException {
+        InputStream inputStream = connection.getErrorStream();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, CHAR_ENCODING_UTF8));
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        reader.close();
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        // Parse JSON string to JsonNode
+        JsonNode jsonNode = objectMapper.readTree(response.toString());
+
+        // Access a specific field, e.g., address -> city
+        String errorMessage = jsonNode.path("message").asText();
+
+        return errorMessage;
+    }
+
+    private String readResponse(HttpURLConnection connection) throws IOException, UnsupportedEncodingException {
+        InputStream inputStream = connection.getInputStream();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, CHAR_ENCODING_UTF8));
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        reader.close();
+        return response.toString();
     }
 
 
@@ -315,14 +359,7 @@ public class GstoreConnector {
             outputStream.close();
 
           
-            InputStream inputStream = connection.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, CHAR_ENCODING_UTF8));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-            reader.close();
+            readResponse(connection);
             connection.disconnect();
         } catch (Exception e) {
             e.printStackTrace();

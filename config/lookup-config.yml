@@ -33,7 +33,13 @@ lookupFields:
   - name: annotation
     type: uri
     tokenize: false
-    weight: 1
+    highlight: false
+    required: true
+    tokenize: true
+    exact: true
+    allowPartialMatch: true
+    exact: true
+    weight: 10
   - name: used
     type: uri
     weight: 1
