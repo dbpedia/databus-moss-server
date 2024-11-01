@@ -13,6 +13,7 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.sys.JenaSystem;
 import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.indexer.IndexerManager;
@@ -75,6 +76,7 @@ public class Main {
      */
     public static void main(String[] args) throws Exception {
 
+        JenaSystem.init();
         ARQ.init();
 
         MossEnvironment environment = MossEnvironment.get();

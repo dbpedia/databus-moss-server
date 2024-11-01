@@ -189,7 +189,7 @@ public class GstoreConnector {
     public void writeHeader(String prefix, MossLayerHeader header, Lang language) throws IOException, URISyntaxException {
         
         System.out.println("Writing header to: " + header.getHeaderDocumentURL());
-        String headerPath = MossUtils.getHeaderDocumentPath(header.getDatabusResource(),
+        String headerPath = MossUtils.getDocumentPath(header.getDatabusResource(),
             header.getLayerName(), language);
 
         StringBuilder uri = new StringBuilder();
@@ -264,7 +264,8 @@ public class GstoreConnector {
        // this.sendWriteRequest(uri.toString(), rdf);
         // System.out.println("Response body\n" + response);
 
-        if(responseCode > 200 && responseCode < 500) {
+        if(responseCode > 200 && responseCode <= 500) {
+            System.out.println(rdf);
             String errorString = readGstoreError(connection);
             connection.disconnect();
             

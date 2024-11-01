@@ -1,25 +1,19 @@
-layers:
-  - name: simple
-    template: templates/simple.ttl
-  - name: helmholtz
-    template: templates/helmholtz.ttl
-  - name: oemetadata
-    template: templates/oemetadata.jsonld
 loaders:
   - collectionURI: https://databus.dbpedia.org/janfo/collections/moss-ontologies
     indexer:
       configPath: ./indexers/ontology-indexer.yml
-indexers:
-  - configPath: ./indexers/simple.yml
-    layers: 
-      - simple
-  - configPath: ./indexers/oemetadata-indexer.yml
-    layers: 
-      - oemetadata
-  - configPath: ./indexers/annotate-count-indexer.yml
-    layers:
-      - oemetadata
-      - simple
-  - configPath: ./indexers/helmholtz.yml
-    layers:
-      - helmholtz
+layers:
+  - name: openenergy
+    templatePath: layers/openenergy/template.jsonld
+    shaclPath: layers/openenergy/shapes.shacl
+    scope: version
+    indexers:
+      - layers/openenergy/indexer.yml
+      - indexers/annotate-count-indexer.yml
+  - name: opentransport
+    templatePath: layers/opentransport/template.jsonld
+    shaclPath: layers/opentransport/shapes.shacl
+    scope: version
+    indexers:
+      - layers/opentransport/indexer.yml
+      - indexers/annotate-count-indexer.yml

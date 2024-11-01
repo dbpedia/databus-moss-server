@@ -2,25 +2,18 @@ package org.dbpedia.moss.utils;
 
 import org.apache.hc.core5.http.NotImplementedException;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.riot.JsonLDWriteContext;
 import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFFormat;
-import org.apache.jena.riot.writer.JsonLDWriter;
-import org.apache.jena.sparql.core.DatasetGraph;
 import org.dbpedia.moss.DatabusMetadataLayerData;
 
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -122,6 +115,7 @@ public final class MossUtils {
         return URI.create(uriString).toURL();
     }
 
+    /*
     public static void saveModel(Model annotationModel, URL saveUrl) throws IOException {
 
         System.out.println("Saving with " + saveUrl.toString());
@@ -170,7 +164,7 @@ public final class MossUtils {
             }
             System.out.println(response.toString());
         }
-    }
+    }*/
 
 
     public static String fetchJSON(String urlString) throws IOException, URISyntaxException {
@@ -324,14 +318,7 @@ public final class MossUtils {
      */
     public static String getHeaderDocumentURL(String baseUrl, String resource, String layerName, Lang language) 
     throws MalformedURLException, URISyntaxException {
-        return baseUrl + "/g/header/" + getHeaderDocumentPath(resource, layerName, language);
-    }
-
-    public static String getHeaderDocumentPath(String resource, String layerName, Lang language) 
-    throws MalformedURLException, URISyntaxException {
-        String extension = language.getFileExtensions().getFirst();  
-        String databusResourceURIFragments = MossUtils.getMossDocumentUriFragments(resource);
-        return databusResourceURIFragments + "/" + layerName + "." + extension;
+        return baseUrl + "/g/header/" + getDocumentPath(resource, layerName, language);
     }
 
     public static String getLayerURI(String baseUrl, String resource, String layerName) 
@@ -339,18 +326,44 @@ public final class MossUtils {
         String databusResourceURIFragments = MossUtils.getMossDocumentUriFragments(resource);
         return baseUrl + "/resource/" + databusResourceURIFragments + "/" + layerName;
     }
+  
 
-    public static String getContentDocumentPath(String resource, String layerName, 
-        Lang language)   throws MalformedURLException, URISyntaxException {
-        String extension = language.getFileExtensions().getFirst();  
-        String databusResourceURIFragments = MossUtils.getMossDocumentUriFragments(resource);
-       return databusResourceURIFragments + "/" + layerName + "." + extension;
+    public static String getDocumentPath(String resource, String layerName, 
+        Lang language) throws MalformedURLException, URISyntaxException {
+        // Replace # and %23 with /
+        String normalizedResource = resource.replace("#", "/").replace("%23", "/");
+        
+        // Ensure no double slashes at the end, normalize consecutive slashes
+        normalizedResource = normalizedResource.replaceAll("/+", "/");
+        
+        // Get the file extension from the language
+        String extension = language.getFileExtensions().getFirst();
+        
+        // Get the resource URI fragments
+        String databusResourceURIFragments = MossUtils.getMossDocumentUriFragments(normalizedResource);
+        
+        // Construct the final path
+        String resultPath = databusResourceURIFragments + "/" + layerName + "." + extension;
+        
+        // Ensure no double slashes at the end
+        resultPath = resultPath.replaceAll("/+", "/");
+        
+        // Remove the final slash if it's the last character
+        if (resultPath.endsWith("/")) {
+            resultPath = resultPath.substring(0, resultPath.length() - 1);
+        }
+
+        if (resultPath.startsWith("/")) {
+            resultPath = resultPath.substring(1);
+        }
+        
+        return resultPath;
     }
 
     public static String getContentDocumentURL(String baseUrl, 
         String resource, String layerName, Lang language) 
         throws MalformedURLException, URISyntaxException {
-        return baseUrl + "/g/content/" + getContentDocumentPath(resource, layerName, language);
+        return baseUrl + "/g/content/" + getDocumentPath(resource, layerName, language);
     }
 
     public static String getPropertyValue(Model model, Resource resource, String propertyURI) {

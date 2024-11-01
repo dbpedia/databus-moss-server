@@ -70,6 +70,9 @@ public class MetadataWriteServlet extends HttpServlet {
         try {
 
             UserInfo userInfo = this.getUserInfo(req);
+
+            // Model model = ModelFactory.createDefaultModel();
+            // RDFParser.source(req.getInputStream()).forceLang(Lang.JSONLD).parse(model); 
             
             String requestBaseURL = env.getMossBaseUrl(); // MossUtils.getRequestBaseURL(req);
             String rdfString = MossUtils.readToString(req.getInputStream());
@@ -96,32 +99,13 @@ public class MetadataWriteServlet extends HttpServlet {
             header.setContentDocumentURL(contentDocumentURL);
 
             // Save to gstore!
-            String contentDocumentPath = MossUtils.getContentDocumentPath(resource, layerName, language);
+            String contentDocumentPath = MossUtils.getDocumentPath(resource, layerName, language);
 
             gstoreConnector.writeHeader(requestBaseURL + "/g/", header, language);
             gstoreConnector.writeContent(requestBaseURL + "/g/", contentDocumentPath, rdfString, language);
 
             indexerManager.updateIndices(header.getUri(), header.getLayerName());
 
-            //String jsonFilePath = "/layer-header-template.jsonld";
-
-		    //try (InputStream inputStream = getClass().getResourceAsStream(jsonFilePath)) {
-
-
-
-            // Save the header in its own file!
-
-
-
-            /**
-            InputStream inputStream = new ByteArrayInputStream(rdfString.getBytes(StandardCharsets.UTF_8));
-            DatabusMetadataLayerData layerData = DatabusMetadataLayerData.parse(requestBaseURL, inputStream, language);
-
-            // Write unchanged json string
-            gstoreConnector.write(requestBaseURL, layerData.getRepo(), layerData.getPath(), 
-                rdfString, userInfo.getUsername());
-            */
-            // Update indices
         } catch (IllegalArgumentException e) {
             String message = e.getMessage();
             resp.setHeader("Content-Type", "application/json");
