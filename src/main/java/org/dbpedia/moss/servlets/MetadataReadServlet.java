@@ -13,6 +13,8 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.utils.MossEnvironment;
@@ -47,6 +49,8 @@ public class MetadataReadServlet extends HttpServlet {
 
 		try {
 
+			Lang requestedLanguage = RDFLanguages.contentTypeToLang(req.getHeader("Accept"));
+
 			URL url = new URI(requestURI).toURL();
 		
 			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -54,29 +58,46 @@ public class MetadataReadServlet extends HttpServlet {
 
 			// Get the response code
 			int responseCode = connection.getResponseCode();
+			
 			if (responseCode != HttpURLConnection.HTTP_OK) {
 				resp.sendError(responseCode, "Failed to fetch the resource from the external server.");
 				return;
 			}
 
-			// Determine the content type based on the file extension of the request URI
+			// Determine the content type based on the file extension of the request URI (the content type of the response is always json -> BUG?)
 			String fileExtension = requestURI.substring(requestURI.lastIndexOf('.') + 1);
-			Lang language = RDFLanguages.fileExtToLang(fileExtension);
+			Lang savedLanguage = RDFLanguages.fileExtToLang(fileExtension);
 
 			// Set the content type header for the response
-			if(language != null) {
-				resp.setContentType(language.getHeaderString());
+			if(requestedLanguage != null) {
+				resp.setContentType(requestedLanguage.getHeaderString());
 			}
+					
+			// CHECK WHETHER REQUESTED TYPE IS ACTUAL SAVED TYPE, IF NOT CONVERT
+			if(requestedLanguage != null && requestedLanguage != savedLanguage) {
+				// Load the content into a Jena Model
+            	try (InputStream inputStream = connection.getInputStream()) {
+					Model model = ModelFactory.createDefaultModel();
+					model.read(inputStream, null, savedLanguage.getName());
 
-			// Read the response from the external server
-			try (InputStream inputStream = connection.getInputStream();
-				OutputStream outputStream = resp.getOutputStream()) {
-				byte[] buffer = new byte[4096];
-				int bytesRead;
-				while ((bytesRead = inputStream.read(buffer)) != -1) {
-					outputStream.write(buffer, 0, bytesRead);
+					// Convert and write the content to the response output stream
+					try (OutputStream outputStream = resp.getOutputStream()) {
+						// Convert the model into the requested language format and write to output
+						model.write(outputStream, requestedLanguage.getName());
+					}
+            	}
+
+			} else {
+				// Read the response from the external server
+				try (InputStream inputStream = connection.getInputStream(); OutputStream outputStream = resp.getOutputStream()) {
+					byte[] buffer = new byte[4096];
+					int bytesRead;
+					while ((bytesRead = inputStream.read(buffer)) != -1) {
+						outputStream.write(buffer, 0, bytesRead);
+					}
 				}
 			}
+			
 		} catch (MalformedURLException e) {
 			resp.sendError(400, "Failed to fetch the resource from the external server.");
 			e.printStackTrace();

@@ -172,7 +172,7 @@ public class MetadataWriteServlet extends HttpServlet {
     private void validateResourceForLayer(String resource, MossLayer layer) {
 
         try {
-            String resourceType = layer.getResourceType();
+            String[] resourceTypes = layer.getResourceTypes();
             Model databusModel = RDFDataMgr.loadModel(resource);
             
             Resource rdfResource = databusModel.getResource(resource);
@@ -185,14 +185,21 @@ public class MetadataWriteServlet extends HttpServlet {
                 if (typeNode.isResource()) {
                     Resource type = typeNode.asResource();
                     foundType = type.getURI();
-                    if (type.getURI().equals(resourceType)) {
-                        return;
+
+                    for(int i = 0; i < resourceTypes.length; i++) {
+                        if (type.getURI().equals(resourceTypes[i])) {
+                            // Found a matching type!
+                            return;
+                        }
                     }
+                    
+                   
                 }
             }
 
-            throw new IllegalArgumentException("Databus resource <" + resource + "> does not have the required type <" 
-                + resourceType + "> (detected type: <" + foundType + ">).");
+            String typesString = String.join(">, <", resourceTypes);
+            throw new IllegalArgumentException("Databus resource <" + resource + "> does not have one of the required types: <" 
+                + typesString + "> (detected type: <" + foundType + ">).");
 
         } catch(RiotNotFoundException e) {
             throw new IllegalArgumentException("Databus resource " + resource + " is not reachable");
@@ -207,7 +214,7 @@ public class MetadataWriteServlet extends HttpServlet {
         if(shaclPath == null) {
             return;
         }
-        
+
         Model shaclModel = RDFDataMgr.loadModel(shaclPath, RDFLanguages.TURTLE);
 
         // Load the RDF data from the provided RDF string

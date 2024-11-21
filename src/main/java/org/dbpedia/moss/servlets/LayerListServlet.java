@@ -57,7 +57,7 @@ public class LayerListServlet extends HttpServlet {
 				layerObject.put("name", layer.getName());
 				layerObject.put("format", layer.getFormatMimeType());
 				layerObject.put("formatExtension", formatExtension);
-				layerObject.put("resourceType", layer.getResourceType());
+				layerObject.put("resourceTypes", layer.getResourceTypes());
 				layerObject.put("hasSHACL", layer.getShaclPath() != null);
 				layerObject.put("hasTemplate", layer.getTemplatePath() != null);
 				layers.add(layerObject);

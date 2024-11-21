@@ -143,7 +143,7 @@ public class MossConfiguration {
 
             System.out.println("Language: " +  lang.toLongString());
 
-            if(layer.getResourceType() == null) {
+            if(layer.getResourceTypes() == null) {
                 throw new ConfigurationException("Resource type not specified for layer " + layer.getName() + ".");
             }
 

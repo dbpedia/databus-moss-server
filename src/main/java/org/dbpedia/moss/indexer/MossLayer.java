@@ -4,7 +4,7 @@ public class MossLayer {
 
     private String name;
     private String formatMimeType;
-    private String resourceType;
+    private String[] resourceTypes;
     private String templatePath;
     private String shaclPath;
     private String[] indexers;
@@ -33,12 +33,12 @@ public class MossLayer {
         this.shaclPath = shaclPath;
     }
 
-    public String getResourceType() {
-        return resourceType;
+    public String[] getResourceTypes() {
+        return resourceTypes;
     }
 
-    public void setResourceType(String scope) {
-        this.resourceType = scope;
+    public void setResourceTypes(String[] resourceTypes) {
+        this.resourceTypes = resourceTypes;
     }
 
 

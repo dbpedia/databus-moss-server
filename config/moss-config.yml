@@ -3,18 +3,36 @@ loaders:
     indexer:
       configPath: ./indexers/ontology-indexer.yml
 layers:
+  - name: keyword
+    formatMimeType: text/turtle
+    templatePath: layers/keyword/template.ttl
+    resourceTypes: 
+      - https://dataid.dbpedia.org/databus#Artifact
+      - https://dataid.dbpedia.org/databus#Group
+      - https://dataid.dbpedia.org/databus#Version
+    indexers:
+      - layers/keyword/indexer.yml
   - name: openenergy
     formatMimeType: application/ld+json
-    resourceType: https://dataid.dbpedia.org/databus#Version
     templatePath: layers/openenergy/template.jsonld
     shaclPath: layers/openenergy/shapes.shacl
+    resourceTypes: 
+      - https://dataid.dbpedia.org/databus#Version
     indexers:
       - layers/openenergy/indexer.yml
       - indexers/annotate-count-indexer.yml
   - name: opentransport
     formatMimeType: application/ld+json
-    resourceType: https://dataid.dbpedia.org/databus#Version
     templatePath: layers/opentransport/template.jsonld
+    resourceTypes: 
+      - https://dataid.dbpedia.org/databus#Version
     indexers:
       - layers/opentransport/indexer.yml
       - indexers/annotate-count-indexer.yml
+  - name: helmholtz
+    formatMimeType: application/ld+json
+    templatePath: layers/helmholtz/template.jsonld
+    resourceTypes: 
+      - https://dataid.dbpedia.org/databus#Artifact
+    indexers:
+      - layers/helmholtz/indexer.yml

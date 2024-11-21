@@ -114,16 +114,18 @@ public class GstoreConnector {
             URL url = new URI(headerDocumentURL).toURL();
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod(REQ_METHOD_GET);
-            connection.setRequestProperty(HEADER_ACCEPT, TEXT_TURTLE);
-
-            // Parse the response to a Jena Model
-            Model model = ModelFactory.createDefaultModel();
-            RDFParser.source(connection.getInputStream()).forceLang(language).parse(model); // forceLang(language)
+            connection.setRequestProperty(HEADER_ACCEPT, language.getHeaderString());
             
-            // Parse values from model
-            Resource layerResource = model.getResource(layerURI);
-            header.setCreatedTime(RDFUtils.getPropertyValue(model, layerResource, RDFUris.DCT_CREATED));
-            // TODO...
+            if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                // Parse the response to a Jena Model
+                Model model = ModelFactory.createDefaultModel();
+                RDFParser.source(connection.getInputStream()).forceLang(language).parse(model); // forceLang(language)
+
+                // Parse values from model
+                Resource layerResource = model.getResource(layerURI);
+                header.setCreatedTime(RDFUtils.getPropertyValue(model, layerResource, RDFUris.DCT_CREATED));
+                // TODO...
+            }
 
         } catch (IOException e) {
             // Layer might not exist yet.
