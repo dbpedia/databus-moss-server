@@ -46,7 +46,6 @@ public class GstoreConnector {
     private static final String HEADER_ACCEPT = "Accept";
     private static final String HEADER_CONTENT_TYPE = "Content-Type";
     private static final String APPLICATION_LD_JSON = "application/ld+json";
-    private static final String TEXT_TURTLE = "text/turtle";
     private static final String DOCUMENT_READ_ENDPOINT = "/document/read";
     private static final String DOCUMENT_SAVE_ENDPOINT = "/document/save";
     private static final String DOCUMENT_HISTORY_ENDPOINT = "/document/history";
