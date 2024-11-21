@@ -1,0 +1,199 @@
+openapi: 3.0.0
+info:
+  title: MOSS API
+  version: 0.1.1
+  description: API documentation for the Databus Metadata Overlay Search System
+
+paths:
+  /sparql:
+    get:
+      summary: "SPARQL Query Endpoint"
+      description: "Endpoint for querying the SPARQL store. Accepts SPARQL queries as URL parameters."
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "The SPARQL query to be executed."
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [json, xml, csv, tsv]
+          description: "Response format. Default is JSON."
+      responses:
+        '200':
+          description: "Query executed successfully"
+          content:
+            application/sparql-results+json: {}
+            application/sparql-results+xml: {}
+            text/csv: {}
+            text/tab-separated-values: {}
+        '400':
+          description: "Invalid query"
+        '500':
+          description: "Internal server error"
+
+    post:
+      summary: "SPARQL Query Endpoint"
+      description: "Endpoint for querying the SPARQL store with a POST request. Accepts SPARQL queries in the body."
+      requestBody:
+        required: true
+        content:
+          application/sparql-query:
+            schema:
+              type: string
+              description: "The SPARQL query to be executed."
+      responses:
+        '200':
+          description: "Query executed successfully"
+          content:
+            application/sparql-results+json: {}
+            application/sparql-results+xml: {}
+            text/csv: {}
+            text/tab-separated-values: {}
+        '400':
+          description: "Invalid query"
+        '500':
+          description: "Internal server error"
+  /g/{graphPath}:
+    get:
+      summary: "Retrieve RDF Graph Document"
+      description: "Endpoint to access RDF documents or graphs hosted on the server. This endpoint allows retrieval of RDF resources stored under the `/g` path."
+      parameters:
+        - name: graphPath
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "The path of the RDF graph document to retrieve. Example: `/header/databus.dbpedia.org/janfo/dbpedia-links/openenergy.jsonld`"
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [jsonld, rdfxml, ttl, ntriples]
+          description: "Response format. Default is JSON-LD."
+      responses:
+        '200':
+          description: "RDF document retrieved successfully"
+          content:
+            application/ld+json: {}
+            application/rdf+xml: {}
+            text/turtle: {}
+            application/n-triples: {}
+        '404':
+          description: "Graph not found"
+        '500':
+          description: "Internal server error"
+  /file/{param}:
+    get:
+      summary: "Metadata Browse Endpoint"
+      description: "Endpoint to browse metadata files."
+      parameters:
+        - name: param
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "File browsed successfully"
+        '404':
+          description: "File not found"
+
+  /api/save:
+    post:
+      summary: "Save Metadata"
+      description: "Protected endpoint to save metadata information."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+      responses:
+        '200':
+          description: "Metadata saved successfully"
+        '401':
+          description: "Unauthorized access"
+
+  /api/search:
+    get:
+      summary: "Search Metadata"
+      description: "Proxy endpoint to perform metadata search."
+      responses:
+        '200':
+          description: "Search results returned successfully"
+        '400':
+          description: "Invalid search query"
+
+  /api/layers/list:
+    get:
+      summary: "List Layers"
+      description: "Endpoint to list metadata layers."
+      responses:
+        '200':
+          description: "Layers listed successfully"
+        '404':
+          description: "Layers not found"
+
+  /api/layers/get-shacl:
+    get:
+      summary: "Get SHACL for Layers"
+      description: "Endpoint to get SHACL constraints for layers."
+      responses:
+        '200':
+          description: "SHACL constraints retrieved successfully"
+        '404':
+          description: "SHACL constraints not found"
+
+  /api/layers/get-template:
+    get:
+      summary: "Get Template for Layers"
+      description: "Endpoint to get layer templates."
+      responses:
+        '200':
+          description: "Layer template retrieved successfully"
+        '404':
+          description: "Template not found"
+
+  /api/users/{userId}:
+    get:
+      summary: "User Management"
+      description: "Endpoint to manage user information."
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "User information retrieved successfully"
+        '404':
+          description: "User not found"
+    post:
+      summary: "Add/Update User Information"
+      description: "Endpoint to add or update user information."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+      responses:
+        '200':
+          description: "User information updated successfully"
+        '401':
+          description: "Unauthorized access"

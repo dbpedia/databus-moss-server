@@ -4,16 +4,17 @@ loaders:
       configPath: ./indexers/ontology-indexer.yml
 layers:
   - name: openenergy
+    formatMimeType: application/ld+json
+    resourceType: https://dataid.dbpedia.org/databus#Version
     templatePath: layers/openenergy/template.jsonld
     shaclPath: layers/openenergy/shapes.shacl
-    scope: version
     indexers:
       - layers/openenergy/indexer.yml
       - indexers/annotate-count-indexer.yml
   - name: opentransport
+    formatMimeType: application/ld+json
+    resourceType: https://dataid.dbpedia.org/databus#Version
     templatePath: layers/opentransport/template.jsonld
-    shaclPath: layers/opentransport/shapes.shacl
-    scope: version
     indexers:
       - layers/opentransport/indexer.yml
       - indexers/annotate-count-indexer.yml

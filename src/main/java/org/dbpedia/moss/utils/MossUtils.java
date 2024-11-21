@@ -1,12 +1,10 @@
 package org.dbpedia.moss.utils;
 
-import org.apache.hc.core5.http.NotImplementedException;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.riot.Lang;
-import org.dbpedia.moss.DatabusMetadataLayerData;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -240,6 +238,10 @@ public final class MossUtils {
 
 
     public static String pruneSlashes(String value) {
+        if(value == null) {
+            return null;
+        }
+        
         while(value.endsWith("/")) {
 			value = value.substring(0, value.length() - 1);
 		}
@@ -284,11 +286,6 @@ public final class MossUtils {
         resourceURL = new URI(resourceURI).toURL();
         String path = resourceURL.getPath();
         return path + "/" + layerName;
-    }
-
-    // TODO
-    public static DatabusMetadataLayerData getLayerData(InputStream stream) throws NotImplementedException {
-        throw new NotImplementedException("isna");
     }
 
     public static String createDocumentURI(String base, String repo, String path) {

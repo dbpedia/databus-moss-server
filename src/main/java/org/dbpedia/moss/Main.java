@@ -1,12 +1,10 @@
 package org.dbpedia.moss;
 
 import org.dbpedia.moss.servlets.MetadataReadServlet;
-import org.dbpedia.moss.servlets.MetadataValidateServlet;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
 import org.dbpedia.moss.servlets.MossProxyServlet;
 import org.dbpedia.moss.servlets.SparqlProxyServlet;
 import org.dbpedia.moss.utils.MossEnvironment;
-import org.dbpedia.moss.servlets.MetadataAnnotateServlet;
 import org.dbpedia.moss.servlets.MetadataBrowseServlet;
 import org.apache.jena.query.ARQ;
 import org.apache.jena.rdf.model.Model;
@@ -18,7 +16,9 @@ import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
-import org.dbpedia.moss.servlets.LayerServlet;
+import org.dbpedia.moss.servlets.LayerListServlet;
+import org.dbpedia.moss.servlets.LayerShaclServlet;
+import org.dbpedia.moss.servlets.LayerTemplateServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.DefaultIdentityService;
 import org.eclipse.jetty.security.IdentityService;
@@ -35,6 +35,7 @@ import jakarta.servlet.DispatcherType;
 import jakarta.servlet.MultipartConfigElement;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -82,6 +83,11 @@ public class Main {
         MossEnvironment environment = MossEnvironment.get();
         System.out.println(environment.toString());
 
+        
+        File configFile = new File(environment.GetConfigPath());
+        MossConfiguration mossConfiguration = MossConfiguration.fromJson(configFile);
+        mossConfiguration.validate();
+        
         waitForGstore(environment.getGstoreBaseURL());
 
         UserDatabaseManager userDatabaseManager = new UserDatabaseManager(environment.getUserDatabasePath());
@@ -95,7 +101,7 @@ public class Main {
 
 
         Constraint constraint = new Constraint();
-        constraint.setName("Lalala");
+        constraint.setName("Authenticate");
         constraint.setRoles(new String[] { Constraint.ANY_ROLE });
         constraint.setAuthenticate(true);
         // constraint.setDataConstraint(Constraint.DC_CONFIDENTIAL);
@@ -114,14 +120,6 @@ public class Main {
         corsHolder.setName("cross-origin");
 
         MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
-
-
-
-        // Context handler for the unprotected routes
-        ServletContextHandler layerContext = new ServletContextHandler();
-        layerContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        layerContext.setContextPath("/layer/*");
-        layerContext.addServlet(new ServletHolder(new LayerServlet()), "/*");
 
         ServletContextHandler sparqlProxyContext = new ServletContextHandler();
         sparqlProxyContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
@@ -144,11 +142,10 @@ public class Main {
         metadataWriteServletHolder.setInitOrder(0);
         metadataWriteServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
-        ServletHolder metadataAnnotateServletHolder = new ServletHolder(new MetadataAnnotateServlet(indexerManager));
-        metadataAnnotateServletHolder.setInitOrder(0);
-        metadataAnnotateServletHolder.getRegistration().setMultipartConfig(multipartConfig);
-
         ServletHolder proxyServlet = new ServletHolder(new MossProxyServlet(environment.GetLookupBaseURL()));
+        ServletHolder layerListServlet = new ServletHolder(new LayerListServlet());
+        ServletHolder layerShaclServlet = new ServletHolder(new LayerShaclServlet());
+        ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
 
         FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
 
@@ -157,23 +154,26 @@ public class Main {
         apiContext.setContextPath("/api");
         apiContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
         apiContext.addServlet(metadataWriteServletHolder, "/save");
-        apiContext.addServlet(metadataAnnotateServletHolder, "/annotate");
         apiContext.addServlet(proxyServlet, "/search");
-        apiContext.addServlet(new ServletHolder(new MetadataValidateServlet()), "/validate");
+        apiContext.addServlet(layerListServlet, "/layers/list");
+        apiContext.addServlet(layerShaclServlet, "/layers/get-shacl");
+        apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
         apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
         apiContext.addFilter(authFilterHolder, "/save", null);
-        apiContext.addFilter(authFilterHolder, "/annotate", null);
         apiContext.addFilter(authFilterHolder, "/users/*", null);
 
         // Set up handler collection
         HandlerList  handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { readContext, browseContext, layerContext, sparqlProxyContext, apiContext });
+        handlers.setHandlers(new Handler[] { readContext, browseContext, sparqlProxyContext, apiContext });
 
         server.setHandler(handlers);
 
         server.start();
         server.join();
     }
+
+    
+
 
     private static void waitForGstore(String targetUrl) throws URISyntaxException, InterruptedException {
         while (true) {

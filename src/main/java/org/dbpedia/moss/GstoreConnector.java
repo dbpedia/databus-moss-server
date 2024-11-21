@@ -244,11 +244,12 @@ public class GstoreConnector {
             .append("=")
             .append(URLEncoder.encode(prefix, CHAR_ENCODING_UTF8));
 
+
         URL url = new URI(uri.toString()).toURL();
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod(REQ_METHOD_POST);
         connection.setRequestProperty(HEADER_ACCEPT, APPLICATION_LD_JSON);
-        connection.setRequestProperty(HEADER_CONTENT_TYPE, APPLICATION_LD_JSON);
+        connection.setRequestProperty(HEADER_CONTENT_TYPE, language.getHeaderString());
         connection.setDoOutput(true);
 
         OutputStream outputStream = connection.getOutputStream();

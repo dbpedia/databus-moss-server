@@ -2,11 +2,16 @@ package org.dbpedia.moss;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import javax.naming.ConfigurationException;
+
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.indexer.DataLoaderConfig;
 import org.dbpedia.moss.indexer.LayerIndexerConfiguration;
 import org.dbpedia.moss.indexer.MossLayer;
@@ -22,50 +27,64 @@ public class MossConfiguration {
     private List<DataLoaderConfig> loaders;
 
     private List<LayerIndexerConfiguration> indexers;
-
-    // Getters and Setters for indexers, layers, loaders
-    public List<LayerIndexerConfiguration> getIndexers() {
-        return indexers;
-    }
-
-    public List<MossLayer> getLayers() {
-        return layers;
-    }
-
-    public void setLayers(List<MossLayer> layers) {
-        this.layers = layers;
-    }
-
-    public List<DataLoaderConfig> getLoaders() {
-        return loaders;
-    }
-
-    public void setLoaders(List<DataLoaderConfig> loaders) {
-        this.loaders = loaders;
-    }
-
-    public static MossConfiguration fromJson(File file) {
-        try {
-            // Load the configuration from the YAML file
-            ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
-            MossConfiguration config = mapper.readValue(file, MossConfiguration.class);
     
-            // Get the directory of the config file for resolving relative paths
-            File configDir = file.getParentFile();
+    
+        // Getters and Setters for indexers, layers, loaders
+        public List<LayerIndexerConfiguration> getIndexers() {
+            return indexers;
+        }
+    
+        public List<MossLayer> getLayers() {
+            return layers;
+        }
+    
+        public void setLayers(List<MossLayer> layers) {
+            this.layers = layers;
+        }
+    
+        public List<DataLoaderConfig> getLoaders() {
+            return loaders;
+        }
+    
+        public void setLoaders(List<DataLoaderConfig> loaders) {
+            this.loaders = loaders;
+        }
+        
+        private File configDir;
+    
+        public static MossConfiguration fromJson(File file) {
+            try {
+                // Load the configuration from the YAML file
+                ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
+                MossConfiguration config = mapper.readValue(file, MossConfiguration.class);
+        
+                // Get the directory of the config file for resolving relative paths
+                config.configDir = file.getParentFile();
     
             // Load template content for each MossLayerType
             for (MossLayer layer : config.getLayers()) {
                 if (layer.getTemplatePath() != null && !layer.getTemplatePath().isEmpty()) {
                     // Resolve the template file relative to the config file's directory
-                    File templateFile = new File(configDir, layer.getTemplatePath());
+                    File templateFile = new File(config.configDir, layer.getTemplatePath());
     
                     // Check if the template file exists and is readable
                     if (templateFile.exists() && templateFile.isFile()) {
                         // Read the content of the template file
-                        String templateContent = new String(Files.readAllBytes(templateFile.toPath()));
-                        layer.setTemplate(templateContent); // Set template content
+                        layer.setTemplatePath(templateFile.getAbsolutePath());
                     } else {
                         System.err.println("Template file not found or not readable: " + templateFile.getAbsolutePath());
+                    }
+                }
+
+                if (layer.getShaclPath() != null && !layer.getShaclPath().isEmpty()) {
+                    // Resolve the template file relative to the config file's directory
+                    File shaclFile = new File(config.configDir, layer.getShaclPath());
+                    // Check if the template file exists and is readable
+                    if (shaclFile.exists() && shaclFile.isFile()) {
+                        // Read the content of the template file
+                        layer.setShaclPath(shaclFile.getAbsolutePath());
+                    } else {
+                        System.err.println("Template file not found or not readable: " + shaclFile.getAbsolutePath());
                     }
                 }
             }
@@ -95,5 +114,64 @@ public class MossConfiguration {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public MossLayer getLayerByName(String layerName) {
+        for (MossLayer layer : layers) {
+            if(layer.getName().equals(layerName)) {
+                return layer;
+            }
+        }
+
+        return null;
+    }
+
+    public void validate() throws ConfigurationException {
+
+        System.out.println("==========================");
+        System.out.println("Validating Configuration...");
+        // Try to load shacl files:
+        for (MossLayer layer : layers) {
+            
+            System.out.println("===== [" + layer.getName() + "] (\"=====");
+            Lang lang = RDFLanguages.contentTypeToLang(layer.getFormatMimeType());
+           
+            if(lang == null) {
+                throw new ConfigurationException("Missing or unknown RDF language in formatMimeType of layer " 
+                    + layer.getName() + ": " + layer.getFormatMimeType());
+            }
+
+            System.out.println("Language: " +  lang.toLongString());
+
+            if(layer.getResourceType() == null) {
+                throw new ConfigurationException("Resource type not specified for layer " + layer.getName() + ".");
+            }
+
+            if(layer.getShaclPath() != null) {
+                System.out.println("SHACL file: " +  layer.getShaclPath());
+                validateSHACL(layer);
+            }
+
+            if(layer.getTemplatePath() != null){
+                System.out.println("Template file: " +  layer.getTemplatePath());
+                validateTemplate(layer, lang);
+            }
+
+        }
+        
+        System.out.println("Configuration OK!");
+        System.out.println("==========================");
+    }
+    
+    private void validateSHACL(MossLayer layer) throws ConfigurationException {
+        Model shaclModel = RDFDataMgr.loadModel(layer.getShaclPath(), Lang.TURTLE);
+
+        if (shaclModel.isEmpty()) {
+            throw new ConfigurationException("The specified SHACL file for layer " + layer.getName() + " is empty or invalid.");
+        }
+    }
+
+    private void validateTemplate(MossLayer layer, Lang lang) throws ConfigurationException {
+        RDFDataMgr.loadModel(layer.getTemplatePath(), lang);
     }
 }

@@ -3,12 +3,19 @@ package org.dbpedia.moss.indexer;
 public class MossLayer {
 
     private String name;
-    private String scope;
+    private String formatMimeType;
+    private String resourceType;
     private String templatePath;
-    private String template;
     private String shaclPath;
-    private String shacl;
     private String[] indexers;
+
+    public String getFormatMimeType() {
+        return formatMimeType;
+    }
+
+    public void setFormatMimeType(String format) {
+        this.formatMimeType = format;
+    }
 
     public String[] getIndexers() {
         return indexers;
@@ -26,29 +33,14 @@ public class MossLayer {
         this.shaclPath = shaclPath;
     }
 
-    public String getShacl() {
-        return shacl;
+    public String getResourceType() {
+        return resourceType;
     }
 
-    public void setShacl(String shacl) {
-        this.shacl = shacl;
+    public void setResourceType(String scope) {
+        this.resourceType = scope;
     }
 
-    public String getScope() {
-        return scope;
-    }
-
-    public void setScope(String scope) {
-        this.scope = scope;
-    }
-
-    public String getTemplate() {
-        return template;
-    }
-
-    public void setTemplate(String templateContent) {
-        this.template = templateContent;
-    }
 
     public String getTemplatePath() {
         return templatePath;

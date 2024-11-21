@@ -1,6 +1,9 @@
 package org.dbpedia.moss.servlets;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.time.ZonedDateTime;
@@ -14,16 +17,29 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.jena.atlas.web.ContentType;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.NodeIterator;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.riot.RiotException;
+import org.apache.jena.riot.RiotNotFoundException;
+import org.apache.jena.shacl.ShaclValidator;
+import org.apache.jena.shacl.ValidationReport;
 import org.dbpedia.moss.GstoreConnector;
+import org.dbpedia.moss.MossConfiguration;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.db.UserInfo;
 import org.dbpedia.moss.indexer.IndexerManager;
+import org.dbpedia.moss.indexer.MossLayer;
 import org.dbpedia.moss.indexer.MossLayerHeader;
 import org.dbpedia.moss.utils.MossEnvironment;
 import org.dbpedia.moss.utils.MossUtils;
+import org.dbpedia.moss.utils.RDFUris;
 
 /**
  * HTTP Servlet with handlers for the single lookup API request "/api/search"
@@ -51,16 +67,21 @@ public class MetadataWriteServlet extends HttpServlet {
     private IndexerManager indexerManager;
 
     private UserDatabaseManager userDatabaseManager;
-
-	public MetadataWriteServlet(IndexerManager indexerManager, UserDatabaseManager userDatabaseManager) {
+    
+    private MossConfiguration mossConfiguration;
+    
+    public MetadataWriteServlet(IndexerManager indexerManager, UserDatabaseManager userDatabaseManager) {
         this.indexerManager = indexerManager;
         this.userDatabaseManager = userDatabaseManager;
     }
 
     @Override
-	public void init() throws ServletException {
-		env = MossEnvironment.get();
+    public void init() throws ServletException {
+        env = MossEnvironment.get();
         gstoreConnector = new GstoreConnector(env.getGstoreBaseURL());
+        
+        File configFile = new File(env.GetConfigPath());
+        mossConfiguration = MossConfiguration.fromJson(configFile);
 	}
 
 
@@ -76,34 +97,46 @@ public class MetadataWriteServlet extends HttpServlet {
             
             String requestBaseURL = env.getMossBaseUrl(); // MossUtils.getRequestBaseURL(req);
             String rdfString = MossUtils.readToString(req.getInputStream());
-            Lang language = getRDFLanguage(req);
-
+            Lang requestLanguage = getRDFLanguage(req);
             String resource = MossUtils.pruneSlashes(req.getParameter("resource"));
             String layerName = req.getParameter("layer");
 
-            // TODO: Check if layer exists
+            MossLayer layer = mossConfiguration.getLayerByName(layerName);
+           
+            if(layer == null) {
+                throw new IllegalArgumentException("Specified layer name is unkown to this MOSS instance:" + layerName);
+            }
+
+            Lang layerLanguage = RDFLanguages.contentTypeToLang(layer.getFormatMimeType());
+
+            if(requestLanguage != layerLanguage) {
+                throw new IllegalArgumentException("Invalid RDF language used: " + requestLanguage.toLongString() +
+                    ". Has to be " + layerLanguage.toLongString() + " for layer "  + layerName + ".");
+            }
+
+            validateInputForLayer(layer, rdfString, requestLanguage);
             
             String contentDocumentURL = MossUtils.getContentDocumentURL(requestBaseURL, 
-                resource, layerName, language);
+                resource, layerName, requestLanguage);
 
             System.out.println("Resource: " + resource);
             System.out.println("Layer name: " + layerName);
             System.out.println("Content document: " + contentDocumentURL);
-            System.out.println("Language: " + language);
+            System.out.println("Language: " + requestLanguage);
 
+            validateResourceForLayer(resource, layer);
+                        
             String currentTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
 
-            MossLayerHeader header = gstoreConnector.getOrCreateLayerHeader(requestBaseURL, layerName, resource, language);
+            MossLayerHeader header = gstoreConnector.getOrCreateLayerHeader(requestBaseURL, layerName, resource, layerLanguage);
             header.setModifiedTime(currentTime);
             header.setLastModifiedBy(userInfo.getUsername());
             header.setContentDocumentURL(contentDocumentURL);
 
             // Save to gstore!
-            String contentDocumentPath = MossUtils.getDocumentPath(resource, layerName, language);
-
-            gstoreConnector.writeHeader(requestBaseURL + "/g/", header, language);
-            gstoreConnector.writeContent(requestBaseURL + "/g/", contentDocumentPath, rdfString, language);
-
+            String contentDocumentPath = MossUtils.getDocumentPath(resource, layerName, layerLanguage);
+            gstoreConnector.writeHeader(requestBaseURL + "/g/", header, layerLanguage);
+            gstoreConnector.writeContent(requestBaseURL + "/g/", contentDocumentPath, rdfString, layerLanguage);
             indexerManager.updateIndices(header.getUri(), header.getLayerName());
 
         } catch (IllegalArgumentException e) {
@@ -136,6 +169,67 @@ public class MetadataWriteServlet extends HttpServlet {
         resp.setStatus(200);
     }
 
+    private void validateResourceForLayer(String resource, MossLayer layer) {
+
+        try {
+            String resourceType = layer.getResourceType();
+            Model databusModel = RDFDataMgr.loadModel(resource);
+            
+            Resource rdfResource = databusModel.getResource(resource);
+            Property rdfTypeProperty = databusModel.getProperty(RDFUris.RDF_TYPE);
+            NodeIterator types = databusModel.listObjectsOfProperty(rdfResource, rdfTypeProperty);
+            String foundType = null;
+
+            while (types.hasNext()) {
+                RDFNode typeNode = types.next();
+                if (typeNode.isResource()) {
+                    Resource type = typeNode.asResource();
+                    foundType = type.getURI();
+                    if (type.getURI().equals(resourceType)) {
+                        return;
+                    }
+                }
+            }
+
+            throw new IllegalArgumentException("Databus resource <" + resource + "> does not have the required type <" 
+                + resourceType + "> (detected type: <" + foundType + ">).");
+
+        } catch(RiotNotFoundException e) {
+            throw new IllegalArgumentException("Databus resource " + resource + " is not reachable");
+        }
+    }
+
+    private void validateInputForLayer(MossLayer layer, String rdfString, Lang language) throws Exception {
+
+        // Load the SHACL shape model from the file path provided by the layer
+        String shaclPath = layer.getShaclPath();
+
+        if(shaclPath == null) {
+            return;
+        }
+        
+        Model shaclModel = RDFDataMgr.loadModel(shaclPath, RDFLanguages.TURTLE);
+
+        // Load the RDF data from the provided RDF string
+        Model dataModel = ModelFactory.createDefaultModel();
+
+        try (InputStream rdfInput = new ByteArrayInputStream(rdfString.getBytes())) {
+            RDFDataMgr.read(dataModel, rdfInput, language);
+        }
+
+        // Validate the RDF data model against the SHACL shape model
+        ValidationReport report = ShaclValidator.get().validate(shaclModel.getGraph(), dataModel.getGraph());
+
+        // Check if validation passed or failed
+        if (!report.conforms()) {
+            // Validation failed: throw an exception or handle the report as needed
+            throw new IllegalArgumentException("RDF data does not conform to SHACL shapes of layer " + layer.getName() 
+                + ": " + report.getEntries().toString());
+        } else {
+            System.out.println("Validation successful: RDF data conforms to SHACL shapes.");
+        }
+    }
+            
     private Lang getRDFLanguage(HttpServletRequest req) throws ValidationException {
         String contentTypeHeader = req.getContentType();
         ContentType contentType = ContentType.create(contentTypeHeader);

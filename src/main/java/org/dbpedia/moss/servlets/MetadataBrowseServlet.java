@@ -21,6 +21,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.utils.MossEnvironment;
+import org.dbpedia.moss.utils.MossUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,6 +105,7 @@ public class MetadataBrowseServlet extends HttpServlet {
 
 	public String parseFolderRequest(String baseUrl, String responseBody) throws IOException, InterruptedException   {
 
+		baseUrl = MossUtils.pruneSlashes(baseUrl);
 		HttpClient httpClient = HttpClient.newBuilder()
 			.followRedirects(HttpClient.Redirect.ALWAYS)
 			.build();

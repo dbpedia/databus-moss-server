@@ -2,12 +2,6 @@ package org.dbpedia.moss.indexer;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
-
-import java.io.File;
-import java.io.IOException;
 
 
 public class LayerIndexerConfiguration {
@@ -37,10 +31,4 @@ public class LayerIndexerConfiguration {
     public void setLayers(List<String> layers) {
         this.layers = layers;
     }
-
-    public static LayerIndexerConfiguration fromJson(File file) throws IOException {
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
-        return mapper.readValue(file, LayerIndexerConfiguration.class);
-    }
-
 }
