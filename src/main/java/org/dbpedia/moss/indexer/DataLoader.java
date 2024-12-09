@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -22,7 +23,6 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.apache.jena.rdf.model.Model;
@@ -32,6 +32,7 @@ import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.dbpedia.moss.GstoreConnector;
+import org.dbpedia.moss.utils.HttpClientWithProxy;
 
 import com.google.gson.JsonParser;
 
@@ -55,12 +56,11 @@ public class DataLoader {
 
     private String[] loadCollectionFileURIs() throws URISyntaxException {
 
-        try {
+        try {   
             URI uri = new URI(collectionURI);
             String baseUrl = uri.getScheme() + "://" + uri.getHost();
 
-            HttpClient httpClient = HttpClients.createDefault();
-
+            HttpClient httpClient = HttpClientWithProxy.create();
             // Get SPARQL query from the collection
             HttpGet collectionQueryGet = new HttpGet(collectionURI);
             collectionQueryGet.addHeader("Accept", "text/sparql");
@@ -116,7 +116,10 @@ public class DataLoader {
 
         try {
             URL url = new URI(targetURI).toURL();
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+            Proxy proxy = HttpClientWithProxy.getProxy(url.getProtocol());
+
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection(proxy);
             connection.setRequestMethod(REQ_METHOD_GET);
             InputStream inputStream = connection.getInputStream();
             RDFParser.source(inputStream).forceLang(Lang.TURTLE).parse(model);

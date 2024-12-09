@@ -16,6 +16,7 @@ import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
+import org.dbpedia.moss.servlets.LayerIndexerConfigurationServlet;
 import org.dbpedia.moss.servlets.LayerListServlet;
 import org.dbpedia.moss.servlets.LayerShaclServlet;
 import org.dbpedia.moss.servlets.LayerTemplateServlet;
@@ -146,6 +147,7 @@ public class Main {
         ServletHolder layerListServlet = new ServletHolder(new LayerListServlet());
         ServletHolder layerShaclServlet = new ServletHolder(new LayerShaclServlet());
         ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
+        ServletHolder layerIndexerConfigurationServlet = new ServletHolder(new LayerIndexerConfigurationServlet());
 
         FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
 
@@ -158,6 +160,7 @@ public class Main {
         apiContext.addServlet(layerListServlet, "/layers/list");
         apiContext.addServlet(layerShaclServlet, "/layers/get-shacl");
         apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
+        apiContext.addServlet(layerIndexerConfigurationServlet, "/layers/get-indexers");
         apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
         apiContext.addFilter(authFilterHolder, "/save", null);
         apiContext.addFilter(authFilterHolder, "/users/*", null);
@@ -204,7 +207,6 @@ public class Main {
             } catch (IOException e) {
                 System.out.println("Error connecting to gstore: " + e.getMessage() + ". Trying again in 1 second.");
             }
-
 
             Thread.sleep(1000);
         }
