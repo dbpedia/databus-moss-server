@@ -80,7 +80,21 @@ public class AuthenticationFilter implements Filter {
         // If X-API-Key header is not present, fall back to Bearer token validation
         String authorizationHeader = httpRequest.getHeader("Authorization");
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+
+            System.out.println("TODO: REMOVE THIS!");
+            System.out.println("========AUTH HEADER=========");
+            System.out.println(authorizationHeader);
+            System.out.println("===========))))))))=========");
+      
+
             String token = authorizationHeader.substring(7);
+
+            System.out.println("TODO: REMOVE THIS!");
+            System.out.println("=========TOKEN============");
+            System.out.println(token);
+            System.out.println("==========================");
+
+
             String sub = validateToken(token);
 
             if (sub != null) {
@@ -103,6 +117,7 @@ public class AuthenticationFilter implements Filter {
 
     private String validateToken(String token) {
         try {
+
             // Parse the token
             DecodedJWT jwt = JWT.decode(token);
 
