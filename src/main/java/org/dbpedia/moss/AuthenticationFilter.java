@@ -5,47 +5,85 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
-import java.util.HashMap;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.TimeUnit;
 
 import com.auth0.jwk.Jwk;
-import com.auth0.jwk.JwkException;
 import com.auth0.jwk.JwkProvider;
 import com.auth0.jwk.UrlJwkProvider;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserInfo;
+import org.dbpedia.moss.utils.HttpClientWithProxy;
+import org.dbpedia.moss.utils.MossEnvironment;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 
 public class AuthenticationFilter implements Filter {
 
+
     private APIKeyValidator apiKeyValidator;
 
-    private HashMap<String, PublicKey> publicKeyCache;
+    private Cache<String, PublicKey> publicKeyCache;
+
+    private Cache<String, String> tokenCache;
+
+    private JsonNode discoveryDocument;
+    
+    
+    private String issuer;
+    private String clientId;
+    private String clientSecret;
+    private Instant lastDiscoveryFetchTime;
+    
 
     public AuthenticationFilter(APIKeyValidator apiKeyValidator) {
         this.apiKeyValidator = apiKeyValidator;
-        publicKeyCache = new HashMap<String, PublicKey>();
+       
+       
     }
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        // Initialization logic if needed
-        // String ISSUER = "https://auth.dbpedia.org/realms/dbpedia";
+        MossEnvironment env = MossEnvironment.get();
+        issuer = env.getAuthOidcIssuer();
+        clientId = env.getAuthOidcClientId();
+        clientSecret = env.getAuthOidcClientSecret();
+
+        JsonNode discoveryDocument = getDiscoveryDocument();
+
+        if(discoveryDocument == null) {
+            throw new ServletException("Failed to fetch discovery document");
+        }
+
+        publicKeyCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(30, TimeUnit.MINUTES) // Cache expires after 5 minutes
+            .build();
+
+
+        tokenCache =  CacheBuilder.newBuilder()
+            .expireAfterWrite(30, TimeUnit.SECONDS) // Cache expires after 5 minutes
+            .build();
     }
 
     @Override
@@ -53,11 +91,10 @@ public class AuthenticationFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
-        if(httpRequest.getMethod() == "OPTIONS") {
+        if(httpRequest.getMethod().equals("OPTIONS")) {
             chain.doFilter(request, response);
             return;
         }
-
 
         // Check for X-API-Key header first
         String apiKeyHeader = httpRequest.getHeader("X-API-Key");
@@ -67,7 +104,7 @@ public class AuthenticationFilter implements Filter {
             UserInfo userInfo = apiKeyValidator.getUserInfoForAPIKey(apiKeyHeader); 
 
             if (userInfo != null) {
-                request.setAttribute("sub", userInfo.getSub());
+                request.setAttribute(OIDC_KEY_SUBJECT, userInfo.getSub());
                 chain.doFilter(request, response); // API key is valid, proceed to the next filter or servlet
                 return;
             } else {
@@ -81,24 +118,11 @@ public class AuthenticationFilter implements Filter {
         String authorizationHeader = httpRequest.getHeader("Authorization");
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
 
-            System.out.println("TODO: REMOVE THIS!");
-            System.out.println("========AUTH HEADER=========");
-            System.out.println(authorizationHeader);
-            System.out.println("===========))))))))=========");
-      
-
             String token = authorizationHeader.substring(7);
-
-            System.out.println("TODO: REMOVE THIS!");
-            System.out.println("=========TOKEN============");
-            System.out.println(token);
-            System.out.println("==========================");
-
-
             String sub = validateToken(token);
 
             if (sub != null) {
-                request.setAttribute("sub", sub);
+                request.setAttribute(OIDC_KEY_SUBJECT, sub);
                 chain.doFilter(request, response); // Token is valid, proceed to the next filter or servlet
             } else {
                 httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -116,52 +140,173 @@ public class AuthenticationFilter implements Filter {
     }
 
     private String validateToken(String token) {
+
+        String cachedSub = tokenCache.getIfPresent(token);
+
+        if (cachedSub != null) {
+            System.out.println("Sub from cache: " + cachedSub);
+            return cachedSub;  // Return cached subject
+        }
+
         try {
+            
+            DecodedJWT jwt = null;
+            
+            try {
+                // Check if the token is a JWT
+                jwt = JWT.decode(token);
+            } catch(JWTDecodeException e) {
+                return validateOpaqueToken(token);
+            }
 
-            // Parse the token
-            DecodedJWT jwt = JWT.decode(token);
+            // Handle JWT tokens
+            String tokenIssuer = jwt.getIssuer();
 
-            // Get the issuer URL
-            String issuer = jwt.getIssuer();
+            if (!issuer.equals(tokenIssuer)) {
+                throw new SecurityException("Invalid token issuer");
+            }
 
-            // Get the kid from the header
+            Instant expirationTime = jwt.getExpiresAtAsInstant();
+
+            if(expirationTime  == null || !expirationTime.isBefore(Instant.now())) {
+                throw new SecurityException("Token is expired");
+            }
+
             String kid = jwt.getKeyId();
-
             String sub = jwt.getSubject();
 
-            // Create a cache key from issuer and kid (key id)
-            String cacheKey = issuer + CACHE_KEY_SEPARATOR + kid;
+            PublicKey publicKey = publicKeyCache.getIfPresent(kid);
 
-            PublicKey publicKey;
-
-            if(publicKeyCache.containsKey(cacheKey)) {
-                publicKey = publicKeyCache.get(cacheKey);
-            } else {
-                // Retrieve the well-known document for the JWKS URL
-                String wellKnownUrl = issuer + "/.well-known/openid-configuration";
-                String jwksUrl = getJwksUrl(wellKnownUrl);
-
-                // Retrieve the JWKS document
+            if(publicKey == null) {
+               
+                String jwksUrl = discoveryDocument.get(DISCOVERY_KEY_JWKS_URI).asText();
                 JwkProvider provider = new UrlJwkProvider(new URI(jwksUrl).toURL());
                 Jwk jwk = provider.get(kid);
 
                 publicKey = jwk.getPublicKey();
-                publicKeyCache.put(cacheKey, publicKey);
+                publicKeyCache.put(kid, publicKey);
             }
-           
-            // Get the algorithm from the header
+            
             Algorithm alg = getAlgorithmFromHeader(jwt.getAlgorithm(), (RSAPublicKey)publicKey);
-
-            // Validate the token signature
-            JWTVerifier verifier = JWT.require(alg).withIssuer(issuer).build();
+            JWTVerifier verifier = JWT.require(alg).withIssuer(tokenIssuer).build();
             verifier.verify(token);
 
             return sub; // Token is valid
 
-        } catch (JWTVerificationException | JwkException | IOException | URISyntaxException e) {
+        } catch (Exception e) {
+            // Fallback to introspection for opaque tokens
             e.printStackTrace();
-            return null; // Token is invalid
+            return null;
         }
+    }
+
+    private String validateOpaqueToken(String token) {
+      
+        try (CloseableHttpClient client = HttpClientWithProxy.create()) {
+
+            System.out.println("Checking opaque token");
+
+            // Try to fetch from the user info endpoint first
+            String sub = fetchSubFromUserInfo(client, token);
+
+            if(sub != null) {
+                return sub;
+            }
+
+            // If that didnt work, try the introspection endpoint
+            return fetchSubFromIntrospectionEndpoint(client, token);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null; // Token is invalid
+    }
+
+    private String fetchSubFromIntrospectionEndpoint(CloseableHttpClient client, String token) throws IOException {
+        
+        System.out.println("Retrieving introspection endpoint from discovery.");
+        JsonNode introspectNode = getDiscoveryDocument().get(DISCOVERY_KEY_INTROSPECTION_ENDPOINT);
+
+        if(introspectNode == null) {
+            System.out.println("Introspection endpoint not found.");
+            return null;
+        }
+
+        if(clientId == null || clientSecret == null) {
+            System.out.println("Client id or secret are not specified");
+            return null;
+        }
+
+        String introspectionEndpoint = introspectNode.asText();
+        System.out.println("Introspection endpoint found: " + introspectionEndpoint);
+
+        try {
+            HttpPost post = new HttpPost(introspectionEndpoint);
+            post.setHeader(HTTP_HEADER_CONTENT_TYPE, "application/x-www-form-urlencoded");
+            String body = "token=" + token + "&client_id=" + clientId + "&client_secret=" + clientSecret;
+            post.setEntity(new StringEntity(body));
+       
+            try (CloseableHttpResponse response = client.execute(post)) {
+                
+                String responseBody = EntityUtils.toString(response.getEntity());
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode responseJson = mapper.readTree(responseBody);
+
+                if (responseJson.get("active").asBoolean()) {
+                    String sub = responseJson.get(OIDC_KEY_SUBJECT).asText();
+                    tokenCache.put(token, sub);
+                    
+                    System.out.println("Retrieved sub from introspection endpoint.");
+                    return sub;
+                }
+            } 
+
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        
+        return null;
+    }
+
+    private String fetchSubFromUserInfo(CloseableHttpClient client, String token) {
+        
+        System.out.println("Retrieving user info endpoint from discovery.");
+        // If introspection fails or is missing, fallback to user info endpoint
+        JsonNode userInfoEndpointNode = getDiscoveryDocument().get(DISCOVERY_KEY_USERINFO_ENDPOINT);
+
+        if(userInfoEndpointNode == null) {
+            System.out.println("User info endpoint not found.");
+            return null;
+        }
+
+        String userInfoEndpoint = userInfoEndpointNode.asText();
+
+        if (userInfoEndpoint == null || userInfoEndpoint.isEmpty()) {
+            System.out.println("User info endpoint not specified.");
+            return null;
+        }
+
+        System.out.println("User info endpoint found: " + userInfoEndpoint);
+
+        HttpGet get = new HttpGet(userInfoEndpoint + "?access_token=" + token);
+        try (CloseableHttpResponse response = client.execute(get)) {
+            String responseBody = EntityUtils.toString(response.getEntity());
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode responseJson = mapper.readTree(responseBody);
+
+            if (responseJson.has(OIDC_KEY_SUBJECT)) {
+                String sub = responseJson.get(OIDC_KEY_SUBJECT).asText();
+                
+                System.out.println("Retrieved sub from user info endpoint.");
+                tokenCache.put(token, sub);
+                return sub;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     private Algorithm getAlgorithmFromHeader(String algorithm, RSAPublicKey publicKey) {
@@ -177,20 +322,46 @@ public class AuthenticationFilter implements Filter {
         }
     }
 
-    private String getJwksUrl(String wellKnownUrl) throws IOException {
-        CloseableHttpClient client = HttpClients.createDefault();
-        HttpGet httpGet = new HttpGet(wellKnownUrl);
-        CloseableHttpResponse response = client.execute(httpGet);
+    private JsonNode getDiscoveryDocument()  {
+    
+        boolean hasExpired = lastDiscoveryFetchTime == null || 
+            Duration.between(lastDiscoveryFetchTime, Instant.now()).toMillis() > DISCOVERY_REFRESH_INTERVAL;
 
-        try {
+        if(!hasExpired) {
+            return discoveryDocument;
+        }
+
+        try (CloseableHttpClient client = HttpClientWithProxy.create()) {
+            
+            HttpGet httpGet = new HttpGet(issuer + DISCOVERY_DOCUMENT_PATH);
+            CloseableHttpResponse response = client.execute(httpGet);
             String responseBody = EntityUtils.toString(response.getEntity());
             ObjectMapper mapper = new ObjectMapper();
-            JsonNode jsonNode = mapper.readTree(responseBody);
-            return jsonNode.get("jwks_uri").asText();
-        } finally {
+            discoveryDocument = mapper.readTree(responseBody);
+            
+            lastDiscoveryFetchTime = Instant.now();
+            System.out.println("Discovery fetched at " + lastDiscoveryFetchTime);
             response.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
+        return discoveryDocument;
     }
 
-    private final static String CACHE_KEY_SEPARATOR = "_____";
+
+    private final static String DISCOVERY_DOCUMENT_PATH = "/.well-known/openid-configuration";
+    
+    private final static int DISCOVERY_REFRESH_INTERVAL = 15 * 60 * 1000;
+
+    private final static String DISCOVERY_KEY_INTROSPECTION_ENDPOINT = "introspection_endpoint";
+
+    private final static String DISCOVERY_KEY_USERINFO_ENDPOINT = "userinfo_endpoint";
+    
+    private final static String DISCOVERY_KEY_JWKS_URI = "jwks_uri";
+    
+    private final static String HTTP_HEADER_CONTENT_TYPE = "Content-Type";
+
+    private final static String OIDC_KEY_SUBJECT = "sub";
 }

@@ -16,6 +16,9 @@
                 "GSTORE_BASE_URL": "http://localhost:5003",
                 "LOOKUP_BASE_URL": "http://localhost:5002",
                 "USER_DATABASE_PATH": "./devenv/sqlite/users.db",
+                "AUTH_OIDC_CLIENT_ID": "e9eOLS9IkGvuyBl7cBorWUQTNgbqejhc", // "moss-dev",
+                "AUTH_OIDC_CLIENT_SECRET": "0RVo9jMnbhPnkR6Ttz0aXQRTcRuSz5DpqyUEjbbcbgRuGA4rbwCjnHM2cOlTrv9q", // "z7feqbX7lGyAFzPzGIaC4LT7vidPqrP5",
+                "AUTH_OIDC_ISSUER": "https://kilt.eu.auth0.com", // "https://auth.dbpedia.org/realms/dbpedia",
                 "JWT_VERBOSE": true
             }
         }

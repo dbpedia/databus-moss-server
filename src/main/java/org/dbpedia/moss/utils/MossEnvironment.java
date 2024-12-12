@@ -12,6 +12,9 @@ public class MossEnvironment {
     private String lookupBaseURL;
     private String mossBaseURL;
     private String userDatabasePath;
+    private String authOidcIssuer;
+    private String authOidcClientId;
+    private String authOidcClientSecret;
 
     private static HashMap<String, String> _testVariableMap;
 
@@ -39,6 +42,10 @@ public class MossEnvironment {
         configuration.lookupBaseURL = getVariable("LOOKUP_BASE_URL");
         configuration.mossBaseURL = getVariable("MOSS_BASE_URL");
         configuration.userDatabasePath = getVariable("USER_DATABASE_PATH");
+        configuration.mossBaseURL = getVariable("MOSS_BASE_URL");
+        configuration.authOidcIssuer = getVariable("AUTH_OIDC_ISSUER");
+        configuration.authOidcClientId = getVariable("AUTH_OIDC_CLIENT_ID");
+        configuration.authOidcClientSecret = getVariable("AUTH_OIDC_CLIENT_SECRET");
 
 		return configuration;
 	}
@@ -60,6 +67,8 @@ public class MossEnvironment {
         sb.append("LOOKUP_BASE_URL: " + lookupBaseURL + "\n");
         sb.append("MOSS_BASE_URL: " + mossBaseURL + "\n");
         sb.append("USER_DATABASE_PATH: " + userDatabasePath + "\n");
+        sb.append("AUTH_OIDC_ISSUER: " + authOidcIssuer + "\n");
+        sb.append("AUTH_OIDC_CLIENT_ID: " + authOidcClientId + "\n");
         return sb.toString();
     }
 
@@ -81,5 +90,17 @@ public class MossEnvironment {
 
     public String getUserDatabasePath() {
         return userDatabasePath;
+    }
+
+    public String getAuthOidcIssuer() {
+        return authOidcIssuer;
+    }
+
+    public String getAuthOidcClientSecret() {
+        return authOidcClientSecret;
+    }
+
+    public String getAuthOidcClientId() {
+        return authOidcClientId;
     }
 }
