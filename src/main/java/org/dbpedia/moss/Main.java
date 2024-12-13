@@ -53,6 +53,8 @@ import java.util.EnumSet;
  */
 public class Main {
 
+    private static final String BUILD_NUM = "0.1.1.1";
+
     public static String KEY_CONFIG = "config";
 
     public static Model parseJSONLD(String jsonld, String documentURI) {
@@ -78,6 +80,7 @@ public class Main {
      */
     public static void main(String[] args) throws Exception {
 
+        System.out.println("BUILD: " + BUILD_NUM);
         JenaSystem.init();
         ARQ.init();
 
@@ -183,6 +186,8 @@ public class Main {
             try {
                 // Create a URL object from the target URL
                 URL url = new URI(targetUrl).toURL();
+
+                System.out.println("Connecting to gstore at " + targetUrl);
 
                 // Open a connection to the URL
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();

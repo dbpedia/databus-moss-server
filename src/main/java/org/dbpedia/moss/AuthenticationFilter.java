@@ -190,7 +190,8 @@ public class AuthenticationFilter implements Filter {
             Algorithm alg = getAlgorithmFromHeader(jwt.getAlgorithm(), (RSAPublicKey)publicKey);
             JWTVerifier verifier = JWT.require(alg).withIssuer(tokenIssuer).build();
             verifier.verify(token);
-
+            
+            tokenCache.put(token, sub);
             return sub; // Token is valid
 
         } catch (Exception e) {
