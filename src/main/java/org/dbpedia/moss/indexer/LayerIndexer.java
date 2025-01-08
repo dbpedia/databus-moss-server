@@ -28,16 +28,6 @@ public class LayerIndexer {
         // this.worker = Executors.newFixedThreadPool(fixedPoolSize);
     }
 
-    /*
-    @Override
-    protected void finalize() {
-        try {
-            this.worker.shutdown();
-        } catch (SecurityException e) {
-            System.err.println(e);
-        }
-    }
- */
 
     public String getId() {
         return id;

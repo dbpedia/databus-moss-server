@@ -84,7 +84,6 @@ public class MetadataBrowseServlet extends HttpServlet {
 			}
 
 			PrintWriter writer = resp.getWriter();
-			// System.out.println(responseBody);
 
 			if(responseBody.startsWith("Requesting")) {
 				resp.setStatus(404);

@@ -53,7 +53,6 @@ public class SparqlProxyServlet extends HttpServlet {
 
 		}
 
-		System.out.println(url.toString());
         // Open a connection to the SPARQL endpoint
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod(method);

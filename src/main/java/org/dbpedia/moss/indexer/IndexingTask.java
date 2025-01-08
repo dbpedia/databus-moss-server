@@ -8,6 +8,8 @@ import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.ParseException;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -18,9 +20,15 @@ import java.util.stream.Collectors;
 
 public class IndexingTask implements Runnable {
 
-    List<String> todos;
-    String configPath;
-    String indexEndpoint;
+    private final static Logger logger = LoggerFactory.getLogger(IndexingTask.class);
+
+    private final static String REQ_KEY_CONFIG = "config";
+    
+    private final static String REQ_KEY_VALUES = "values";
+
+    private List<String> todos;
+    private String configPath;
+    private String indexEndpoint;
 
     public IndexingTask(String configPath, String indexEndpoint, List<String> todos) {
         this.todos = todos;
@@ -30,22 +38,27 @@ public class IndexingTask implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("Starting indexing runner on thread " + Thread.currentThread().threadId());
 
+        long tid = Thread.currentThread().threadId();
         File configFile = new File(configPath);
-        System.out.println("Building index with config " + configFile.getAbsolutePath());
+        logger.info("[Thread {}] Indexing with {}...", tid, configFile.getAbsolutePath());
+
+        if(todos != null) {
+            String todosString = todos.stream().collect(Collectors.joining(","));
+            logger.info("[Thread {}] VALUES: {}...", tid, todosString);
+        }
 
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpPost uploadFile = new HttpPost(indexEndpoint);
             MultipartEntityBuilder builder = MultipartEntityBuilder.create();
 
             // Add the file part
-            builder.addBinaryBody("config", configFile, ContentType.APPLICATION_OCTET_STREAM, configFile.getName());
+            builder.addBinaryBody(REQ_KEY_CONFIG, configFile, ContentType.APPLICATION_OCTET_STREAM, configFile.getName());
 
             // Add the todos part if not null
             if (todos != null) {
                 String todosString = todos.stream().collect(Collectors.joining(","));
-                builder.addTextBody("values", todosString, ContentType.TEXT_PLAIN);
+                builder.addTextBody(REQ_KEY_VALUES, todosString, ContentType.TEXT_PLAIN);
             }
 
             // Set the multipart entity to the request
@@ -54,18 +67,18 @@ public class IndexingTask implements Runnable {
             // Execute the request
             try (CloseableHttpResponse response = httpClient.execute(uploadFile)) {
                 int responseCode = response.getCode();
-                System.out.println("Response code: " + responseCode);
 
                 // Print the response
                 String responseString = EntityUtils.toString(response.getEntity(), "UTF-8");
-                System.out.println(responseString);
+                
+                logger.info("[Thread {}] Indexing request response: {} - {}", tid, responseCode, responseString);
 
                 // Print the response content if the request was successful
                 if (responseCode == 200) {
                     try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent()))) {
                         String line;
                         while ((line = reader.readLine()) != null) {
-                            System.out.println(line);
+                            logger.info("[Thread {}] {}", tid, line);
                         }
                     }
                 }
@@ -73,10 +86,10 @@ public class IndexingTask implements Runnable {
                 e.printStackTrace();
             }
         } catch (IOException e) {
-            System.out.println("indexing error");
+            logger.error("[Thread {}] Indexing error: {}", tid,  e.getMessage());
             e.printStackTrace();
         }
 
-        System.out.println("Done on thread " + Thread.currentThread().threadId());
+        logger.info("[Thread {}] Indexing task completed.", tid);
     }
 }

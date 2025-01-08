@@ -1,5 +1,6 @@
 # Starts everything except the databus
 version: "3.0"
+name: moss-dev
 services:
   lookup:
     image: dbpedia/lookup:dev

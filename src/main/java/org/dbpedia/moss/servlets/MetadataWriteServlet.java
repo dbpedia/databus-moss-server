@@ -53,11 +53,6 @@ public class MetadataWriteServlet extends HttpServlet {
 	 */
 	private static final long serialVersionUID = 102831973239L;
 
-    // private static final String REQ_LAYER_NAME = "layer";
-
-    // private static final String REQ_RESOURCE_URI = "resource";
-
-
 	final static Logger logger = LoggerFactory.getLogger(MetadataWriteServlet.class);
 
 	private MossEnvironment env;
@@ -91,15 +86,13 @@ public class MetadataWriteServlet extends HttpServlet {
         try {
 
             UserInfo userInfo = this.getUserInfo(req);
-
-            // Model model = ModelFactory.createDefaultModel();
-            // RDFParser.source(req.getInputStream()).forceLang(Lang.JSONLD).parse(model); 
-            
-            String requestBaseURL = env.getMossBaseUrl(); // MossUtils.getRequestBaseURL(req);
+            String requestBaseURL = env.getMossBaseUrl(); 
             String rdfString = MossUtils.readToString(req.getInputStream());
             Lang requestLanguage = getRDFLanguage(req);
             String resource = MossUtils.pruneSlashes(req.getParameter("resource"));
             String layerName = req.getParameter("layer");
+
+            logger.debug("New write request: {}", req.getRequestURL());
 
             MossLayer layer = mossConfiguration.getLayerByName(layerName);
            
@@ -119,10 +112,10 @@ public class MetadataWriteServlet extends HttpServlet {
             String contentDocumentURL = MossUtils.getContentDocumentURL(requestBaseURL, 
                 resource, layerName, requestLanguage);
 
-            System.out.println("Resource: " + resource);
-            System.out.println("Layer name: " + layerName);
-            System.out.println("Content document: " + contentDocumentURL);
-            System.out.println("Language: " + requestLanguage);
+            logger.debug("Resource: {}", resource);
+            logger.debug("Layer name: {}", layerName);
+            logger.debug("Content document: {}", contentDocumentURL);
+            logger.debug("Language: {}", requestLanguage);
 
             validateResourceForLayer(resource, layer);
                         
@@ -144,24 +137,14 @@ public class MetadataWriteServlet extends HttpServlet {
             resp.setHeader("Content-Type", "application/json");
             resp.sendError(400, message);
             return;
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-            resp.setStatus(400);
-            return;
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-            resp.setStatus(400);
-            return;
-        } catch (ValidationException e) {
-            e.printStackTrace();
-            resp.setStatus(400);
-            return;
-        } catch (RiotException e) {
-            e.printStackTrace();
+        } catch (UnsupportedEncodingException | URISyntaxException | ValidationException | RiotException e ) {
+            logger.error(e.getMessage());
+            resp.getWriter().write(e.getMessage());
             resp.setStatus(400);
             return;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
+            resp.getWriter().write(e.getMessage());
             resp.setStatus(500);
             return;
         }
@@ -233,7 +216,7 @@ public class MetadataWriteServlet extends HttpServlet {
             throw new IllegalArgumentException("RDF data does not conform to SHACL shapes of layer " + layer.getName() 
                 + ": " + report.getEntries().toString());
         } else {
-            System.out.println("Validation successful: RDF data conforms to SHACL shapes.");
+            logger.debug("Validation successful: RDF data conforms to SHACL shapes.");
         }
     }
             
@@ -244,8 +227,6 @@ public class MetadataWriteServlet extends HttpServlet {
         if(contentType == null) {
             throw new ValidationException("Unknown Content Type: " +  req.getContentType());
         }
-        
-        System.out.println("Content type:" + contentType.toHeaderString());
 
         Lang language = RDFLanguages.contentTypeToLang(contentType);
 
@@ -253,7 +234,6 @@ public class MetadataWriteServlet extends HttpServlet {
             throw new ValidationException("Unknown RDF format for content type " + contentType);
         }
 
-        System.out.println(language.toLongString());
         return language;
     }
 
@@ -265,7 +245,6 @@ public class MetadataWriteServlet extends HttpServlet {
         }
 
         UserInfo userInfo = userDatabaseManager.getUserInfoBySub(sub.toString());
-        System.out.println(userInfo);
 
         if (userInfo == null || userInfo.getUsername().isEmpty()) {
             throw new ValidationException("User null or username missing");

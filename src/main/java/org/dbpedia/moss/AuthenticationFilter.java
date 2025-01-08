@@ -36,11 +36,15 @@ import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserInfo;
 import org.dbpedia.moss.utils.HttpClientWithProxy;
 import org.dbpedia.moss.utils.MossEnvironment;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 
 public class AuthenticationFilter implements Filter {
 
+
+	final static Logger logger = LoggerFactory.getLogger(AuthenticationFilter.class);
 
     private APIKeyValidator apiKeyValidator;
 
@@ -50,10 +54,12 @@ public class AuthenticationFilter implements Filter {
 
     private JsonNode discoveryDocument;
     
-    
     private String issuer;
+
     private String clientId;
+
     private String clientSecret;
+
     private Instant lastDiscoveryFetchTime;
     
 
@@ -144,7 +150,8 @@ public class AuthenticationFilter implements Filter {
         String cachedSub = tokenCache.getIfPresent(token);
 
         if (cachedSub != null) {
-            System.out.println("Sub from cache: " + cachedSub);
+
+            logger.debug("Retrieved sub from cache: {}", cachedSub);
             return cachedSub;  // Return cached subject
         }
 
@@ -205,7 +212,7 @@ public class AuthenticationFilter implements Filter {
       
         try (CloseableHttpClient client = HttpClientWithProxy.create()) {
 
-            System.out.println("Checking opaque token");
+            logger.debug("Checking opaque token");
 
             // Try to fetch from the user info endpoint first
             String sub = fetchSubFromUserInfo(client, token);
@@ -226,21 +233,21 @@ public class AuthenticationFilter implements Filter {
 
     private String fetchSubFromIntrospectionEndpoint(CloseableHttpClient client, String token) throws IOException {
         
-        System.out.println("Retrieving introspection endpoint from discovery.");
+        logger.debug("Retrieving introspection endpoint from discovery.");
         JsonNode introspectNode = getDiscoveryDocument().get(DISCOVERY_KEY_INTROSPECTION_ENDPOINT);
 
         if(introspectNode == null) {
-            System.out.println("Introspection endpoint not found.");
+            logger.debug("Introspection endpoint not found.");
             return null;
         }
 
         if(clientId == null || clientSecret == null) {
-            System.out.println("Client id or secret are not specified");
+            logger.debug("Client id or secret are not specified.");
             return null;
         }
 
         String introspectionEndpoint = introspectNode.asText();
-        System.out.println("Introspection endpoint found: " + introspectionEndpoint);
+        logger.debug("Introspection endpoint found:", introspectionEndpoint);
 
         try {
             HttpPost post = new HttpPost(introspectionEndpoint);
@@ -258,7 +265,7 @@ public class AuthenticationFilter implements Filter {
                     String sub = responseJson.get(OIDC_KEY_SUBJECT).asText();
                     tokenCache.put(token, sub);
                     
-                    System.out.println("Retrieved sub from introspection endpoint.");
+                    logger.debug("Retrieved sub from introspection endpoint:");
                     return sub;
                 }
             } 
@@ -272,23 +279,24 @@ public class AuthenticationFilter implements Filter {
 
     private String fetchSubFromUserInfo(CloseableHttpClient client, String token) {
         
-        System.out.println("Retrieving user info endpoint from discovery.");
+        logger.debug("Retrieving user info endpoint from discovery.");
         // If introspection fails or is missing, fallback to user info endpoint
         JsonNode userInfoEndpointNode = getDiscoveryDocument().get(DISCOVERY_KEY_USERINFO_ENDPOINT);
 
         if(userInfoEndpointNode == null) {
-            System.out.println("User info endpoint not found.");
+            logger.debug("User info endpoint not found.");
             return null;
         }
 
         String userInfoEndpoint = userInfoEndpointNode.asText();
 
         if (userInfoEndpoint == null || userInfoEndpoint.isEmpty()) {
-            System.out.println("User info endpoint not specified.");
+            logger.debug("User info endpoint not specified.");
             return null;
         }
 
-        System.out.println("User info endpoint found: " + userInfoEndpoint);
+        
+        logger.debug("User info endpoint found: {}", userInfoEndpoint);
 
         HttpGet get = new HttpGet(userInfoEndpoint + "?access_token=" + token);
         try (CloseableHttpResponse response = client.execute(get)) {
@@ -299,7 +307,7 @@ public class AuthenticationFilter implements Filter {
             if (responseJson.has(OIDC_KEY_SUBJECT)) {
                 String sub = responseJson.get(OIDC_KEY_SUBJECT).asText();
                 
-                System.out.println("Retrieved sub from user info endpoint.");
+                logger.debug("Retrieved sub from user info endpoint."); 
                 tokenCache.put(token, sub);
                 return sub;
             }
@@ -341,7 +349,8 @@ public class AuthenticationFilter implements Filter {
             discoveryDocument = mapper.readTree(responseBody);
             
             lastDiscoveryFetchTime = Instant.now();
-            System.out.println("Discovery fetched at " + lastDiscoveryFetchTime);
+            
+            logger.debug("Discovery fetched at: {}", lastDiscoveryFetchTime); 
             response.close();
 
         } catch (IOException e) {

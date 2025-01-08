@@ -7,6 +7,9 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +19,8 @@ public class MossProxyServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
     private String baseUrl;
+
+    final static Logger logger = LoggerFactory.getLogger(MossProxyServlet.class);
 
     public MossProxyServlet(String baseUrl) {
         this.baseUrl = baseUrl;
@@ -53,7 +58,7 @@ public class MossProxyServlet extends HttpServlet {
                 }
             }
         } catch (IOException | URISyntaxException e) {
-            // TODO Auto-generated catch block
+            logger.error(e.getMessage());
             e.printStackTrace();
         }
 

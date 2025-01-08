@@ -15,12 +15,16 @@ import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.indexer.DataLoaderConfig;
 import org.dbpedia.moss.indexer.LayerIndexerConfiguration;
 import org.dbpedia.moss.indexer.MossLayer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 
 public class MossConfiguration {
+
+    private static final Logger logger = LoggerFactory.getLogger(MossConfiguration.class);
 
     private List<MossLayer> layers;
 
@@ -125,43 +129,42 @@ public class MossConfiguration {
 
         return null;
     }
-
     public void validate() throws ConfigurationException {
 
-        System.out.println("==========================");
-        System.out.println("Validating Configuration...");
+        logger.info("Validating MOSS configuration...");
+    
         // Try to load shacl files:
         for (MossLayer layer : layers) {
             
-            System.out.println("===== [" + layer.getName() + "] (\"=====");
+            
+            logger.info("Validating layer \"{}\"...", layer.getName());
             Lang lang = RDFLanguages.contentTypeToLang(layer.getFormatMimeType());
            
             if(lang == null) {
                 throw new ConfigurationException("Missing or unknown RDF language in formatMimeType of layer " 
                     + layer.getName() + ": " + layer.getFormatMimeType());
             }
-
-            System.out.println("Language: " +  lang.toLongString());
-
+    
+            logger.debug("Language: " +  lang.toLongString());
+    
             if(layer.getResourceTypes() == null) {
                 throw new ConfigurationException("Resource type not specified for layer " + layer.getName() + ".");
             }
-
+    
             if(layer.getShaclPath() != null) {
-                System.out.println("SHACL file: " +  layer.getShaclPath());
+                logger.debug("SHACL file: " + layer.getShaclPath());
                 validateSHACL(layer);
             }
-
+    
             if(layer.getTemplatePath() != null){
-                System.out.println("Template file: " +  layer.getTemplatePath());
+                logger.debug("Template file: " +  layer.getTemplatePath());
                 validateTemplate(layer, lang);
             }
-
         }
         
-        System.out.println("Configuration OK!");
-        System.out.println("==========================");
+        logger.info("Configuration OK!");
     }
+    
     
     private void validateSHACL(MossLayer layer) throws ConfigurationException {
         Model shaclModel = RDFDataMgr.loadModel(layer.getShaclPath(), Lang.TURTLE);

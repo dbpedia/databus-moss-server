@@ -31,6 +31,8 @@ import org.dbpedia.moss.indexer.MossLayerHeader;
 import org.dbpedia.moss.utils.MossUtils;
 import org.dbpedia.moss.utils.RDFUris;
 import org.dbpedia.moss.utils.RDFUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +41,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 
 public class GstoreConnector {
+
+    final static Logger logger = LoggerFactory.getLogger(GstoreConnector.class);
 
     private static final String REQ_METHOD_POST = "POST";
     private static final String REQ_METHOD_GET = "GET";
@@ -52,7 +56,7 @@ public class GstoreConnector {
     private static final String REQ_PARAM_REPO = "repo";
     private static final String REQ_PARAM_PATH = "path";
     private static final String REQ_PARAM_PREFIX = "prefix";
-    private static final String REQ_AUTHOR_NAME = "author_name";
+    // private static final String REQ_AUTHOR_NAME = "author_name";
     private static final String LAYER_FRAGMENT = "#layer";
 
     private String gstoreBaseURL;
@@ -162,34 +166,11 @@ public class GstoreConnector {
         return read(targetURI);
     }
 
-    public void write(String baseURL, String repo, String path, String rdfString, String author) throws IOException, URISyntaxException {
-
-        StringBuilder uri = new StringBuilder();
-        uri.append(gstoreBaseURL)
-            .append(DOCUMENT_SAVE_ENDPOINT)
-            .append("?")
-            .append(REQ_PARAM_REPO)
-            .append("=")
-            .append(URLEncoder.encode(repo, CHAR_ENCODING_UTF8))
-            .append("&")
-            .append(REQ_PARAM_PATH)
-            .append("=")
-            .append(URLEncoder.encode(path, CHAR_ENCODING_UTF8))
-            .append("&")
-            .append(REQ_AUTHOR_NAME)
-            .append("=")
-            .append(URLEncoder.encode(author, CHAR_ENCODING_UTF8));
-
-        System.out.println("SAVING " + rdfString);
-        String response = this.sendWriteRequest(uri.toString(), rdfString);
-
-        
-        System.out.println("Response body\n" + response);
-    }
 
     public void writeHeader(String prefix, MossLayerHeader header, Lang language) throws IOException, URISyntaxException {
         
-        System.out.println("Writing header to: " + header.getHeaderDocumentURL());
+        logger.debug("Writing header to: {}",  header.getHeaderDocumentURL());
+
         String headerPath = MossUtils.getDocumentPath(header.getDatabusResource(),
             header.getLayerName(), language);
 
@@ -222,13 +203,15 @@ public class GstoreConnector {
 
         // Get response code
         int responseCode = connection.getResponseCode();
-        System.out.println("Response Code: " + responseCode);
+        logger.debug("Response code: {}",  responseCode);
+
         connection.disconnect();
     }
 
     public void writeContent(String prefix, String path, String rdf, Lang language) throws IOException, URISyntaxException {
 
-        System.out.println("Writing content to: " + prefix + path);
+        logger.debug("Writing content to: {}",  prefix + path);
+
         StringBuilder uri = new StringBuilder();
         uri.append(gstoreBaseURL)
             .append(DOCUMENT_SAVE_ENDPOINT)
@@ -262,12 +245,11 @@ public class GstoreConnector {
         // Get response code
         int responseCode = connection.getResponseCode();
         
-        System.out.println("Response Code: " + responseCode);
-       // this.sendWriteRequest(uri.toString(), rdf);
-        // System.out.println("Response body\n" + response);
+        logger.debug("Gstore response code: {}", responseCode);
 
         if(responseCode > 200 && responseCode <= 500) {
-            System.out.println(rdf);
+
+            logger.debug("Failed to save RDF: {}", rdf);
             String errorString = readGstoreError(connection);
             connection.disconnect();
             
@@ -308,41 +290,6 @@ public class GstoreConnector {
         reader.close();
         return response.toString();
     }
-
-
-    private String sendWriteRequest(String uri, String rdfString) throws IOException, URISyntaxException {
-        
-        URL url = new URI(uri).toURL();
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod(REQ_METHOD_POST);
-        connection.setRequestProperty(HEADER_ACCEPT, APPLICATION_LD_JSON);
-        connection.setRequestProperty(HEADER_CONTENT_TYPE, APPLICATION_LD_JSON);
-        connection.setDoOutput(true);
-
-        OutputStream outputStream = connection.getOutputStream();
-        PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, CHAR_ENCODING_UTF8));
-        writer.write(rdfString);
-        writer.flush();
-        writer.close();
-
-        // Get response code
-        int responseCode = connection.getResponseCode();
-        System.out.println("Response Code: " + responseCode);
-
-        // Read response body
-        InputStream inputStream = connection.getInputStream();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, CHAR_ENCODING_UTF8));
-        StringBuilder response = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            response.append(line);
-        }
-        reader.close();
-        connection.disconnect();
-
-        return response.toString();
-    }
-
 
     public void write(String repo, String path, Model model) throws UnsupportedEncodingException, URISyntaxException {
         

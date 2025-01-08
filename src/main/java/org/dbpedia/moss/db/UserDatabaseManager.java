@@ -8,11 +8,22 @@ import java.sql.SQLException;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.PreparedStatement;
 
 public class UserDatabaseManager {
 
+	final static Logger logger = LoggerFactory.getLogger(UserDatabaseManager.class);
+
     private static String prefix = "jdbc:sqlite:";
+
+    private static final String USERDB_COLUMN_USERNAME = "username";
+
+    private static final String USERDB_COLUMN_KEY = "key";
+
     private String userDatabasePath = "";
 
     public UserDatabaseManager(String userDatabasePath) {
@@ -23,10 +34,11 @@ public class UserDatabaseManager {
 
         if (databaseDir != null && !databaseDir.exists()) {
             boolean dirsCreated = databaseDir.mkdirs(); // Create the directory if it doesn't exist
+
             if (dirsCreated) {
-                System.out.println("Directory created: " + databaseDir.getAbsolutePath());
+                logger.debug("Created directories for user database: {}", databaseDir.getAbsolutePath());
             } else {
-                System.out.println("Failed to create directory: " + databaseDir.getAbsolutePath());
+                logger.error("Failed to create directory for user database: {}", databaseDir.getAbsolutePath());
             }
         }
 
@@ -46,8 +58,7 @@ public class UserDatabaseManager {
                 }
             });
         } catch(SQLException sqlException) {
-            // Error initializing
-            System.out.println(sqlException.getMessage());
+            logger.error(sqlException.getMessage());
         }
     }
 
@@ -64,7 +75,7 @@ public class UserDatabaseManager {
             @Override
             public void process(ResultSet rs) throws SQLException {
                 while (rs.next()) {
-                    apiKeys.add(rs.getString("key"));
+                    apiKeys.add(rs.getString(USERDB_COLUMN_KEY));
                 }
             }
         }, sub);
@@ -81,7 +92,7 @@ public class UserDatabaseManager {
                 while (rs.next()) {
                     UserInfo info = new UserInfo();
                     info.setSub(sub);
-                    info.setUsername(rs.getString("username"));
+                    info.setUsername(rs.getString(USERDB_COLUMN_USERNAME));
                     userInfo[0] = info;
                 }
             }
@@ -156,8 +167,8 @@ public class UserDatabaseManager {
 
             PreparedStatement statement = statementProvider.createStatement(conn);
             int updatedRows = statement.executeUpdate();
-            System.out.println(String.format("Prepared statement:\n%s", statement.toString()));
-            System.out.println(String.format("Inserted rows %s", updatedRows));
+
+            logger.debug("Executed prepared statement: {} --- inserted {} rows", statement.toString(), updatedRows);
 
         } catch (SQLException sqlException) {
             close(conn);
@@ -193,7 +204,7 @@ public class UserDatabaseManager {
             }
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            logger.error(e.getMessage());
         } finally {
             close(conn);
         }
@@ -209,7 +220,7 @@ public class UserDatabaseManager {
                 connection.close();
             }
         } catch (SQLException sqlException) {
-            System.out.println(sqlException.getMessage());
+            logger.error(sqlException.getMessage());
         }
     }
 

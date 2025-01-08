@@ -113,57 +113,6 @@ public final class MossUtils {
         return URI.create(uriString).toURL();
     }
 
-    /*
-    public static void saveModel(Model annotationModel, URL saveUrl) throws IOException {
-
-        System.out.println("Saving with " + saveUrl.toString());
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        final JsonLDWriteContext ctx = new JsonLDWriteContext();
-
-        String jsonLDContext = null;
-        try {
-            jsonLDContext = MossUtils.fetchJSON(MossUtils.contextURL);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        ctx.setJsonLDContext(jsonLDContext);
-        ctx.setJsonLDContextSubstitution("\"" + MossUtils.contextURL + "\"");
-
-        DatasetGraph datasetGraph = DatasetFactory.create(annotationModel).asDatasetGraph();
-        JsonLDWriter writer = new JsonLDWriter(RDFFormat.JSONLD_COMPACT_PRETTY);
-        writer.write(outputStream, datasetGraph, null, null, ctx);
-
-        String jsonString = outputStream.toString("UTF-8");
-        System.out.println("jsonjsonjsonjsonjsonjsonjsonjsonjsonjson");
-        System.out.println(jsonString);
-        System.out.println("jsonjsonjsonjsonjsonjsonjsonjsonjsonjson");
-
-        HttpURLConnection con = (HttpURLConnection) saveUrl.openConnection();
-        con.setRequestMethod("POST");
-        con.setRequestProperty("Accept", "application/ld+json");
-        con.setRequestProperty("Content-Type", "application/ld+json");
-
-        con.setDoOutput(true);
-
-        try (OutputStream os = con.getOutputStream()) {
-            byte[] input = jsonString.getBytes("utf-8");
-            os.write(input, 0, input.length);
-        }
-
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(con.getInputStream(), "utf-8"))) {
-            StringBuilder response = new StringBuilder();
-            String responseLine = null;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
-            }
-            System.out.println(response.toString());
-        }
-    }*/
-
 
     public static String fetchJSON(String urlString) throws IOException, URISyntaxException {
         StringBuilder result = new StringBuilder();

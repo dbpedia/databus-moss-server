@@ -43,7 +43,6 @@ public class UserDatabaseServlet extends HttpServlet {
         String requestURI = req.getRequestURI();
         String sub = (String)req.getAttribute("sub");
 
-        System.out.println(requestURI);
         String operation = getAPIOperation(requestURI);
 		
         switch (operation) {
@@ -75,7 +74,6 @@ public class UserDatabaseServlet extends HttpServlet {
         String apiKey = APIKeyValidator.createAPIKey(sub);
         String salt = BCrypt.gensalt();
 
-        System.out.println("Why so salty: " + salt);
         String hashedAPIKey = BCrypt.hashpw(apiKey, salt);
         
         String keyName = req.getParameter("name");
@@ -111,8 +109,8 @@ public class UserDatabaseServlet extends HttpServlet {
     private void handleSetUsername(String sub, HttpServletRequest req, HttpServletResponse resp) throws IOException {
         try {
             String username = req.getParameter("username");
-            System.out.println("SET USERNAME: " + sub + " // " + username);
             userDatabase.updateUsername(sub, username);
+            logger.info("User {} set his name to {}", sub, username);
             resp.setStatus(200);
         } catch (Exception e) {
             resp.getWriter().write(e.getMessage());
@@ -125,7 +123,6 @@ public class UserDatabaseServlet extends HttpServlet {
         String requestURI = req.getRequestURI();
         String sub = (String)req.getAttribute("sub");
 
-        System.out.println(requestURI);
         String operation = getAPIOperation(requestURI);
 		
         switch (operation) {

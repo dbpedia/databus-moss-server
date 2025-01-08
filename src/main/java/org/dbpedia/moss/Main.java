@@ -31,6 +31,8 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.eclipse.jetty.util.security.Constraint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.MultipartConfigElement;
@@ -56,6 +58,8 @@ public class Main {
     private static final String BUILD_NUM = "0.1.1.1";
 
     public static String KEY_CONFIG = "config";
+    
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
     public static Model parseJSONLD(String jsonld, String documentURI) {
         // Convert JSON-LD string to InputStream
@@ -80,13 +84,14 @@ public class Main {
      */
     public static void main(String[] args) throws Exception {
 
-        System.out.println("BUILD: " + BUILD_NUM);
+        logger.info("BUILD_NUM: {} ", BUILD_NUM);
+
         JenaSystem.init();
         ARQ.init();
 
         MossEnvironment environment = MossEnvironment.get();
-        System.out.println(environment.toString());
 
+        logger.info("ENV:\n{} ", environment.toString());
         
         File configFile = new File(environment.GetConfigPath());
         MossConfiguration mossConfiguration = MossConfiguration.fromJson(configFile);
@@ -98,7 +103,6 @@ public class Main {
         IndexerManager indexerManager = new IndexerManager(environment);
 
         Server server = new Server(8080);
-
 
         IdentityService identityService = new DefaultIdentityService();
         server.addBean(identityService);
@@ -181,13 +185,17 @@ public class Main {
     
 
 
-    private static void waitForGstore(String targetUrl) throws URISyntaxException, InterruptedException {
+    private static void waitForGstore(String targetUrl) throws URISyntaxException, InterruptedException, IOException {
+        
+        int attempts = 0;
+        int maxAttempts = 20;
+
         while (true) {
             try {
                 // Create a URL object from the target URL
                 URL url = new URI(targetUrl).toURL();
 
-                System.out.println("Connecting to gstore at " + targetUrl);
+                logger.info("Connecting to gstore at: {} ", targetUrl);
 
                 // Open a connection to the URL
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -202,7 +210,7 @@ public class Main {
                 int responseCode = connection.getResponseCode();
 
                 // Print the response code
-                System.out.println("Gstore detected: status code " + responseCode);
+                logger.info("Gstore detected: status code {} ", responseCode);
 
                 // Disconnect the connection
                 connection.disconnect();
@@ -210,7 +218,16 @@ public class Main {
                 break;
 
             } catch (IOException e) {
-                System.out.println("Error connecting to gstore: " + e.getMessage() + ". Trying again in 1 second.");
+                
+                attempts++;
+
+                if(attempts > maxAttempts) {
+                    logger.error("Error connecting to gstore after {} attempts: {}", attempts, e.getMessage());
+                    throw new IOException(e);
+                }
+                else {
+                    logger.info("Error connecting to gstore. Trying again in 1 second.");
+                }
             }
 
             Thread.sleep(1000);

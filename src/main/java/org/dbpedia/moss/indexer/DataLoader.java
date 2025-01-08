@@ -33,6 +33,8 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.dbpedia.moss.GstoreConnector;
 import org.dbpedia.moss.utils.HttpClientWithProxy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonParser;
 
@@ -40,6 +42,8 @@ import com.google.gson.JsonParser;
  * Loads data into the database and runs an indexer on startup
  */
 public class DataLoader {
+
+    final static Logger logger = LoggerFactory.getLogger(IndexerManager.class);
 
     private static final String REQ_METHOD_GET = "GET";
 
@@ -141,7 +145,8 @@ public class DataLoader {
             if (fileURIs != null) {
 
                 for (int i = 0; i < fileURIs.length; i++) {
-                    System.out.println("Loading " + fileURIs[i]);
+
+                    logger.info("Loading {}...", fileURIs[i]);
                     Model model = cleanModel(read(fileURIs[i]));
                     URI fileURI = new URI(fileURIs[i]);
 
@@ -149,18 +154,16 @@ public class DataLoader {
                     String newPath = filePath.substring(0, filePath.lastIndexOf('.')) + ".jsonld";
                     String gstorePath = fileURI.getHost() + newPath;
 
-                    System.out.println("Saving to " + gstorePath);
-
+                    logger.debug("Saving to {}...", gstorePath);
                     gstoreConnector.write("loaded", gstorePath, model);
                 }
             }
-            System.out.println("Indexing...");
+
             indexer.run(null);
 
         } catch (URISyntaxException e) {
             e.printStackTrace();
         } catch (UnsupportedEncodingException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }

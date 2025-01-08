@@ -10,6 +10,8 @@ import java.util.concurrent.TimeUnit;
 import org.dbpedia.moss.GstoreConnector;
 import org.dbpedia.moss.MossConfiguration;
 import org.dbpedia.moss.utils.MossEnvironment;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -18,7 +20,10 @@ import java.util.HashMap;
 
 public class IndexerManager {
 
+    final static Logger logger = LoggerFactory.getLogger(IndexerManager.class);
+
     // Alle indexer
+
     private List<LayerIndexer> indexers;
     //Ein mod kann in 1 oder mehreren Indexern vorkommen -> rebuild index for entsprechenden indexern für die der mod wichtig ist
     private HashMap<String, List<LayerIndexer>> indexerMappings;
@@ -51,12 +56,11 @@ public class IndexerManager {
             LayerIndexer modIndexer = new LayerIndexer(indexerConfig, configRootPath, environment.GetLookupBaseURL());
 
             this.indexers.add(modIndexer);
-            System.out.println("Created indexer with id " + modIndexer.getId());
-            System.out.println("Config path: " + modIndexer.getConfig().getConfigPath());
-            System.out.println("Mods: " + modIndexer.getConfig().getLayers());
-        }this.worker = new ThreadPoolExecutor(fixedPoolSize, fixedPoolSize,
-        0L, TimeUnit.MILLISECONDS,
-        new LinkedBlockingQueue<Runnable>());
+
+            logger.info("Created indexer \"{}\" for layer(s) {}", modIndexer.getId(), modIndexer.getConfig().getLayers());
+        }
+        
+        this.worker = new ThreadPoolExecutor(fixedPoolSize, fixedPoolSize, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
         for(LayerIndexer indexer : this.indexers) {
             for(String modType : indexer.getConfig().getLayers()) {
@@ -103,18 +107,15 @@ public class IndexerManager {
      */
     public void rebuildIndices() {
 
-        // System.out.println("Ich manage auf thread " + Thread.currentThread().threadId());
         for(LayerIndexer indexer : indexers) {
           
             if(indexer.getTodos().size() == 0) {
-                // System.out.println("Nothing to do");
                 continue;
             }
 
             // Hier haben wir etwas zu tun!
             // frage indexer, ob er gerade ein task bearbeitet
             if(indexer.isBusy()) {
-                //  System.out.println("Am busy");
                 continue;
                 
             }
@@ -125,7 +126,6 @@ public class IndexerManager {
                 continue;
             }
 
-            // System.out.println("Ich würd denn mal losmachen mit todos: " + indexer.getTodos());
             indexer.run(worker);
         }
     }
@@ -134,8 +134,9 @@ public class IndexerManager {
     public void updateIndices(String contentUri, String layerName) {
         List<LayerIndexer> correspondingIndexers = indexerMappings.get(layerName);
         for (LayerIndexer indexer : correspondingIndexers) {
+           
             indexer.addTodo(contentUri);
-            System.out.println("Indexer " + indexer.getId() + " hat jetzt todos: " + indexer.getTodos());
+            logger.info("Indexer {} task list updated: {}", indexer.getId(), indexer.getTodos());
         }
     }
 }
