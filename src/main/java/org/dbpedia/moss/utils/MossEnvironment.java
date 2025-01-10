@@ -63,10 +63,10 @@ public class MossEnvironment {
         StringBuilder sb = new StringBuilder();
 
         sb.append("GSTORE_BASE_URL: " + gstoreBaseURL + "\n");
-        sb.append("CONFIG_PATH: " + configPath + "\n");
-        sb.append("LOOKUP_BASE_URL: " + lookupBaseURL + "\n");
         sb.append("MOSS_BASE_URL: " + mossBaseURL + "\n");
+        sb.append("LOOKUP_BASE_URL: " + lookupBaseURL + "\n");
         sb.append("USER_DATABASE_PATH: " + userDatabasePath + "\n");
+        sb.append("CONFIG_PATH: " + configPath + "\n");
         sb.append("AUTH_OIDC_ISSUER: " + authOidcIssuer + "\n");
         sb.append("AUTH_OIDC_CLIENT_ID: " + authOidcClientId + "\n");
         return sb.toString();
