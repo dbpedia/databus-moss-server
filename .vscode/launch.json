@@ -15,10 +15,10 @@
                 "MOSS_BASE_URL": "http://localhost:8080",
                 "GSTORE_BASE_URL": "http://localhost:5003",
                 "LOOKUP_BASE_URL": "http://localhost:5002",
-                "HTTPS_PROXY": "http://localhost:8888",
-                "HTTP_PROXY": "http://localhost:8888",
+                "HTTPS_PROXY": null,
+                "HTTP_PROXY": null,
                 "USER_DATABASE_PATH": "./devenv/sqlite/users.db",
-                "AUTH_OIDC_ISSUER": "https://kilt.eu.auth0.com", // "https://auth.dbpedia.org/realms/dbpedia",
+                "AUTH_OIDC_ISSUER": "https://auth.dbpedia.org/realms/dbpedia",
                 "JWT_VERBOSE": true
             }
         }

@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
@@ -174,8 +175,9 @@ public class AuthenticationFilter implements Filter {
             }
 
             Instant expirationTime = jwt.getExpiresAtAsInstant();
+            Instant currentTime = Instant.now(Clock.systemUTC());
 
-            if(expirationTime  == null || !expirationTime.isBefore(Instant.now())) {
+            if(expirationTime  == null || expirationTime.isBefore(currentTime)) {
                 throw new SecurityException("Token is expired");
             }
 
