@@ -24,9 +24,6 @@ public class HttpClientWithProxy {
 
     private static String getProxyUrl(String scheme) {
 
-        return null;
-
-        /*
         boolean isHttps = scheme.equalsIgnoreCase("https");
         String proxyEnv = null;
 
@@ -45,7 +42,7 @@ public class HttpClientWithProxy {
             }
         }
 
-        return proxyEnv; */
+        return proxyEnv; 
     }
 
     private static HttpHost getProxyHost(String scheme) {
