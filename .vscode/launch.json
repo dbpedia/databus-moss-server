@@ -19,7 +19,9 @@
                 "HTTP_PROXY": null,
                 "USER_DATABASE_PATH": "./devenv/sqlite/users.db",
                 "AUTH_OIDC_ISSUER": "https://auth.dbpedia.org/realms/dbpedia",
-                "JWT_VERBOSE": true
+                "JWT_VERBOSE": true,
+                "ADMIN_ROLE": "moss-dev-admin",
+                "AUTH_OIDC_CLIENT_ID": "moss-dev"
             }
         }
     ]

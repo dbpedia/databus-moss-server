@@ -27,12 +27,12 @@ public class IndexingTask implements Runnable {
     private final static String REQ_KEY_VALUES = "values";
 
     private List<String> todos;
-    private String configPath;
+    private File configFile;
     private String indexEndpoint;
 
-    public IndexingTask(String configPath, String indexEndpoint, List<String> todos) {
+    public IndexingTask(File configPath, String indexEndpoint, List<String> todos) {
         this.todos = todos;
-        this.configPath = configPath;
+        this.configFile = configPath;
         this.indexEndpoint = indexEndpoint;
     }
 
@@ -40,7 +40,6 @@ public class IndexingTask implements Runnable {
     public void run() {
 
         long tid = Thread.currentThread().threadId();
-        File configFile = new File(configPath);
         logger.info("[Thread {}] Indexing with {}...", tid, configFile.getAbsolutePath());
 
         if(todos != null) {

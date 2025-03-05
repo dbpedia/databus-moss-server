@@ -1,23 +1,33 @@
 package org.dbpedia.moss;
 
-import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
 import org.dbpedia.moss.servlets.MossProxyServlet;
+import org.dbpedia.moss.servlets.ResourceServlet;
 import org.dbpedia.moss.servlets.SparqlProxyServlet;
-import org.dbpedia.moss.utils.MossEnvironment;
+import org.dbpedia.moss.utils.Constants;
+import org.dbpedia.moss.utils.ENV;
+import org.dbpedia.moss.utils.MossContext;
+import org.dbpedia.moss.utils.RequestMethodFilterWrapper;
 import org.dbpedia.moss.servlets.MetadataBrowseServlet;
+import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.apache.jena.query.ARQ;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.sys.JenaSystem;
+import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
+import org.dbpedia.moss.servlets.indexers.IndexerListServlet;
+import org.dbpedia.moss.servlets.indexers.IndexerResourceServlet;
+import org.dbpedia.moss.servlets.indexers.IndexerServlet;
+import org.dbpedia.moss.servlets.layers.LayerListServlet;
+import org.dbpedia.moss.servlets.layers.LayerResourceServlet;
+import org.dbpedia.moss.servlets.layers.LayerServlet;
 import org.dbpedia.moss.servlets.LayerIndexerConfigurationServlet;
-import org.dbpedia.moss.servlets.LayerListServlet;
 import org.dbpedia.moss.servlets.LayerShaclServlet;
 import org.dbpedia.moss.servlets.LayerTemplateServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
@@ -35,7 +45,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.DispatcherType;
+import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.http.HttpServlet;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -89,18 +101,19 @@ public class Main {
         JenaSystem.init();
         ARQ.init();
 
-        MossEnvironment environment = MossEnvironment.get();
 
-        logger.info("ENV:\n{} ", environment.toString());
+        logger.info("ENV:\n{} ", ENV.printAll());
         
-        File configFile = new File(environment.GetConfigPath());
-        MossConfiguration mossConfiguration = MossConfiguration.fromJson(configFile);
-        mossConfiguration.validate();
-        
-        waitForGstore(environment.getGstoreBaseURL());
+        File configFile = new File(ENV.CONFIG_PATH);
 
-        UserDatabaseManager userDatabaseManager = new UserDatabaseManager(environment.getUserDatabasePath());
-        IndexerManager indexerManager = new IndexerManager(environment);
+        MossConfiguration.initialize(configFile);
+        MossContext.initialize();
+
+        
+        waitForGstore(ENV.GSTORE_BASE_URL);
+
+        UserDatabaseManager userDatabaseManager = new UserDatabaseManager(ENV.USER_DATABASE_PATH);
+        IndexerManager indexerManager = new IndexerManager();
 
         Server server = new Server(8080);
 
@@ -120,29 +133,33 @@ public class Main {
 
         FilterHolder corsFilterHolder = new FilterHolder(new CorsFilter());
 
-        FilterHolder corsHolder = new FilterHolder(CrossOriginFilter.class);
-        corsHolder.setInitParameter(CrossOriginFilter.ALLOWED_ORIGINS_PARAM, "*");
-        corsHolder.setInitParameter(CrossOriginFilter.ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, "*");
-        corsHolder.setInitParameter(CrossOriginFilter.ALLOWED_METHODS_PARAM, "GET,POST,HEAD");
-        corsHolder.setInitParameter(CrossOriginFilter.ALLOWED_HEADERS_PARAM, "X-Requested-With,Content-Type,Accept,Origin");
-        corsHolder.setName("cross-origin");
-
         MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
 
         ServletContextHandler sparqlProxyContext = new ServletContextHandler();
-        sparqlProxyContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        sparqlProxyContext.setContextPath("/sparql/*");
+        sparqlProxyContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
+        sparqlProxyContext.setContextPath("/sparql");
         sparqlProxyContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/*");
 
+
+
+        // Context handler for the unprotected routes
+        ServletContextHandler resourceContext = new ServletContextHandler();
+        resourceContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        resourceContext.setContextPath("/res/*");
+        resourceContext.addServlet(new ServletHolder(new ResourceServlet()), "/*");
+
+        ServletContextHandler indexerContext = createSimpleContext("/indexer/", new IndexerResourceServlet());
+        ServletContextHandler layerContext = createSimpleContext("/layer/", new LayerResourceServlet());
+                
         // Context handler for the unprotected routes
         ServletContextHandler readContext = new ServletContextHandler();
-        readContext.addFilter(corsHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        readContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         readContext.setContextPath("/g/*");
         readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
         // Context handler for the unprotected routes
         ServletContextHandler browseContext = new ServletContextHandler();
-        browseContext.addFilter(corsHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        browseContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         browseContext.setContextPath("/file/*");
         browseContext.addServlet(new ServletHolder(new MetadataBrowseServlet()), "/*");
 
@@ -150,37 +167,87 @@ public class Main {
         metadataWriteServletHolder.setInitOrder(0);
         metadataWriteServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
-        ServletHolder proxyServlet = new ServletHolder(new MossProxyServlet(environment.GetLookupBaseURL()));
-        ServletHolder layerListServlet = new ServletHolder(new LayerListServlet());
+        ServletHolder searchProxyServlet = new ServletHolder(new MossProxyServlet(ENV.LOOKUP_BASE_URL));
         ServletHolder layerShaclServlet = new ServletHolder(new LayerShaclServlet());
         ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
-        ServletHolder layerIndexerConfigurationServlet = new ServletHolder(new LayerIndexerConfigurationServlet());
+        // ServletHolder layerIndexerConfigurationServlet = new ServletHolder(new LayerIndexerConfigurationServlet());
+
+        AuthenticationFilter authFilter = new AuthenticationFilter(new APIKeyValidator(userDatabaseManager));
 
         FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
-
         // Context handler for the protected api routes
         ServletContextHandler apiContext = new ServletContextHandler();
         apiContext.setContextPath("/api");
         apiContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
         apiContext.addServlet(metadataWriteServletHolder, "/save");
-        apiContext.addServlet(proxyServlet, "/search");
-        apiContext.addServlet(layerListServlet, "/layers/list");
+        apiContext.addServlet(searchProxyServlet, "/search");
+
+
         apiContext.addServlet(layerShaclServlet, "/layers/get-shacl");
         apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
-        apiContext.addServlet(layerIndexerConfigurationServlet, "/layers/get-indexers");
+
+        
+        RoleFilter adminFilter = new RoleFilter(ENV.ADMIN_ROLE);
+
+        setupReadOnlyAdminServlet(apiContext, new IndexerServlet(), "/indexers/*", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(apiContext, new LayerServlet(), "/layers/*", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(apiContext, new LayerListServlet(), "/layers", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(apiContext, new IndexerListServlet(), "/indexers", authFilter, adminFilter);
+        
+
+        // apiContext.addServlet(layerIndexerConfigurationServlet, "/layers/get-indexers");
         apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
         apiContext.addFilter(authFilterHolder, "/save", null);
         apiContext.addFilter(authFilterHolder, "/users/*", null);
 
+        
+        // apiContext.addFilter(adminFilterHolder, "/save", null);
+
         // Set up handler collection
         HandlerList  handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { readContext, browseContext, sparqlProxyContext, apiContext });
+        handlers.setHandlers(new Handler[] { 
+            readContext, 
+            indexerContext,
+            layerContext,
+            resourceContext, 
+            browseContext, 
+            apiContext,
+            sparqlProxyContext,  
+        });
 
         server.setHandler(handlers);
 
         server.start();
         server.join();
     }
+
+    private static ServletContextHandler createSimpleContext(String path, HttpServlet servlet) {
+        FilterHolder corsFilterHolder = new FilterHolder(new CorsFilter());
+
+        ServletContextHandler context = new ServletContextHandler();
+        context.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        context.setContextPath(path);
+        context.addServlet(new ServletHolder(servlet), "/*");
+        return context;
+    }
+
+    private static void setupReadOnlyAdminServlet(ServletContextHandler apiContext, HttpServlet servlet, String path,
+        Filter authFilter, Filter adminFilter) {
+
+        ServletHolder servletHolder = new ServletHolder(servlet);
+        String[] layerListAllowedMethods = new String[] { 
+            Constants.REQ_METHOD_HEAD, 
+            Constants.REQ_METHOD_GET, 
+            Constants.REQ_METHOD_OPTIONS 
+        };
+
+        RequestMethodFilterWrapper authFilterWrapper = new RequestMethodFilterWrapper(authFilter, layerListAllowedMethods);
+        RequestMethodFilterWrapper adminFilterWrapper = new RequestMethodFilterWrapper(adminFilter, layerListAllowedMethods);
+
+        apiContext.addServlet(servletHolder, path);
+        apiContext.addFilter(new FilterHolder(authFilterWrapper), path, null);
+        apiContext.addFilter(new FilterHolder(adminFilterWrapper), path, null);
+    }    
 
     
 

@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -64,17 +65,30 @@ public class SparqlProxyServlet extends HttpServlet {
             connection.setRequestProperty(headerName, req.getHeader(headerName));
         }
 
-        // For POST requests, send the body of the request
-        if ("POST".equalsIgnoreCase(method)) {
-            connection.setDoOutput(true);
-            try (InputStream inputStream = req.getInputStream()) {
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    connection.getOutputStream().write(buffer, bytesRead, 0);
-                }
+       // For POST requests, send the body of the request
+    if ("POST".equalsIgnoreCase(method)) {
+        connection.setDoOutput(true);
+        try (InputStream inputStream = req.getInputStream()) {
+            // Read the entire body into a string
+            StringBuilder requestBody = new StringBuilder();
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                requestBody.append(new String(buffer, 0, bytesRead));
             }
+
+            // Write the body to the output stream of the connection
+            try (OutputStream outputStream = connection.getOutputStream()) {
+                outputStream.write(requestBody.toString().getBytes());
+                outputStream.flush();  // Ensure that the data is sent
+            }
+
+        } catch (IOException e) {
+            // Handle any I/O exceptions
+            e.printStackTrace();
         }
+    }
 
         // Get the response from the SPARQL endpoint and forward it to the client
         int responseCode = connection.getResponseCode();

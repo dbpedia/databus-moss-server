@@ -1,4 +1,6 @@
 package org.dbpedia.moss.servlets;
+
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -17,35 +19,26 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
-import org.dbpedia.moss.utils.MossEnvironment;
+import org.dbpedia.moss.utils.ENV;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * HTTP Servlet with handlers for the single lookup API request "/api/search"
- * Post-processes requests and sends the query to the LuceneLookupSearcher,
- * which translates requests into lucene queries
- */
+
 public class MetadataReadServlet extends HttpServlet {
 
-	/**
-	 *
-	 */
 	private static final long serialVersionUID = 102831973239L;
 
 	final static Logger logger = LoggerFactory.getLogger(MetadataReadServlet.class);
 
-	private MossEnvironment configuration;
 
 	@Override
 	public void init() throws ServletException {
-		configuration = MossEnvironment.get();
 	}
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		// Construct the URL for the request
-		String requestURI = configuration.getGstoreBaseURL() + req.getRequestURI();
+		String requestURI = ENV.GSTORE_BASE_URL + req.getRequestURI();
 
 		try {
 

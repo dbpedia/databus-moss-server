@@ -1,10 +1,8 @@
 package org.dbpedia.moss.utils;
 
-import java.util.HashMap;
-
 /** 
  * Helper class for accessing environment variables for MOSS
- */
+
 public class MossEnvironment {
 
     private String gstoreBaseURL;
@@ -15,6 +13,7 @@ public class MossEnvironment {
     private String authOidcIssuer;
     private String authOidcClientId;
     private String authOidcClientSecret;
+    private String adminRole;
 
     private static HashMap<String, String> _testVariableMap;
 
@@ -26,12 +25,6 @@ public class MossEnvironment {
         _testVariableMap.put(key, value);
     }
 
-    /**
-	 * Loads the XML Configuration from file
-	 * @param path The path of the file
-	 * @return True if the configuration has been loaded correctly, false otherwise
-	 * @throws Exception 
-	 */
 	public static MossEnvironment get() {
 
         MossEnvironment configuration = new MossEnvironment();
@@ -46,6 +39,7 @@ public class MossEnvironment {
         configuration.authOidcIssuer = getVariable("AUTH_OIDC_ISSUER");
         configuration.authOidcClientId = getVariable("AUTH_OIDC_CLIENT_ID");
         configuration.authOidcClientSecret = getVariable("AUTH_OIDC_CLIENT_SECRET");
+        configuration.adminRole = getVariable("ADMIN_ROLE");
 
 		return configuration;
 	}
@@ -103,4 +97,9 @@ public class MossEnvironment {
     public String getAuthOidcClientId() {
         return authOidcClientId;
     }
+
+    public String GetAdminRole() {
+        return adminRole;
+    }
 }
+*/

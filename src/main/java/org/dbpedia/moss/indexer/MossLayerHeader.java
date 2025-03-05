@@ -1,11 +1,16 @@
 package org.dbpedia.moss.indexer;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.DCTerms;
+import org.apache.jena.vocabulary.RDF;
 import org.dbpedia.moss.utils.RDFUris;
+import org.dbpedia.moss.utils.RDFUtils;
 
 /*
 {
@@ -23,43 +28,32 @@ import org.dbpedia.moss.utils.RDFUris;
 
 public class MossLayerHeader {
    
-    private String uri;
+    private String URI;
 
-    private String headerDocumentURL;
-   
-    private String databusResource;
+    private String databusResourceURI;
 
-    private String layerName;
+    private String layerURI;
+
+    private String contentGraphURI;
 
     private String createdTime;
 
     private String modifiedTime;
 
-    private String contentDocumentURL;
-
-    public String getHeaderDocumentURL() {
-        return headerDocumentURL;
+    public String getDatabusResourceURI() {
+        return databusResourceURI;
     }
 
-    public void setHeaderDocumentURL(String headerDocumentURL) {
-        this.headerDocumentURL = headerDocumentURL;
+    public void setDatabusResourceURI(String databusResource) {
+        this.databusResourceURI = databusResource;
     }
 
-
-    public String getDatabusResource() {
-        return databusResource;
+    public String getLayerURI() {
+        return layerURI;
     }
 
-    public void setDatabusResource(String databusResource) {
-        this.databusResource = databusResource;
-    }
-
-    public String getLayerName() {
-        return layerName;
-    }
-
-    public void setLayerName(String layerName) {
-        this.layerName = layerName;
+    public void setLayerURI(String layerName) {
+        this.layerURI = layerName;
     }
 
     public String getCreatedTime() {
@@ -78,63 +72,67 @@ public class MossLayerHeader {
         this.modifiedTime = modifiedTime;
     }
 
-    public String getContentDocumentURL() {
-        return contentDocumentURL;
+    public String getURI() {
+        return URI;
     }
 
-    public void setContentDocumentURL(String contentDocumentURL) {
-        this.contentDocumentURL = contentDocumentURL;
+    public void setURI(String uri) {
+        this.URI = uri;
     }
 
-    public String getUri() {
-        return uri;
+    public String getContentGraphURI() {
+        return contentGraphURI;
     }
 
-    public void setUri(String uri) {
-        this.uri = uri;
+    public void setContentGraphURI(String contentGraphURI) {
+        this.contentGraphURI = contentGraphURI;
     }
 
-
-  
 
     public void setLastModifiedBy(String username) {
         // TODO... 
     }
 
-   public Model toModel() {
-    Model model = ModelFactory.createDefaultModel();
-    
-    // Create the resource for the MossLayerHeader using its ID
-    Resource layerResource = model.createResource(uri);
-    
-    layerResource.addProperty(model.createProperty(RDFUris.RDF_TYPE), 
-    model.createResource(RDFUris.MOSS_DATABUS_METADATA_LAYER));
+    public Model toModel() {
 
-    // Set the properties on the resource
-    layerResource.addProperty(
-        model.createProperty(RDFUris.MOSS_LAYERNAME), 
-        layerName);
-    
-    layerResource.addProperty(
-        model.createProperty(RDFUris.MOSS_EXTENDS), 
-        model.createResource(databusResource));
-    
-    layerResource.addProperty(
-        model.createProperty(RDFUris.MOSS_CONTENT), 
-        model.createResource(contentDocumentURL));
-    
-    layerResource.addProperty(
-        DCTerms.created, 
-        model.createTypedLiteral(createdTime, XSDDatatype.XSDdateTime));
-    
-    layerResource.addProperty(
-        DCTerms.modified, 
-        model.createTypedLiteral(modifiedTime, XSDDatatype.XSDdateTime));
+        Model model = ModelFactory.createDefaultModel();
+        
+        // Create the resource for the MossLayerHeader using its ID
+        Resource layerResource = model.createResource(URI);
+        
+        layerResource.addProperty(RDF.type, RDFUris.MOSS_METADATA_ENTRY);
+        // layerResource.addProperty(RDFUris.MOSS_LAYER, );
+        layerResource.addProperty(RDFUris.MOSS_INSTANCE_OF, model.createResource(layerURI));
+        layerResource.addProperty(RDFUris.MOSS_EXTENDS, model.createResource(databusResourceURI));
+        layerResource.addProperty(DCTerms.created,  model.createTypedLiteral(createdTime, XSDDatatype.XSDdateTime));
+        layerResource.addProperty(DCTerms.modified, model.createTypedLiteral(modifiedTime, XSDDatatype.XSDdateTime));
+        layerResource.addProperty(RDFUris.MOSS_CONTENT, model.createResource(contentGraphURI));
 
-    model.setNsPrefix("moss", RDFUris.NS_MOSS);
-    model.setNsPrefix("dct", RDFUris.NS_DCT);
-    model.setNsPrefix("xsd", RDFUris.NS_XSD);
-    return model;
-}
+        model.setNsPrefix("moss", RDFUris.NS_MOSS);
+        model.setNsPrefix("dct", RDFUris.NS_DCT);
+        model.setNsPrefix("xsd", RDFUris.NS_XSD);
+        return model;
+    }
+
+    public static MossLayerHeader fromModel(String resourceURI, Model model) {
+
+        MossLayerHeader header = new MossLayerHeader();
+        header.setURI(resourceURI);
+
+        String currentTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
+
+        if(model == null) {
+            // Set creation time to the current time and return!
+            
+            header.setCreatedTime(currentTime);
+            return header;
+        }
+
+        Resource resource = model.getResource(resourceURI);
+        header.setCreatedTime(RDFUtils.getPropertyValue(model, resource, DCTerms.created, currentTime));
+        // TODO: parse other properties
+
+        return header;
+    }
 
 }

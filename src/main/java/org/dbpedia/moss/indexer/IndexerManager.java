@@ -7,13 +7,16 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import javax.naming.ConfigurationException;
+
 import org.dbpedia.moss.GstoreConnector;
-import org.dbpedia.moss.MossConfiguration;
-import org.dbpedia.moss.utils.MossEnvironment;
+import org.dbpedia.moss.config.MossConfiguration;
+import org.dbpedia.moss.config.MossDataLoaderConfig;
+import org.dbpedia.moss.config.MossIndexerConfiguration;
+import org.dbpedia.moss.utils.ENV;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -26,7 +29,7 @@ public class IndexerManager {
 
     private List<LayerIndexer> indexers;
     //Ein mod kann in 1 oder mehreren Indexern vorkommen -> rebuild index for entsprechenden indexern für die der mod wichtig ist
-    private HashMap<String, List<LayerIndexer>> indexerMappings;
+    private HashMap<String, LayerIndexer> indexerMap;
     
     private ThreadPoolExecutor worker;
 
@@ -34,27 +37,23 @@ public class IndexerManager {
 
     private ScheduledExecutorService scheduler;
 
-    public IndexerManager(MossEnvironment environment) {
-        GstoreConnector gstoreConnector = new GstoreConnector(environment.getGstoreBaseURL());
-        
-        File configFile = new File(environment.GetConfigPath());
-        String configRootPath = configFile.getParent();
+    public IndexerManager() throws ConfigurationException {
 
-        MossConfiguration config = MossConfiguration.fromJson(configFile);
+        GstoreConnector gstoreConnector = new GstoreConnector(ENV.GSTORE_BASE_URL);
+        MossConfiguration config = MossConfiguration.get();
 
         this.indexers = new ArrayList<LayerIndexer>();
-        this.indexerMappings = new HashMap<String, List<LayerIndexer>>();
+        this.indexerMap = new HashMap<String, LayerIndexer>();
 
-        for(DataLoaderConfig loaderConfig : config.getLoaders()) {
-            DataLoader loader = new DataLoader(loaderConfig, gstoreConnector, configRootPath, environment.GetLookupBaseURL());
+        for(MossDataLoaderConfig loaderConfig : config.getLoaders()) {
+            DataLoader loader = new DataLoader(loaderConfig, gstoreConnector);
                 
             loader.load();
         }
 
-        for(LayerIndexerConfiguration indexerConfig : config.getIndexers()) {
+        for(MossIndexerConfiguration indexerConfig : config.getIndexers()) {
 
-            LayerIndexer modIndexer = new LayerIndexer(indexerConfig, configRootPath, environment.GetLookupBaseURL());
-
+            LayerIndexer modIndexer = new LayerIndexer(indexerConfig);
             this.indexers.add(modIndexer);
 
             logger.info("Created indexer \"{}\" for layer(s) {}", modIndexer.getId(), modIndexer.getConfig().getLayers());
@@ -63,13 +62,17 @@ public class IndexerManager {
         this.worker = new ThreadPoolExecutor(fixedPoolSize, fixedPoolSize, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
         for(LayerIndexer indexer : this.indexers) {
+
+            indexerMap.put(indexer.getConfig().getId(), indexer);
+
+            /* 
             for(String modType : indexer.getConfig().getLayers()) {
-                if(!this.indexerMappings.containsKey(modType)) {
-                    this.indexerMappings.put(modType, new ArrayList<LayerIndexer>());
+                if(!this.indexerMap.containsKey(modType)) {
+                    this.indexerMap.put(modType, new ArrayList<LayerIndexer>());
                 }
 
-                this.indexerMappings.get(modType).add(indexer);
-            }
+                this.indexerMap.get(modType).add(indexer);
+            }*/
         }
 
         // Schedule a task to run every second
@@ -94,13 +97,14 @@ public class IndexerManager {
         }
     }
 
-    public HashMap<String,List<LayerIndexer>> getIndexerMappings() {
-        return this.indexerMappings;
+    /*
+    public HashMap<String,List<LayerIndexer>> getIndexerMap() {
+        return this.indexerMap;
     }
 
     public void setIndexerMappings(HashMap<String,List<LayerIndexer>> indexerMappings) {
-        this.indexerMappings = indexerMappings;
-    }
+        this.indexerMap = indexerMappings;
+    } */
 
     /**
      * Gehe über alle indexer mit todos und starte entsprechende index tasks
@@ -131,12 +135,20 @@ public class IndexerManager {
     }
 
     
-    public void updateIndices(String contentUri, String layerName) {
-        List<LayerIndexer> correspondingIndexers = indexerMappings.get(layerName);
-        for (LayerIndexer indexer : correspondingIndexers) {
+    public void updateIndices(String contentUri, String layerId) {
+
+        MossConfiguration mossConfiguration = MossConfiguration.get();
+
+        for(MossIndexerConfiguration indexer : mossConfiguration.getIndexers()) {
            
-            indexer.addTodo(contentUri);
-            logger.info("Indexer {} task list updated: {}", indexer.getId(), indexer.getTodos());
+            if(indexer.hasLayer(layerId)) {
+
+                LayerIndexer layerIndexer = indexerMap.get(indexer.getId());
+                layerIndexer.addTodo(contentUri);
+                logger.info("Indexer {} task list updated: {}", layerIndexer.getId(), layerIndexer.getTodos());
+
+            }
+
         }
     }
 }

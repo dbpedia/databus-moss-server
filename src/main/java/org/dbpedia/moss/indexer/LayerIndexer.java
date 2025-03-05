@@ -7,24 +7,23 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import org.dbpedia.moss.config.MossIndexerConfiguration;
+import org.dbpedia.moss.utils.ENV;
+
 
 public class LayerIndexer {
     private String id;
     private HashSet<String> todos;
     // private ExecutorService worker;
-    private LayerIndexerConfiguration config;
+    private MossIndexerConfiguration config;
     @SuppressWarnings("rawtypes")
     private Future indexingFuture;
-    private String configRootPath;
-    private String lookupBaseURL;
     // private final int fixedPoolSize = 1;
 
-    public LayerIndexer(LayerIndexerConfiguration config, String configRootPath, String lookupBaseURL) {
+    public LayerIndexer(MossIndexerConfiguration config) {
         this.config = config;
-        this.configRootPath = configRootPath;
         this.todos = new HashSet<String>();
         this.id = UUID.randomUUID().toString();
-        this.lookupBaseURL = lookupBaseURL;
         // this.worker = Executors.newFixedThreadPool(fixedPoolSize);
     }
 
@@ -33,11 +32,11 @@ public class LayerIndexer {
         return id;
     }
 
-    public LayerIndexerConfiguration getConfig() {
+    public MossIndexerConfiguration getConfig() {
         return this.config;
     }
 
-    public void setConfig(LayerIndexerConfiguration config) {
+    public void setConfig(MossIndexerConfiguration config) {
         this.config = config;
     }
 
@@ -62,10 +61,8 @@ public class LayerIndexer {
         resources.addAll(this.todos);
         this.todos.clear();
 
-        String configPath = configRootPath + "/" + config.getConfigPath();
-
-        String indexEndpoint = lookupBaseURL + "/api/index/run";
-        IndexingTask task = new IndexingTask(configPath, indexEndpoint, resources);
+        String indexEndpoint = ENV.LOOKUP_BASE_URL + "/api/index/run";
+        IndexingTask task = new IndexingTask(config.getConfigFile(), indexEndpoint, resources);
 
         if(executor != null) {
             this.indexingFuture = executor.submit(task);

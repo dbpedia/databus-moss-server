@@ -10,27 +10,18 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFParser;
-import org.apache.jena.shared.PropertyNotFoundException;
-import org.dbpedia.moss.indexer.MossLayerHeader;
-import org.dbpedia.moss.utils.MossUtils;
-import org.dbpedia.moss.utils.RDFUris;
-import org.dbpedia.moss.utils.RDFUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +48,6 @@ public class GstoreConnector {
     private static final String REQ_PARAM_PATH = "path";
     private static final String REQ_PARAM_PREFIX = "prefix";
     // private static final String REQ_AUTHOR_NAME = "author_name";
-    private static final String LAYER_FRAGMENT = "#layer";
 
     private String gstoreBaseURL;
 
@@ -94,20 +84,20 @@ public class GstoreConnector {
       
         MossLayerHeader layerHeader = MossLayerHeader.fromModel(layerURI, model);
         return layerHeader;
-    } */
+    } 
 
-    public MossLayerHeader getOrCreateLayerHeader(String requestBaseURL, String layerName, String resource, Lang language) 
+    public MossLayerHeader getOrCreateLayerHeader(String requestBaseURL, String layerName, String resource) 
         throws URISyntaxException, MalformedURLException {
         
         // String layerURI = MossUtils.getLayerURI(requestBaseURL, resource, layerName);
-        String headerDocumentURL = MossUtils.getHeaderDocumentURL(requestBaseURL, resource, layerName, language);
+        String headerDocumentURL = MossUtils.getHeaderStoragePath(requestBaseURL, resource, layerName, language);
         String layerURI = headerDocumentURL + LAYER_FRAGMENT;
 
         MossLayerHeader header = new MossLayerHeader();
         header.setUri(layerURI);
         header.setHeaderDocumentURL(headerDocumentURL);
         header.setDatabusResource(resource);
-        header.setLayerName(layerName);
+        header.setLayer(layerName);
 
         String currentTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
         header.setCreatedTime(currentTime);
@@ -137,7 +127,7 @@ public class GstoreConnector {
         }
 
         return header;
-    }
+    }*/
 
     public Model read(String targetURI) throws URISyntaxException, UnsupportedEncodingException {
         Model model = ModelFactory.createDefaultModel();
@@ -166,13 +156,14 @@ public class GstoreConnector {
         return read(targetURI);
     }
 
+    /*
 
     public void writeHeader(String prefix, MossLayerHeader header, Lang language) throws IOException, URISyntaxException {
         
         logger.debug("Writing header to: {}",  header.getHeaderDocumentURL());
 
-        String headerPath = MossUtils.getDocumentPath(header.getDatabusResource(),
-            header.getLayerName(), language);
+        String headerPath = MossUtils.getDocumentStoragePath(header.getDatabusResourceURI(),
+            header.getLayerURI(), language);
 
         StringBuilder uri = new StringBuilder();
         uri.append(gstoreBaseURL)
@@ -206,7 +197,7 @@ public class GstoreConnector {
         logger.debug("Response code: {}",  responseCode);
 
         connection.disconnect();
-    }
+    } */
 
     public void writeContent(String prefix, String path, String rdf, Lang language) throws IOException, URISyntaxException {
 
@@ -259,7 +250,7 @@ public class GstoreConnector {
         connection.disconnect();
     }
 
-    private String readGstoreError(HttpURLConnection connection) throws IOException, UnsupportedEncodingException {
+    public static String readGstoreError(HttpURLConnection connection) throws IOException, UnsupportedEncodingException {
         InputStream inputStream = connection.getErrorStream();
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, CHAR_ENCODING_UTF8));
         StringBuilder response = new StringBuilder();

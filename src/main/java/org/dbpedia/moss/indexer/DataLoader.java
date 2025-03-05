@@ -32,6 +32,9 @@ import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.dbpedia.moss.GstoreConnector;
+import org.dbpedia.moss.config.MossConfiguration;
+import org.dbpedia.moss.config.MossDataLoaderConfig;
+import org.dbpedia.moss.config.MossIndexerConfiguration;
 import org.dbpedia.moss.utils.HttpClientWithProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,14 +51,22 @@ public class DataLoader {
     private static final String REQ_METHOD_GET = "GET";
 
     private GstoreConnector gstoreConnector;
-    private String collectionURI;
-    private LayerIndexer indexer;
 
-    public DataLoader(DataLoaderConfig config, GstoreConnector gstoreConnector,
-            String configRootPath, String lookupBaseURL) {
+    private String collectionURI;
+
+    private ArrayList<LayerIndexer> indexers;
+
+    public DataLoader(MossDataLoaderConfig config, GstoreConnector gstoreConnector) {
         this.gstoreConnector = gstoreConnector;
         this.collectionURI = config.getCollectionURI();
-        this.indexer = new LayerIndexer(config.getIndexer(), configRootPath, lookupBaseURL);
+        this.indexers = new ArrayList<>();
+        MossConfiguration mossConfiguration = MossConfiguration.get();
+
+        for(String indexerName : config.getIndexers()) {
+            MossIndexerConfiguration indexerConfiguration = mossConfiguration.getIndexer(indexerName);
+            LayerIndexer layerIndexer = new LayerIndexer(indexerConfiguration);
+            indexers.add(layerIndexer);            
+        }
     }
 
     private String[] loadCollectionFileURIs() throws URISyntaxException {
@@ -159,7 +170,9 @@ public class DataLoader {
                 }
             }
 
-            indexer.run(null);
+            for(LayerIndexer indexer : indexers) {
+                indexer.run(null);
+            }
 
         } catch (URISyntaxException e) {
             e.printStackTrace();

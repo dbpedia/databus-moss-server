@@ -35,8 +35,8 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserInfo;
+import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.HttpClientWithProxy;
-import org.dbpedia.moss.utils.MossEnvironment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,10 +72,9 @@ public class AuthenticationFilter implements Filter {
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        MossEnvironment env = MossEnvironment.get();
-        issuer = env.getAuthOidcIssuer();
-        clientId = env.getAuthOidcClientId();
-        clientSecret = env.getAuthOidcClientSecret();
+        issuer = ENV.AUTH_OIDC_ISSUER;
+        clientId = ENV.AUTH_OIDC_CLIENT_ID;
+        clientSecret = ENV.AUTH_OIDC_CLIENT_SECRET;
 
         JsonNode discoveryDocument = getDiscoveryDocument();
 

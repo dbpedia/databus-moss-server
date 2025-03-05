@@ -1,17 +1,27 @@
 package org.dbpedia.moss.utils;
 
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.jena.atlas.web.ContentType;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFLanguages;
+import org.dbpedia.moss.servlets.ValidationException;
 
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonWriter;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -105,15 +115,6 @@ public final class MossUtils {
     }
 
 
-    public static URL createSaveURL(String annotationFileURI) throws MalformedURLException {
-        MossEnvironment config = MossEnvironment.get();
-        String path = annotationFileURI.replaceAll(MossUtils.baseURI, "");
-        String gStoreBaseURL = config.getGstoreBaseURL();
-        String uriString = gStoreBaseURL + path;
-        return URI.create(uriString).toURL();
-    }
-
-
     public static String fetchJSON(String urlString) throws IOException, URISyntaxException {
         StringBuilder result = new StringBuilder();
         URL url = new URI(urlString).toURL();
@@ -133,17 +134,7 @@ public final class MossUtils {
     }
 
 
-    public static String getMossDocumentUriFragments(String resourceURI) throws MalformedURLException, URISyntaxException  {
-        resourceURI = resourceURI.replace("#", "%23");
-
-        URL resourceURL = null;
-        resourceURL = new URI(resourceURI).toURL();
-        String host = resourceURL.getHost();
-        String path = resourceURL.getPath();
-        String url = host + path;
-
-        return url;
-    }
+    
 
 
     public static String getMossDocumentUri(String mossBaseUrl, String databusDistributionUriFragments,
@@ -162,7 +153,7 @@ public final class MossUtils {
 
         reader.close();
 
-        String result = stringBuilder.toString().replaceAll("^\\s+|\\s+$", "");
+        String result = stringBuilder.toString().replaceAll("^\s+|\s+$", "");
         return result;
     }
 
@@ -254,6 +245,26 @@ public final class MossUtils {
         return base + "/g/" + repo + "/" + path;
     }
 
+    
+
+    public static String getExtensionURI(String baseUrl, String resource, String layerName) 
+    throws MalformedURLException, URISyntaxException {
+        String databusResourceURIFragments = MossUtils.getMossDocumentUriFragments(resource);
+        return baseUrl + "/res/" + databusResourceURIFragments + "/" + layerName;
+    }
+
+    public static String getMossDocumentUriFragments(String resourceURI) throws MalformedURLException, URISyntaxException  {
+        resourceURI = resourceURI.replace("#", "%23");
+
+        URL resourceURL = null;
+        resourceURL = new URI(resourceURI).toURL();
+        String host = resourceURL.getHost();
+        String path = resourceURL.getPath();
+        String url = host + path;
+
+        return url;
+    }
+
     /**
      * Gets the URI of the layer header document
      * @param resource
@@ -262,19 +273,22 @@ public final class MossUtils {
      * @throws URISyntaxException 
      * @throws MalformedURLException 
      */
-    public static String getHeaderDocumentURL(String baseUrl, String resource, String layerName, Lang language) 
+    public static String getHeaderStoragePath(String resource, String layerName, Lang language) 
     throws MalformedURLException, URISyntaxException {
-        return baseUrl + "/g/header/" + getDocumentPath(resource, layerName, language);
+        return "/header/" + getDocumentStoragePath(resource, layerName, language);
     }
 
-    public static String getLayerURI(String baseUrl, String resource, String layerName) 
-    throws MalformedURLException, URISyntaxException {
-        String databusResourceURIFragments = MossUtils.getMossDocumentUriFragments(resource);
-        return baseUrl + "/resource/" + databusResourceURIFragments + "/" + layerName;
+    public static String getContentStoragePath(String resource, String layerName, Lang language) 
+        throws MalformedURLException, URISyntaxException {
+        return "/content/" + getDocumentStoragePath(resource, layerName, language);
     }
-  
 
-    public static String getDocumentPath(String resource, String layerName, 
+    public static String getContentGraphURI(String baseUrl, String resource, String layerName, Lang language) 
+        throws MalformedURLException, URISyntaxException {
+        return  baseUrl + "/g/content/" + getDocumentStoragePath(resource, layerName, language);
+    }
+
+    public static String getDocumentStoragePath(String resource, String layerName, 
         Lang language) throws MalformedURLException, URISyntaxException {
         // Replace # and %23 with /
         String normalizedResource = resource.replace("#", "/").replace("%23", "/");
@@ -306,12 +320,6 @@ public final class MossUtils {
         return resultPath;
     }
 
-    public static String getContentDocumentURL(String baseUrl, 
-        String resource, String layerName, Lang language) 
-        throws MalformedURLException, URISyntaxException {
-        return baseUrl + "/g/content/" + getDocumentPath(resource, layerName, language);
-    }
-
     public static String getPropertyValue(Model model, Resource resource, String propertyURI) {
         // Get the statement corresponding to the property URI from the resource
         Statement statement = resource.getProperty(model.createProperty(propertyURI));
@@ -327,5 +335,84 @@ public final class MossUtils {
     }
 
 
+    public static String readToString(File configFile) {
+        StringBuilder configString = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(configFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                configString.append(line).append("\n"); // Preserve line breaks
+            }
+        } catch (IOException e) {
+            e.printStackTrace(); // Handle file reading error properly in production
+        }
+
+        return configString.toString();
+    }
+
+    public static Lang getContentTypeLang(HttpServletRequest req) throws ValidationException {
+        String contentTypeHeader = req.getContentType();
+        ContentType contentType = ContentType.create(contentTypeHeader);
+
+        if(contentType == null) {
+            throw new ValidationException("Unknown Content Type: " +  req.getContentType());
+        }
+
+        Lang language = RDFLanguages.contentTypeToLang(contentType);
+
+        if(language == null) {
+            throw new ValidationException("Unknown RDF format for content type " + contentType);
+        }
+
+        return language;
+    }
+
+    public static Lang getAcceptLang(HttpServletRequest req, Lang defaultLang)  {
+        String acceptHeader = req.getHeader(Constants.HTTP_HEADER_ACCEPT);
+    
+        if (acceptHeader != null && !acceptHeader.isEmpty()) {
+            Lang parsedLang = RDFLanguages.contentTypeToLang(ContentType.create(acceptHeader));
+            if (parsedLang != null) {
+                return parsedLang;
+            }
+        }
+        return defaultLang;
+    }
+
+    public static void sendPrettyRDF(HttpServletResponse resp, Lang acceptLanguage, Model layerModel) throws IOException {
+		
+        resp.setStatus(HttpServletResponse.SC_OK);
+        resp.setContentType(acceptLanguage.getHeaderString());
+
+        if(acceptLanguage == Lang.JSONLD) {
+		    // Compact
+		    JsonObject compacted = RDFUtils.compact(layerModel);
+		  
+		    try (OutputStream outputStream = resp.getOutputStream();
+		        JsonWriter jsonWriter = Json.createWriter(outputStream)) {
+		        jsonWriter.write(compacted);
+		    } catch (IOException e) {
+		        throw new RuntimeException("Error writing JSON response", e);
+		    }
+
+		} else {
+		    // Write the aggregated model to the output stream
+		    try (OutputStream outputStream = resp.getOutputStream()) {
+		        layerModel.write(outputStream, acceptLanguage.getName());
+		    }
+		}
+	}
+
+
+    public static String uriToName(String layerURI) {
+        int lastSlashIndex = layerURI.lastIndexOf("/");
+        
+        // Ensure there is a valid slash and return the substring after it
+        if (lastSlashIndex != -1 && lastSlashIndex < layerURI.length() - 1) {
+            return layerURI.substring(lastSlashIndex + 1);
+        }
+        
+        // Return an empty string or handle cases where no slash is found
+        return layerURI;
+    }
     
 }

@@ -20,7 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
-import org.dbpedia.moss.utils.MossEnvironment;
+import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.MossUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -38,22 +38,20 @@ public class MetadataBrowseServlet extends HttpServlet {
 	 */
 	private static final long serialVersionUID = 102831973239L;
 
-	final static Logger logger = LoggerFactory.getLogger(MetadataReadServlet.class);
+	final static Logger logger = LoggerFactory.getLogger(MetadataBrowseServlet.class);
 
-	private MossEnvironment configuration;
 
 	@Override
 	public void init() throws ServletException {
-		configuration = MossEnvironment.get();
         // gstoreConnector = new GstoreConnector(configuration.getGstoreBaseURL());
 	}
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		// Construct the URL for the request
-		String requestURL = this.configuration.getGstoreBaseURL() + req.getRequestURI();
-		requestURL = requestURL.replace(this.configuration.getGstoreBaseURL() + "/file",
-			this.configuration.getGstoreBaseURL() + "/file/content");
+		String requestURL = ENV.GSTORE_BASE_URL + req.getRequestURI();
+		requestURL = requestURL.replace(ENV.GSTORE_BASE_URL + "/file",
+			ENV.GSTORE_BASE_URL + "/file/content");
 
 		HttpClient httpClient = HttpClient.newBuilder()
 			.followRedirects(HttpClient.Redirect.ALWAYS)

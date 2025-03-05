@@ -9,9 +9,8 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.dbpedia.moss.MossConfiguration;
-import org.dbpedia.moss.indexer.MossLayer;
-import org.dbpedia.moss.utils.MossEnvironment;
+import org.dbpedia.moss.config.MossConfiguration;
+import org.dbpedia.moss.config.MossLayerConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,10 +29,7 @@ public class LayerShaclServlet extends HttpServlet {
 
 	@Override
 	public void init() throws ServletException {
-		MossEnvironment environment = MossEnvironment.get();
-
-		File configFile = new File(environment.GetConfigPath());
-        mossConfiguration = MossConfiguration.fromJson(configFile);
+        mossConfiguration = MossConfiguration.get();
 	}
 
 	@Override
@@ -42,7 +38,7 @@ public class LayerShaclServlet extends HttpServlet {
 		String layerName = req.getParameter("layerName");
 		
 		// Retrieve the layer object from the configuration
-		MossLayer layer = mossConfiguration.getLayerByName(layerName);
+		MossLayerConfiguration layer = mossConfiguration.getLayerByName(layerName);
 
 		if (layer == null) {
 			// Layer not found, send a 404 Not Found response

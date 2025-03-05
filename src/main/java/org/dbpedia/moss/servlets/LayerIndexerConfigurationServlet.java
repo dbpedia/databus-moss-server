@@ -1,22 +1,14 @@
 package org.dbpedia.moss.servlets;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.dbpedia.moss.MossConfiguration;
-import org.dbpedia.moss.indexer.IndexingTaskConfiguration;
-import org.dbpedia.moss.indexer.MossLayer;
-import org.dbpedia.moss.utils.MossEnvironment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * HTTP Servlet with handlers for the single lookup API request "/api/search"
@@ -29,26 +21,23 @@ public class LayerIndexerConfigurationServlet extends HttpServlet {
 
 	final static Logger logger = LoggerFactory.getLogger(LayerShaclServlet.class);
 
-	private MossConfiguration mossConfiguration;
 	
-	private String configRootPath;
 
 	@Override
 	public void init() throws ServletException {
-		MossEnvironment environment = MossEnvironment.get();
 
-		File configFile = new File(environment.GetConfigPath());
-		mossConfiguration = MossConfiguration.fromJson(configFile);
-		configRootPath = configFile.getParent();
 	}
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		// Get the layer name from the request parameter
-		String layerName = req.getParameter("layerName");
 		
 		// Retrieve the layer object from the configuration
-		MossLayer layer = mossConfiguration.getLayerByName(layerName);
+
+		/*
+		String layerName = req.getParameter("layerName");
+
+		MossLayerConfiguration layer = mossConfiguration.getLayerByName(layerName);
 
 		if (layer == null) {
 			// Layer not found, send a 404 Not Found response
@@ -80,6 +69,6 @@ public class LayerIndexerConfigurationServlet extends HttpServlet {
 			// Use Jackson to convert the list to JSON
 			ObjectMapper objectMapper = new ObjectMapper();
 			objectMapper.writerWithDefaultPrettyPrinter().writeValue(resp.getWriter(), configurations);
-		}
+		} */
 	}
 }
