@@ -2,6 +2,8 @@ package org.dbpedia.moss.config;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -261,7 +263,21 @@ public class MossConfiguration {
 
    
 
-    public static void initialize(File configFile) throws ConfigurationException {
+    public static void initialize(File configFile) throws ConfigurationException, IOException {
+
+        if (!configFile.exists()) {
+            File defaultConfig = new File("./config/moss-default.yml");
+
+            if (defaultConfig.exists()) {
+                // Copy the default config to the new location
+                logger.info("Creating default config at " + configFile.toPath());
+                Files.copy(defaultConfig.toPath(), configFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            } else {
+                throw new ConfigurationException("Default configuration file not found: " + defaultConfig.getAbsolutePath());
+            }
+        }
+
+
         MossConfiguration mossConfiguration = MossConfiguration.fromJson(configFile);
         mossConfiguration.validate();
 
@@ -343,8 +359,6 @@ public class MossConfiguration {
 
             groups.add(new IndexGroup(layerConfiguration.getId(), indexConfigFiles.toArray(new File[0])));
         }
-
-
         
         return groups;
     }

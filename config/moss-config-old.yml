@@ -6,6 +6,9 @@ layers:
 - id: layer:keyword
   formatMimeType: text/turtle
   resourceTypes: []
+- id: layer:openenergy
+  formatMimeType: application/ld+json
+  resourceTypes: []
 ontologies:
 - dataPath: ./ontologies/oeo.ttl
   indexerConfigPath: ./ontologies/oeo-indexer.yml
@@ -13,3 +16,12 @@ indexers:
 - id: indexer:keyword
   layers:
   - layer:keyword
+- id: indexer:annotate-count
+  layers:
+  - layer:openenergy
+  - layer:keyword
+- id: indexer:ontology
+  layers: null
+- id: indexer:oemetadata
+  layers:
+  - layer:openenergy

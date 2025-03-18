@@ -192,8 +192,8 @@ public class Main {
         
         RoleFilter adminFilter = new RoleFilter(ENV.AUTH_ADMIN_ROLE);
 
-        setupReadOnlyAdminServlet(apiContext, new IndexerServlet(), "/indexers/*", authFilter, adminFilter);
-        setupReadOnlyAdminServlet(apiContext, new LayerServlet(), "/layers/*", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(apiContext, new IndexerServlet(indexerManager), "/indexers/*", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(apiContext, new LayerServlet(indexerManager), "/layers/*", authFilter, adminFilter);
         setupReadOnlyAdminServlet(apiContext, new LayerListServlet(), "/layers", authFilter, adminFilter);
         setupReadOnlyAdminServlet(apiContext, new IndexerListServlet(), "/indexers", authFilter, adminFilter);
         

@@ -50,6 +50,15 @@ public class IndexerManager {
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
+    public void updateIndexGroup(List<IndexGroup> groups) {
+        this.indexGroups = new HashMap<String, IndexGroup>();
+       
+        for(IndexGroup group : groups) {
+            logger.info("Updated/Created index group {}", group.getName());
+            this.indexGroups.put(group.getName(), group);
+        }
+    }
+
     public void start(int tickIntervalSeconds) {
         this.scheduler.scheduleAtFixedRate(() -> tick(), 0, tickIntervalSeconds, TimeUnit.SECONDS); 
     }

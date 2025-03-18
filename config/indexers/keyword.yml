@@ -6,7 +6,7 @@ indexFields:
     documentVariable: layer
     query: >
       SELECT DISTINCT ?layer ?label WHERE {
-        GRAPH ?g  {
+        GRAPH ?g {
           ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
         }
         GRAPH ?content {

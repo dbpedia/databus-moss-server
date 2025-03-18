@@ -18,6 +18,7 @@ import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.config.MossIndexerConfiguration;
 import org.dbpedia.moss.config.MossLayerConfiguration;
+import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.utils.Constants;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.MossUtils;
@@ -36,7 +37,12 @@ public class IndexerServlet extends HttpServlet {
 	private static final long serialVersionUID = 102831973239L;
 
 	final static Logger logger = LoggerFactory.getLogger(IndexerServlet.class);
+
+	private IndexerManager indexerManager;
 	
+	public IndexerServlet(IndexerManager indexerManager) {
+		this.indexerManager = indexerManager;
+	}
 
 	@Override
 	public void init() throws ServletException {
@@ -87,6 +93,8 @@ public class IndexerServlet extends HttpServlet {
 		mossConfiguration.addOrReplaceIndexer(inputIndexer);
 		mossConfiguration.save();
 
+		indexerManager.updateIndexGroup(mossConfiguration.getIndexingGroups());
+
 		resp.setStatus(HttpServletResponse.SC_CREATED);
 		resp.setContentType("application/json");
 		resp.getWriter().write(objectMapper.writeValueAsString(inputIndexer));
@@ -132,6 +140,8 @@ public class IndexerServlet extends HttpServlet {
 
         mossConfiguration.save();
 
+		
+		indexerManager.updateIndexGroup(mossConfiguration.getIndexingGroups());
 		
 		resp.setStatus(HttpServletResponse.SC_CREATED);
 		resp.setContentType("application/json");

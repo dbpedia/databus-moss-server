@@ -17,6 +17,7 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.config.MossLayerConfiguration;
+import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.utils.Constants;
 import org.dbpedia.moss.utils.MossUtils;
 import org.slf4j.Logger;
@@ -36,6 +37,11 @@ public class LayerServlet extends HttpServlet {
 
 	final static Logger logger = LoggerFactory.getLogger(LayerListServlet.class);
 	
+	private IndexerManager indexerManager;
+	
+	public LayerServlet(IndexerManager indexerManager) {
+		this.indexerManager = indexerManager;
+	}
 
 	@Override
 	public void init() throws ServletException {
@@ -57,6 +63,9 @@ public class LayerServlet extends HttpServlet {
 	
 			mossConfiguration.addOrReplaceLayer(inputLayer);
 			mossConfiguration.save();
+
+			
+			indexerManager.updateIndexGroup(mossConfiguration.getIndexingGroups());
 			
 			resp.setStatus(HttpServletResponse.SC_CREATED);
             resp.setHeader(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON);
@@ -110,7 +119,7 @@ public class LayerServlet extends HttpServlet {
 		}
 
         mossConfiguration.save();
-
+		indexerManager.updateIndexGroup(mossConfiguration.getIndexingGroups());
 		
 		resp.setStatus(HttpServletResponse.SC_CREATED);
 		resp.setContentType("application/json");
