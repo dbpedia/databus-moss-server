@@ -15,6 +15,7 @@
                 "MOSS_BASE_URL": "http://localhost:8080",
                 "GSTORE_BASE_URL": "http://localhost:5003",
                 "LOOKUP_BASE_URL": "http://localhost:5002",
+                "STORE_SPARQL_ENDPOINT": "http://localhost:5004/sparql",
                 "HTTPS_PROXY": null,
                 "HTTP_PROXY": null,
                 "USER_DATABASE_PATH": "./devenv/sqlite/users.db",

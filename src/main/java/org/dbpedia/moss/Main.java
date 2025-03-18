@@ -192,7 +192,7 @@ public class Main {
         // apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
 
         
-        RoleFilter adminFilter = new RoleFilter(ENV.ADMIN_ROLE);
+        RoleFilter adminFilter = new RoleFilter(ENV.AUTH_ADMIN_ROLE);
 
         setupReadOnlyAdminServlet(apiContext, new IndexerServlet(), "/indexers/*", authFilter, adminFilter);
         setupReadOnlyAdminServlet(apiContext, new LayerServlet(), "/layers/*", authFilter, adminFilter);

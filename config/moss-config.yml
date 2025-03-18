@@ -18,8 +18,8 @@ indexers:
   - layer:keyword
 - id: indexer:annotate-count
   layers:
-  - layer:keyword
   - layer:openenergy
+  - layer:keyword
 - id: indexer:ontology
   layers: null
 - id: indexer:oemetadata

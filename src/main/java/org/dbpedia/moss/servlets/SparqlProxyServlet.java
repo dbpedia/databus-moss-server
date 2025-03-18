@@ -15,14 +15,19 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Enumeration;
 
+import org.dbpedia.moss.utils.ENV;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class SparqlProxyServlet extends HttpServlet {
 
+	final static Logger logger = LoggerFactory.getLogger(SparqlProxyServlet.class);
     private final String sparqlEndpoint;
 
     public SparqlProxyServlet() {
 		
 		// MossEnvironment env = MossEnvironment.get();
-        this.sparqlEndpoint = "http://localhost:5004/sparql"; // env.getGstoreBaseURL() + "/sparql";
+        this.sparqlEndpoint = ENV.STORE_SPARQL_ENDPOINT; // "http://localhost:5004/sparql"; // env.getGstoreBaseURL() + "/sparql";
     }
 
     @Override
@@ -54,6 +59,7 @@ public class SparqlProxyServlet extends HttpServlet {
 
 		}
 
+        logger.info("Proxying to: " + url);
         // Open a connection to the SPARQL endpoint
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod(method);
@@ -66,29 +72,29 @@ public class SparqlProxyServlet extends HttpServlet {
         }
 
        // For POST requests, send the body of the request
-    if ("POST".equalsIgnoreCase(method)) {
-        connection.setDoOutput(true);
-        try (InputStream inputStream = req.getInputStream()) {
-            // Read the entire body into a string
-            StringBuilder requestBody = new StringBuilder();
-            byte[] buffer = new byte[8192];
-            int bytesRead;
+        if ("POST".equalsIgnoreCase(method)) {
+            connection.setDoOutput(true);
+            try (InputStream inputStream = req.getInputStream()) {
+                // Read the entire body into a string
+                StringBuilder requestBody = new StringBuilder();
+                byte[] buffer = new byte[8192];
+                int bytesRead;
 
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                requestBody.append(new String(buffer, 0, bytesRead));
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    requestBody.append(new String(buffer, 0, bytesRead));
+                }
+
+                // Write the body to the output stream of the connection
+                try (OutputStream outputStream = connection.getOutputStream()) {
+                    outputStream.write(requestBody.toString().getBytes());
+                    outputStream.flush();  // Ensure that the data is sent
+                }
+
+            } catch (IOException e) {
+                // Handle any I/O exceptions
+                e.printStackTrace();
             }
-
-            // Write the body to the output stream of the connection
-            try (OutputStream outputStream = connection.getOutputStream()) {
-                outputStream.write(requestBody.toString().getBytes());
-                outputStream.flush();  // Ensure that the data is sent
-            }
-
-        } catch (IOException e) {
-            // Handle any I/O exceptions
-            e.printStackTrace();
         }
-    }
 
         // Get the response from the SPARQL endpoint and forward it to the client
         int responseCode = connection.getResponseCode();

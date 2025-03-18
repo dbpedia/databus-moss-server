@@ -8,6 +8,7 @@ import java.util.HashMap;
 public class ENV {
 
     public static final String GSTORE_BASE_URL;
+    public static final String STORE_SPARQL_ENDPOINT; // TODO: Remove, when gstore sparql proxy is fixed
     public static final String CONFIG_PATH;
     public static final String LOOKUP_BASE_URL;
     public static final String USER_DATABASE_PATH;
@@ -15,7 +16,7 @@ public class ENV {
     public static final String AUTH_OIDC_CLIENT_ID;
     public static final String AUTH_OIDC_CLIENT_SECRET;
     public static final String MOSS_BASE_URL;
-    public static final String ADMIN_ROLE;
+    public static final String AUTH_ADMIN_ROLE;
 
     private static HashMap<String, String> _testVariableMap;
     
@@ -29,7 +30,8 @@ public class ENV {
         AUTH_OIDC_ISSUER = getVariable("AUTH_OIDC_ISSUER");
         AUTH_OIDC_CLIENT_ID = getVariable("AUTH_OIDC_CLIENT_ID");
         AUTH_OIDC_CLIENT_SECRET = getVariable("AUTH_OIDC_CLIENT_SECRET");
-        ADMIN_ROLE = getVariable("ADMIN_ROLE");
+        AUTH_ADMIN_ROLE = getVariable("AUTH_ADMIN_ROLE");
+        STORE_SPARQL_ENDPOINT = getVariable("STORE_SPARQL_ENDPOINT");
     }
 
     public static void setTestVariable(String key, String value) {
@@ -54,9 +56,10 @@ public class ENV {
         sb.append("LOOKUP_BASE_URL: ").append(LOOKUP_BASE_URL).append("\n");
         sb.append("MOSS_BASE_URL: ").append(MOSS_BASE_URL).append("\n");
         sb.append("USER_DATABASE_PATH: ").append(USER_DATABASE_PATH).append("\n");
-        sb.append("ADMIN_ROLE: ").append(ADMIN_ROLE).append("\n");
+        sb.append("AUTH_ADMIN_ROLE: ").append(AUTH_ADMIN_ROLE).append("\n");
         sb.append("AUTH_OIDC_ISSUER: ").append(AUTH_OIDC_ISSUER).append("\n");
         sb.append("AUTH_OIDC_CLIENT_ID: ").append(AUTH_OIDC_CLIENT_ID).append("\n");
+        sb.append("STORE_SPARQL_ENDPOINT: ").append(STORE_SPARQL_ENDPOINT).append("\n");
         return sb.toString();
     }
 }
