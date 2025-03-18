@@ -1,5 +1,7 @@
 ---
 indexerConfigPath: indexers
+templatePath: templates
+templateResourcePlaceholder: $DATABUS_RESOURCE
 layers:
 - id: layer:keyword
   formatMimeType: text/turtle
@@ -7,25 +9,19 @@ layers:
 - id: layer:openenergy
   formatMimeType: application/ld+json
   resourceTypes: []
-- id: layer:more
-  formatMimeType: text/turtle
-  resourceTypes: []
-- id: layer:OEMetadata_2_0
-  formatMimeType: application/ld+json
-  resourceTypes: []
-loaders:
-- collectionURI: https://databus.dbpedia.org/janfo/collections/moss-ontologies
-  indexers:
-  - indexer:ontology
+ontologies:
+- dataPath: ./ontologies/oeo.ttl
+  indexerConfigPath: ./ontologies/oeo-indexer.yml
 indexers:
 - id: indexer:keyword
-  layers: null
-- id: indexer:openenergy
   layers:
-  - layer:OEMetadata_2_0
+  - layer:keyword
 - id: indexer:annotate-count
   layers:
+  - layer:keyword
   - layer:openenergy
-  - layer:OEMetadata_2_0
 - id: indexer:ontology
   layers: null
+- id: indexer:oemetadata
+  layers:
+  - layer:openenergy

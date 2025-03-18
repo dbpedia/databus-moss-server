@@ -8,7 +8,6 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
-import org.apache.jena.vocabulary.RDF;
 import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.config.MossLayerConfiguration;
 import org.dbpedia.moss.utils.ENV;
@@ -52,6 +51,12 @@ public class ResourceServlet extends HttpServlet {
 		try {
 			GstoreResource headerDocument = new GstoreResource(headerDocumentPath);
 			Model headerModel = headerDocument.readModel(Lang.JSONLD);
+
+			if(headerModel == null) {
+				resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+				return;
+			}
+			
 			Resource resource = headerModel.getResource(ENV.MOSS_BASE_URL + requestURI);
 
 			String contentGraphURI = RDFUtils.getPropertyValue(headerModel, resource, RDFUris.MOSS_CONTENT, null);

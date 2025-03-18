@@ -1,11 +1,14 @@
 package org.dbpedia.moss.servlets;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -91,6 +94,15 @@ public class MetadataWriteServlet extends HttpServlet {
 
             Lang layerLanguage = RDFLanguages.contentTypeToLang(layer.getFormatMimeType());
 
+            if(rdfString == null || rdfString.isBlank()) {
+                File templateFile = layer.getTemplateFile();
+
+                if (templateFile != null && templateFile.exists()) {
+                    rdfString = Files.readString(templateFile.toPath(), StandardCharsets.UTF_8);
+                    rdfString = rdfString.replace(mossConfiguration.getTemplateResourcePlaceholder(), resource);
+                }
+            }
+           
             // Validate the input document with SHACL shapes
             Model model = validateInputForLayer(layer, rdfString, contentTypeLanguage);
 
@@ -135,7 +147,7 @@ public class MetadataWriteServlet extends HttpServlet {
             GstoreResource contentDocument = new GstoreResource(contentDocumentPath);
             contentDocument.writeDocument(rdfString, layerLanguage);
 
-            indexerManager.updateIndices(entryURI, layerId);
+            indexerManager.updateResource(entryURI, layerId);
             
             // Create JSON response
             Map<String, String> jsonResponse = new HashMap<>();

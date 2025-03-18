@@ -2,6 +2,7 @@ package org.dbpedia.moss.config;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.naming.ConfigurationException;
@@ -10,6 +11,7 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFLanguages;
+import org.dbpedia.moss.indexer.IndexGroup;
 import org.dbpedia.moss.utils.ENV;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +26,26 @@ public class MossConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(MossConfiguration.class);
 
     private String indexerConfigPath;
+    
+    private String templatePath;
+
+    private String templateResourcePlaceholder;
+
+    public String getTemplateResourcePlaceholder() {
+        return templateResourcePlaceholder;
+    }
+
+    public void setTemplateResourcePlaceholder(String templateResourcePlaceholder) {
+        this.templateResourcePlaceholder = templateResourcePlaceholder;
+    }
+
+    public String getTemplatePath() {
+        return templatePath;
+    }
+
+    public void setTemplatePath(String templatePath) {
+        this.templatePath = templatePath;
+    }
 
     public String getIndexerConfigPath() {
         return indexerConfigPath;
@@ -35,7 +57,7 @@ public class MossConfiguration {
 
     private List<MossLayerConfiguration> layers;
 
-    private List<MossDataLoaderConfig> loaders;
+    private List<MossOntologyConfiguration> ontologies;
 
     private List<MossIndexerConfiguration> indexers;
     
@@ -57,12 +79,12 @@ public class MossConfiguration {
         this.layers = layers;
     }
 
-    public List<MossDataLoaderConfig> getLoaders() {
-        return loaders;
+    public List<MossOntologyConfiguration> getOntologies() {
+        return ontologies;
     }
 
-    public void setLoaders(List<MossDataLoaderConfig> loaders) {
-        this.loaders = loaders;
+    public void setOntologies(List<MossOntologyConfiguration> ontologies) {
+        this.ontologies = ontologies;
     }
     
     @JsonIgnore
@@ -92,8 +114,8 @@ public class MossConfiguration {
                             System.err.println("Layer " + layer.getId() + " references missing indexer " + indexerId + ".");
                         }
                     }
-                }*/
-                
+                }
+
                 
                 if (layer.getTemplatePath() != null && !layer.getTemplatePath().isEmpty()) {
                     // Resolve the template file relative to the config file's directory
@@ -107,7 +129,7 @@ public class MossConfiguration {
                         System.err.println("Template file not found or not readable: " + templateFile.getAbsolutePath());
                     }
                 }
-
+*/
                 if (layer.getShaclPath() != null && !layer.getShaclPath().isEmpty()) {
                     // Resolve the template file relative to the config file's directory
                     File shaclFile = new File(config.configDir, layer.getShaclPath());
@@ -122,7 +144,9 @@ public class MossConfiguration {
             }
             
             // HashMap<String, MossIndexerConfiguration> indexerMap = new HashMap<>();
-
+            for(MossLayerConfiguration layer : config.getLayers()) {
+                layer.createOrFetchTemplateFile(config);
+            }
             // Load indexer configurations for indexers
             for(MossIndexerConfiguration indexer : config.getIndexers()) {
                 indexer.createOrFetchConfigFile(config);
@@ -208,10 +232,7 @@ public class MossConfiguration {
                 validateSHACL(layer);
             }
     
-            if(layer.getTemplatePath() != null){
-                logger.debug("Template file: " +  layer.getTemplatePath());
-                validateTemplate(layer, lang);
-            }
+           
         }
         
         logger.info("Configuration OK!");
@@ -226,9 +247,7 @@ public class MossConfiguration {
         }
     }
 
-    private void validateTemplate(MossLayerConfiguration layer, Lang lang) throws ConfigurationException {
-        RDFDataMgr.loadModel(layer.getTemplatePath(), lang);
-    }
+   
 
     public static void initialize(File configFile) throws ConfigurationException {
         MossConfiguration mossConfiguration = MossConfiguration.fromJson(configFile);
@@ -294,6 +313,28 @@ public class MossConfiguration {
         }
     
         layers.add(inputLayer);
+    }
+
+    @JsonIgnore
+    public List<IndexGroup> getIndexingGroups() {
+        List<IndexGroup> groups = new ArrayList<>();
+
+        for (MossLayerConfiguration layerConfiguration : getLayers()) {
+
+            List<File> indexConfigFiles = new ArrayList<>();
+
+            for(MossIndexerConfiguration indexerConfiguration : getIndexers()) {
+                if(indexerConfiguration.hasLayer(layerConfiguration.getId())) {
+                    indexConfigFiles.add(indexerConfiguration.getConfigFile());
+                }
+            }
+
+            groups.add(new IndexGroup(layerConfiguration.getId(), indexConfigFiles.toArray(new File[0])));
+        }
+
+
+        
+        return groups;
     }
     
 

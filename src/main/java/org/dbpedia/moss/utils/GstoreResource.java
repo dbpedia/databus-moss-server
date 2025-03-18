@@ -113,6 +113,8 @@ public class GstoreResource {
             
         return new URI(uri.toString()).toURL();
     }
+
+
         
     private String getAPIRouteForOperation(GstoreOp operation) {
         switch (operation) {
@@ -213,6 +215,10 @@ public class GstoreResource {
         return connection.getResponseCode();
         
         //logger.info("Deleted resource  request returned {}.", responseCode);
+    }
+
+    public String getGraphURL() {
+        return String.format("%s/g/%s/%s", ENV.MOSS_BASE_URL, repo, path);
     }
 
     // Getter for repo

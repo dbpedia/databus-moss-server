@@ -55,6 +55,23 @@ public class MossIndexerConfiguration {
         Resource configResource = model.createResource(String.format("%s/config.yml", getURI()));
         model.add(indexerResource, RDF.type, RDFUris.MOSS_DATABUS_METADATA_LAYER_INDEXER);
         model.add(indexerResource, RDFUris.MOSS_CONFIG_FILE, configResource);
+
+        if(layers != null) {
+            
+            MossConfiguration mossConfiguration = MossConfiguration.get();
+
+            for(String layerId : layers) {
+                MossLayerConfiguration layerConfiguration = mossConfiguration.getLayer(layerId);
+
+                if(layerConfiguration == null) {
+                    continue;
+                }
+                
+                Resource layerResource = model.createResource(layerConfiguration.getURI());
+                model.add(indexerResource, RDFUris.MOSS_LAYER, layerResource);
+            }
+        }
+
         return model;
     }
 

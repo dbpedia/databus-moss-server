@@ -17,7 +17,6 @@ public class CorsFilter implements Filter {
  
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
-        System.out.println("CORS Filter triggered for: " + httpRequest.getMethod() + " " + httpRequest.getRequestURI());
 
         // Add CORS headers
         httpResponse.setHeader("Access-Control-Allow-Origin", "*");

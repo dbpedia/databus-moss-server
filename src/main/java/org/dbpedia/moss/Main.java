@@ -19,6 +19,7 @@ import org.apache.jena.sys.JenaSystem;
 import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
+import org.dbpedia.moss.indexer.OntologyLoader;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
 import org.dbpedia.moss.servlets.indexers.IndexerListServlet;
@@ -27,9 +28,7 @@ import org.dbpedia.moss.servlets.indexers.IndexerServlet;
 import org.dbpedia.moss.servlets.layers.LayerListServlet;
 import org.dbpedia.moss.servlets.layers.LayerResourceServlet;
 import org.dbpedia.moss.servlets.layers.LayerServlet;
-import org.dbpedia.moss.servlets.LayerIndexerConfigurationServlet;
 import org.dbpedia.moss.servlets.LayerShaclServlet;
-import org.dbpedia.moss.servlets.LayerTemplateServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.DefaultIdentityService;
 import org.eclipse.jetty.security.IdentityService;
@@ -39,7 +38,6 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.eclipse.jetty.util.security.Constraint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,12 +107,19 @@ public class Main {
         MossConfiguration.initialize(configFile);
         MossContext.initialize();
 
+      
         
         waitForGstore(ENV.GSTORE_BASE_URL);
 
-        UserDatabaseManager userDatabaseManager = new UserDatabaseManager(ENV.USER_DATABASE_PATH);
-        IndexerManager indexerManager = new IndexerManager();
+        MossConfiguration config = MossConfiguration.get();
+        OntologyLoader.load(config);
 
+
+        UserDatabaseManager userDatabaseManager = new UserDatabaseManager(ENV.USER_DATABASE_PATH);
+
+        
+        IndexerManager indexerManager = new IndexerManager(MossConfiguration.get().getIndexingGroups());
+        indexerManager.start(1);
         Server server = new Server(8080);
 
         IdentityService identityService = new DefaultIdentityService();
@@ -169,7 +174,7 @@ public class Main {
 
         ServletHolder searchProxyServlet = new ServletHolder(new MossProxyServlet(ENV.LOOKUP_BASE_URL));
         ServletHolder layerShaclServlet = new ServletHolder(new LayerShaclServlet());
-        ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
+        // ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
         // ServletHolder layerIndexerConfigurationServlet = new ServletHolder(new LayerIndexerConfigurationServlet());
 
         AuthenticationFilter authFilter = new AuthenticationFilter(new APIKeyValidator(userDatabaseManager));
@@ -184,7 +189,7 @@ public class Main {
 
 
         apiContext.addServlet(layerShaclServlet, "/layers/get-shacl");
-        apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
+        // apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
 
         
         RoleFilter adminFilter = new RoleFilter(ENV.ADMIN_ROLE);

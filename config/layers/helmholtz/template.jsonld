@@ -1,7 +1,0 @@
-{
-  "@context": {
-    "schema": "https://schema.org/"
-  },
-  "@id": "%DATABUS_RESOURCE%",
-  "schema:keywords": "helmholtz"
-}

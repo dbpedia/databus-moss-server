@@ -20,6 +20,7 @@ public class Constants {
     public static final String HTTP_HEADER_ACCEPT = "Accept";
     public static final String HTTP_HEADER_CONTENT_TYPE = "Content-Type";
     public static final String HTTP_CONTENT_TYPE_FORM = "application/x-www-form-urlencoded";
+    public static final String HTTP_CONTENT_TYPE_JSON = "application/json";
     public static final String LOCALHOST_URL = "http://localhost";
     public static final String DOCKERHOST_URL = "http://host.docker.internal";
 }

@@ -1,3 +1,0 @@
-PREFIX schema: <https://schema.org/> 
-
-<%DATABUS_RESOURCE%> schema:keywords "simple" . 

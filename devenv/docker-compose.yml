@@ -3,7 +3,7 @@ version: "3.0"
 name: moss-dev
 services:
   lookup:
-    image: dbpedia/lookup:dev
+    image: lookup:dev
     container_name: moss_dev_lookup
     ports:
       - "5002:8082"

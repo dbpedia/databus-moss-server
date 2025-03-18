@@ -6,89 +6,143 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.ParseException;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.dbpedia.moss.utils.ENV;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 public class IndexingTask implements Runnable {
 
-    private final static Logger logger = LoggerFactory.getLogger(IndexingTask.class);
+    private static final String PARAM_CONFIG = "config";
 
-    private final static String REQ_KEY_CONFIG = "config";
+    private static final String PARAM_VALUES = "values";
+
+    private static final String ROUTE_INDEX = "/api/index/run";
+
+    private static final String ROUTE_DELETE = "/api/index/delete";
+
+    private static final Logger logger = LoggerFactory.getLogger(IndexingTask.class);
     
-    private final static String REQ_KEY_VALUES = "values";
+    private String resourceURI;
 
-    private List<String> todos;
-    private File configFile;
-    private String indexEndpoint;
+    private IndexGroup indexGroup;
 
-    public IndexingTask(File configPath, String indexEndpoint, List<String> todos) {
-        this.todos = todos;
-        this.configFile = configPath;
-        this.indexEndpoint = indexEndpoint;
+  
+    public IndexingTask(String resourceURI, IndexGroup indexGroup) {
+        this.resourceURI = resourceURI;
+        this.indexGroup = indexGroup;
     }
 
     @Override
     public void run() {
+        
 
-        long tid = Thread.currentThread().threadId();
-        logger.info("[Thread {}] Indexing with {}...", tid, configFile.getAbsolutePath());
+        try(CloseableHttpClient httpClient = HttpClients.createDefault()) {
 
-        if(todos != null) {
-            String todosString = todos.stream().collect(Collectors.joining(","));
-            logger.info("[Thread {}] VALUES: {}...", tid, todosString);
-        }
+            // FIRST: Delete document from index
 
-        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-            HttpPost uploadFile = new HttpPost(indexEndpoint);
-            MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-
-            // Add the file part
-            builder.addBinaryBody(REQ_KEY_CONFIG, configFile, ContentType.APPLICATION_OCTET_STREAM, configFile.getName());
-
-            // Add the todos part if not null
-            if (todos != null) {
-                String todosString = todos.stream().collect(Collectors.joining(","));
-                builder.addTextBody(REQ_KEY_VALUES, todosString, ContentType.TEXT_PLAIN);
+            if(resourceURI != null) {
+                HttpPost deleteRequest = createRequest(ENV.LOOKUP_BASE_URL + ROUTE_DELETE, null);
+            
+                try (CloseableHttpResponse deleteResponse = httpClient.execute(deleteRequest)) {
+                    int responseCode = deleteResponse.getCode();
+                    logger.info("Resource <{}> deleted from index with code {} " , resourceURI, responseCode);
+                } catch (IOException e) {
+                    logger.error("Failed to delete resource from index <{}>: {}", resourceURI, e.getMessage());;
+                }
             }
 
-            // Set the multipart entity to the request
-            uploadFile.setEntity(builder.build());
+            if(indexGroup == null) {
+                return;
+            }
 
-            // Execute the request
-            try (CloseableHttpResponse response = httpClient.execute(uploadFile)) {
-                int responseCode = response.getCode();
+            // SECOND: Sequentially run all indexers of the specified group for the resource
+            String indexEndpointURL = ENV.LOOKUP_BASE_URL + ROUTE_INDEX;
+            logger.info("Reindexing <{}> ({})" , resourceURI, indexGroup.getName());
 
-                // Print the response
-                String responseString = EntityUtils.toString(response.getEntity(), "UTF-8");
+            for(File indexConfiguration : indexGroup.getIndexConfigurations()) {
                 
-                logger.info("[Thread {}] Indexing request response: {} - {}", tid, responseCode, responseString);
+                String indexerName = indexConfiguration.getName();
+                HttpPost indexRequest = createRequest(indexEndpointURL, indexConfiguration);
+        
+                try (CloseableHttpResponse response = httpClient.execute(indexRequest)) {
+                    int responseCode = response.getCode();
 
-                // Print the response content if the request was successful
-                if (responseCode == 200) {
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent()))) {
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            logger.info("[Thread {}] {}", tid, line);
+                    if(responseCode < 400) {
+                        logger.info("Indexer {} completed with {}" , indexerName, responseCode);
+                    } else {
+                        logger.error("Indexer {} failed with {}: check the Lookup logs for more information", 
+                            indexerName, responseCode);
+                    }
+
+                    
+                } catch (IOException e) {
+                    logger.error("Indexer {} failed: {}", indexerName, e.getMessage());;
+                }
+            }
+
+        } catch (IOException e) {
+            logger.error("Indexing task failed: {}", e.getMessage());
+        }   
+    }
+
+    private HttpPost createRequest(String indexEndpointURL, File indexConfiguration) {
+        HttpPost postRequest = new HttpPost(indexEndpointURL);
+        MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+
+        if(indexConfiguration != null) {
+            builder.addBinaryBody(PARAM_CONFIG, indexConfiguration, 
+                ContentType.APPLICATION_OCTET_STREAM, indexConfiguration.getName());
+        }
+
+        if(resourceURI != null) {
+            builder.addTextBody(PARAM_VALUES, resourceURI, ContentType.TEXT_PLAIN);
+        }
+   
+        postRequest.setEntity(builder.build());
+        return postRequest;
+    }
+
+    public IndexGroup getIndexGroup() {
+        return indexGroup;
+    }
+
+    public String getResourceURI() {
+        return resourceURI;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        IndexingTask that = (IndexingTask) obj;
+        return Objects.equals(resourceURI, that.resourceURI) &&
+                Objects.equals(indexGroup, that.indexGroup);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(resourceURI, indexGroup);
+    }
+
+}
+
+/*
+ * // Print the response content if the request was successful
+                    if (responseCode == 200) {
+                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent()))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                System.out.println(line);
+                            }
                         }
                     }
-                }
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-        } catch (IOException e) {
-            logger.error("[Thread {}] Indexing error: {}", tid,  e.getMessage());
-            e.printStackTrace();
-        }
+                         // Print the response
+                    // String responseString = EntityUtils.toString(response.getEntity(), "UTF-8");
+                    // System.out.println(responseString);
 
-        logger.info("[Thread {}] Indexing task completed.", tid);
-    }
-}
+                    
+ */

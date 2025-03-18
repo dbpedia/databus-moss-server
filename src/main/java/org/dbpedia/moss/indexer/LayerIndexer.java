@@ -1,3 +1,4 @@
+/*
 package org.dbpedia.moss.indexer;
 
 import java.util.ArrayList;
@@ -77,3 +78,4 @@ public class LayerIndexer {
         return this.indexingFuture != null && !this.indexingFuture.isDone();
     }
 }
+ */

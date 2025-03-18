@@ -1,7 +1,7 @@
 package org.dbpedia.moss;
 
 import org.dbpedia.moss.servlets.MetadataReadServlet;
-import org.dbpedia.moss.utils.MossEnvironment;
+import org.dbpedia.moss.utils.ENV;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlet.ServletTester;
 import org.eclipse.jetty.http.HttpTester;
@@ -18,14 +18,12 @@ public class MetadataReadServletTest {
     @BeforeEach
     public void setup() throws Exception {
 
-        MossEnvironment.setTestVariable("CONFIG_PATH", "./config/moss-config.yml");
-        MossEnvironment.setTestVariable("MOSS_BASE_URL", "http://localhost:8080");
-        MossEnvironment.setTestVariable("GSTORE_BASE_URL", "http://localhost:5003");
-        MossEnvironment.setTestVariable("LOOKUP_BASE_URL", "http://localhost:5002");
-        MossEnvironment.setTestVariable("USER_DATABASE_PATH", "./devenv/users.db");
+        ENV.setTestVariable("CONFIG_PATH", "./config/moss-config.yml");
+        ENV.setTestVariable("MOSS_BASE_URL", "http://localhost:8080");
+        ENV.setTestVariable("GSTORE_BASE_URL", "http://localhost:5003");
+        ENV.setTestVariable("LOOKUP_BASE_URL", "http://localhost:5002");
+        ENV.setTestVariable("USER_DATABASE_PATH", "./devenv/users.db");
 
-        MossEnvironment env = MossEnvironment.get();
-        System.out.println(env.toString());
 
         tester = new ServletTester();
         tester.setContextPath("/g");

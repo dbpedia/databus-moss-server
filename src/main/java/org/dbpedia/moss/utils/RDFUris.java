@@ -22,6 +22,10 @@ public final class RDFUris {
     
     public static final Resource MOSS_DATABUS_METADATA_LAYER_INDEXER = model.createResource("http://dataid.dbpedia.org/ns/moss#DatabusMetadataLayerIndexer");
     
+    public static final Resource MOSS_METADATA_LAYER = model.createResource("http://dataid.dbpedia.org/ns/moss#MetadataLayer");
+    
+    public static final Resource MOSS_METADATA_ENTRY = model.createResource("http://dataid.dbpedia.org/ns/moss#MetadataEntry");
+
     public static final Property MOSS_NAME = model.createProperty("http://dataid.dbpedia.org/ns/moss#name");
    
     public static final Property MOSS_LAYER = model.createProperty("http://dataid.dbpedia.org/ns/moss#layer");
@@ -46,9 +50,6 @@ public final class RDFUris {
     
     public static final Property MOSS_INSTANCE_OF = model.createProperty("http://dataid.dbpedia.org/ns/moss#instanceOf");
 
-    public static final String MOSS_METADATA_LAYER = "http://dataid.dbpedia.org/ns/moss#MetadataLayer";
-    
-    public static final String MOSS_METADATA_ENTRY = "http://dataid.dbpedia.org/ns/moss#MetadataEntry";
 
     public static final String MOSS_LAYERNAME = "http://dataid.dbpedia.org/ns/moss#layerName";
 

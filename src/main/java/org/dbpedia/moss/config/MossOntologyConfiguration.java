@@ -11,27 +11,26 @@ import java.io.IOException;
 /**
  * Loads data into the database and runs an indexer on startup
  */
-public class MossDataLoaderConfig {
-    private String collectionURI;
-    private String[] indexers;
+public class MossOntologyConfiguration {
+    private String dataPath;
+    private String indexerConfigPath;
 
-    public String[] getIndexers() {
-        return indexers;
+    public String getIndexerConfigPath() {
+        return indexerConfigPath;
     }
 
-    public void setIndexers(String[] indexers) {
-        this.indexers = indexers;
+    public void setIndexerConfigs(String indexerConfigPath) {
+        this.indexerConfigPath = indexerConfigPath;
     }
 
-    public String getCollectionURI() {
-        return collectionURI;
+    public String getDataPath() {
+        return dataPath;
     }
 
-    public void setCollectionURI(String collectionURI) {
-        this.collectionURI = collectionURI;
+    public void setDataPath(String dataPath) {
+        this.dataPath = dataPath;
     }
 
-  
 
     public static MossIndexerConfiguration fromJson(File file) throws IOException {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));

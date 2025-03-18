@@ -2,24 +2,18 @@ version: "1.0"
 indexMode: INDEX_SPARQL_ENDPOINT
 sparqlEndpoint: http://virtuoso:8890/sparql
 indexFields:
-  - fieldName: annotatedCount
-    documentVariable: oeoClass
-    type: numeric
+  - fieldName: annotation
+    documentVariable: layer
+    type: uri
     query: >
-      SELECT ?oeoClass (COUNT(DISTINCT ?layer) as ?annotatedCount) WHERE {
+      SELECT DISTINCT ?layer ?annotation WHERE {
         GRAPH ?g {
-          ?layer a <http://dataid.dbpedia.org/ns/moss#DatabusMetadataLayer> .
           ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
         }
         GRAPH ?content {
-          {
-            ?_ <https://saref.etsi.org/core/isAbout> ?oeoClass .
-            FILTER (strstarts(str(?oeoClass), 'http://openenergy-platform.org/ontology/oeo/OEO_'))
-          }
-          UNION
-          {
-            ?_ <http://purl.org/dc/elements/1.1/subject> ?oeoClass .
-            FILTER (strstarts(str(?oeoClass), 'http://openenergy-platform.org/ontology/oeo/OEO_'))
-          }
+        {
+          ?_ ?_ ?annotation .
+          ?annotation a <http://www.w3.org/2002/07/owl#Class> .
         }
-      } GROUP BY ?oeoClass
+        #VALUES#
+      }

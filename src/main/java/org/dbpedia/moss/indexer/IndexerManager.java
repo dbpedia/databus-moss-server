@@ -1,92 +1,57 @@
 package org.dbpedia.moss.indexer;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import javax.naming.ConfigurationException;
-
-import org.dbpedia.moss.GstoreConnector;
-import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.config.MossDataLoaderConfig;
-import org.dbpedia.moss.config.MossIndexerConfiguration;
-import org.dbpedia.moss.utils.ENV;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
-
+/**
+ * Takes care of reindexing resources with index groups.
+ * An index group is a range of index configuration files that need to be run for a resource
+ */
 public class IndexerManager {
 
-    final static Logger logger = LoggerFactory.getLogger(IndexerManager.class);
+    private final int THREAD_POOL_SIZE = 1;
 
-    // Alle indexer
-
-    private List<LayerIndexer> indexers;
-    //Ein mod kann in 1 oder mehreren Indexern vorkommen -> rebuild index for entsprechenden indexern für die der mod wichtig ist
-    private HashMap<String, LayerIndexer> indexerMap;
+    private ConcurrentLinkedDeque<IndexingTask> tasks;
     
-    private ThreadPoolExecutor worker;
-
-    private final int fixedPoolSize = 1;
+    private HashMap<String, IndexGroup> indexGroups;
+    
+    private ThreadPoolExecutor executor;
 
     private ScheduledExecutorService scheduler;
 
-    public IndexerManager() throws ConfigurationException {
+    private static final Logger logger = LoggerFactory.getLogger(IndexerManager.class);
 
-        GstoreConnector gstoreConnector = new GstoreConnector(ENV.GSTORE_BASE_URL);
-        MossConfiguration config = MossConfiguration.get();
-
-        this.indexers = new ArrayList<LayerIndexer>();
-        this.indexerMap = new HashMap<String, LayerIndexer>();
-
-        for(MossDataLoaderConfig loaderConfig : config.getLoaders()) {
-            DataLoader loader = new DataLoader(loaderConfig, gstoreConnector);
-                
-            loader.load();
+    public IndexerManager(List<IndexGroup> groups) {
+        this.tasks = new ConcurrentLinkedDeque<IndexingTask>();
+        this.executor = new ThreadPoolExecutor(
+            THREAD_POOL_SIZE, 
+            THREAD_POOL_SIZE, 
+            0L, 
+            TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<Runnable>()
+        );
+        this.indexGroups = new HashMap<String, IndexGroup>();
+       
+        for(IndexGroup group : groups) {
+            logger.info("Added index group {}", group.getName());
+            this.indexGroups.put(group.getName(), group);
         }
 
-        for(MossIndexerConfiguration indexerConfig : config.getIndexers()) {
-
-            LayerIndexer modIndexer = new LayerIndexer(indexerConfig);
-            this.indexers.add(modIndexer);
-
-            logger.info("Created indexer \"{}\" for layer(s) {}", modIndexer.getId(), modIndexer.getConfig().getLayers());
-        }
-        
-        this.worker = new ThreadPoolExecutor(fixedPoolSize, fixedPoolSize, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
-
-        for(LayerIndexer indexer : this.indexers) {
-
-            indexerMap.put(indexer.getConfig().getId(), indexer);
-
-            /* 
-            for(String modType : indexer.getConfig().getLayers()) {
-                if(!this.indexerMap.containsKey(modType)) {
-                    this.indexerMap.put(modType, new ArrayList<LayerIndexer>());
-                }
-
-                this.indexerMap.get(modType).add(indexer);
-            }*/
-        }
-
-        // Schedule a task to run every second
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
-        this.scheduler.scheduleAtFixedRate(() -> tick(), 0, 1, TimeUnit.SECONDS); 
-        
-        this.worker = new ThreadPoolExecutor(fixedPoolSize, fixedPoolSize,
-            0L, TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<Runnable>());
-
     }
 
-    private void tick() {
-        rebuildIndices();
+    public void start(int tickIntervalSeconds) {
+        this.scheduler.scheduleAtFixedRate(() -> tick(), 0, tickIntervalSeconds, TimeUnit.SECONDS); 
     }
 
     public void stop() {
@@ -97,58 +62,43 @@ public class IndexerManager {
         }
     }
 
-    /*
-    public HashMap<String,List<LayerIndexer>> getIndexerMap() {
-        return this.indexerMap;
+    private void tick() {
+        // frage prozessmanager, ob wir kapazitäten haben für einen neuen prozess
+        if(executor.getActiveCount() >= THREAD_POOL_SIZE) {
+            return;
+        }
+
+        IndexingTask task = tasks.poll();
+
+        if(task == null) {
+            return;
+        }
+
+        executor.submit(task);
     }
 
-    public void setIndexerMappings(HashMap<String,List<LayerIndexer>> indexerMappings) {
-        this.indexerMap = indexerMappings;
-    } */
+    public void updateResource(String resourceURI, String indexGroupName) {
 
-    /**
-     * Gehe über alle indexer mit todos und starte entsprechende index tasks
-     */
-    public void rebuildIndices() {
 
-        for(LayerIndexer indexer : indexers) {
-          
-            if(indexer.getTodos().size() == 0) {
-                continue;
-            }
-
-            // Hier haben wir etwas zu tun!
-            // frage indexer, ob er gerade ein task bearbeitet
-            if(indexer.isBusy()) {
-                continue;
-                
-            }
-
-            // Läuft grad nischt für indexer
-            // frage prozessmanager, ob wir kapazitäten haben für einen neuen prozess
-            if(worker.getActiveCount() >= fixedPoolSize) {
-                continue;
-            }
-
-            indexer.run(worker);
+        if(indexGroupName != null && !indexGroups.containsKey(indexGroupName)) {
+            throw new IllegalArgumentException(String.format("Index group not found: %s", indexGroupName));
         }
-    }
 
-    
-    public void updateIndices(String contentUri, String layerId) {
+        IndexGroup indexGroup = null;
 
-        MossConfiguration mossConfiguration = MossConfiguration.get();
-
-        for(MossIndexerConfiguration indexer : mossConfiguration.getIndexers()) {
-           
-            if(indexer.hasLayer(layerId)) {
-
-                LayerIndexer layerIndexer = indexerMap.get(indexer.getId());
-                layerIndexer.addTodo(contentUri);
-                logger.info("Indexer {} task list updated: {}", layerIndexer.getId(), layerIndexer.getTodos());
-
-            }
-
+        if(indexGroupName != null) {
+            indexGroup = indexGroups.get(indexGroupName);
         }
+
+        IndexingTask indexingTask = new IndexingTask(resourceURI, indexGroup);
+
+        // Leave, if a task like this already exists in the list
+        for(IndexingTask existingTask : tasks) {
+            if(existingTask.equals(indexingTask)) {
+                return;
+            }
+        }
+
+        tasks.add(indexingTask);
     }
 }

@@ -52,8 +52,7 @@ public final class RDFUtils {
         InputStream jsonLdInputStream = new ByteArrayInputStream(out.toByteArray());
         return JsonDocument.of(jsonLdInputStream);
     }
-
-    public static JsonObject compact(Model listModel) {
+public static JsonObject compact(Model listModel) {
         try {
             // Convert the Jena Model to a JSON-LD string
             Document document = modelToDocument(listModel);
@@ -65,5 +64,6 @@ public final class RDFUtils {
         } 
     }
 
+    
 
 }

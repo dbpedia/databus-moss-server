@@ -1,6 +1,12 @@
 package org.dbpedia.moss.servlets.layers;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,28 +44,48 @@ public class LayerServlet extends HttpServlet {
 	@Override
 	protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		
+		LayerServletRequestInfo requestInfo = LayerServletRequestInfo.fromRequest(req);
+
 		MossConfiguration mossConfiguration = MossConfiguration.get();
-		String layerName = req.getPathInfo().replace("/", "");
-				
+		MossLayerConfiguration existingLayer = mossConfiguration.getLayerByName(requestInfo.getLayerName());
 
-		ObjectMapper objectMapper = new ObjectMapper();
-		// Parse JSON request body
-		MossLayerConfiguration inputLayer = objectMapper.readValue(req.getReader(), MossLayerConfiguration.class);
-		inputLayer.setId(LAYER_ID_PREFIX + layerName);
+		if(requestInfo.isResourceRequested()) {
+			ObjectMapper objectMapper = new ObjectMapper();
+			// Parse JSON request body
+			MossLayerConfiguration inputLayer = objectMapper.readValue(req.getReader(), MossLayerConfiguration.class);
+			inputLayer.setId(LAYER_ID_PREFIX + requestInfo.getLayerName());
+	
+			mossConfiguration.addOrReplaceLayer(inputLayer);
+			mossConfiguration.save();
+			
+			resp.setStatus(HttpServletResponse.SC_CREATED);
+            resp.setHeader(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON);
+			resp.getWriter().write(objectMapper.writeValueAsString(inputLayer));
 
-		mossConfiguration.addOrReplaceLayer(inputLayer);
-		mossConfiguration.save();
-		/*
-		if(!layerName.equals(layer.getId())) {
-			resp.setHeader("Content-Type", "application/json");
-            resp.sendError(400, String.format("Cannot change the layer name: %s.", layerName));
-            return;
-		} */
+		} else if (requestInfo.isTemplateRequested()) {
 
+			if(existingLayer == null) {
+				resp.setHeader(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON);
+				resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Indexer " + requestInfo.getLayerName() + " does not exist.");
+				return;
+			}
 
-		resp.setStatus(HttpServletResponse.SC_CREATED);
-		resp.setContentType("application/json");
-		resp.getWriter().write(objectMapper.writeValueAsString(inputLayer));
+			// Save the config!
+			existingLayer.createOrFetchTemplateFile(mossConfiguration);
+			File file = existingLayer.getTemplateFile();
+
+			try (InputStream inputStream = req.getInputStream()) {
+				Files.copy(inputStream, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+			} catch (IOException e) {
+				resp.setHeader(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON);
+				resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error saving configuration file.");
+				e.printStackTrace();
+				return;
+			}
+
+            resp.setHeader(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON);
+			resp.setStatus(HttpServletResponse.SC_CREATED);
+		}
 	}
 
 	@Override
@@ -70,15 +96,15 @@ public class LayerServlet extends HttpServlet {
 		MossLayerConfiguration layerConfiguration =	mossConfiguration.getLayerByName(layerName);
 
 		if(layerConfiguration == null) {
-            resp.setHeader("Content-Type", "application/json");
+            resp.setHeader(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON);
             resp.sendError(404, String.format("Layer %s does not exist.", layerName));
             return;
 		}
 
-		boolean removed = mossConfiguration.getLayers().removeIf(layer -> layer.getId().equals(layerName));
+		boolean removed = mossConfiguration.getLayers().removeIf(layer -> layer.getName().equals(layerName));
 
 		if(!removed) {
-            resp.setHeader("Content-Type", "application/json");
+            resp.setHeader(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON);
             resp.sendError(500, String.format("Failed to remove layer %s.", layerName));
             return;
 		}
@@ -91,37 +117,65 @@ public class LayerServlet extends HttpServlet {
 	}
 
 	public static void getResource(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		String layerName = req.getPathInfo().replace("/", "");
+		
+		LayerServletRequestInfo requestInfo = LayerServletRequestInfo.fromRequest(req);
 
-        String acceptHeader = req.getHeader(Constants.HTTP_HEADER_ACCEPT);
-        Lang acceptLanguage = RDFLanguages.contentTypeToLang(acceptHeader);
-
-        if (acceptLanguage == null) {
-            acceptLanguage = Lang.JSONLD;
-        }
+		if(requestInfo == null) {
+			resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+			return;
+		}
 
         try {
 
-			MossConfiguration mossConfiguration = MossConfiguration.get();
-
-			MossLayerConfiguration layer = mossConfiguration.getLayerByName(layerName);
-
-			if(layer == null) {
-				resp.sendError(HttpServletResponse.SC_NOT_FOUND);
-				return;
-			}
-
-			Model layerModel = layer.toModel();
-
-			if(layerModel == null) {
-				resp.sendError(HttpServletResponse.SC_NOT_FOUND);
-				return;
-			}
-
-			// Set the response if resource is found
+			if(requestInfo.isResourceRequested()) {
+				String acceptHeader = req.getHeader(Constants.HTTP_HEADER_ACCEPT);
+				Lang acceptLanguage = RDFLanguages.contentTypeToLang(acceptHeader);
 		
-			MossUtils.sendPrettyRDF(resp, acceptLanguage, layerModel);
-			
+				if (acceptLanguage == null) {
+					acceptLanguage = Lang.JSONLD;
+				}
+		
+		
+				MossConfiguration mossConfiguration = MossConfiguration.get();
+	
+				MossLayerConfiguration layer = mossConfiguration.getLayerByName(requestInfo.getLayerName());
+	
+				if(layer == null) {
+					resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+					return;
+				}
+	
+				Model layerModel = layer.toModel();
+				MossUtils.sendPrettyRDF(resp, acceptLanguage, layerModel);
+
+			} else if(requestInfo.isTemplateRequested()) {
+				// Send the template
+				// Send the config file
+				MossConfiguration mossConfiguration = MossConfiguration.get();
+				MossLayerConfiguration layer = mossConfiguration.getLayerByName(requestInfo.getLayerName());
+
+				if (layer == null) {
+					resp.setHeader(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON);
+					resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Layer not found");
+					return; 
+				}
+
+				layer.createOrFetchTemplateFile(mossConfiguration);
+				File templateFile = layer.getTemplateFile();
+
+				resp.setContentType("text/plain");
+				resp.setCharacterEncoding("UTF-8");
+
+				// Send the contents of the config file
+				try (InputStream inputStream = new FileInputStream(templateFile)) {
+					Files.copy(templateFile.toPath(), resp.getOutputStream());
+					resp.getOutputStream().flush(); 
+				}
+			} else {
+				resp.setHeader(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON);
+				resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Layer not found");
+				return; 
+			}
 
         } catch (IOException e) {
             // Handle internal server error
@@ -132,7 +186,6 @@ public class LayerServlet extends HttpServlet {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
         }
 	}
-
 	
 
 	@Override

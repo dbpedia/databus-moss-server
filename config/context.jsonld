@@ -3,6 +3,7 @@
         "moss": "http://dataid.dbpedia.org/ns/moss#",
         "dct": "http://purl.org/dc/terms/",
         "xsd": "http://www.w3.org/2001/XMLSchema#",
+        "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
         "name": "moss:name",
         "formatMimeType": "moss:mimeType",
         "extends": {
@@ -11,6 +12,10 @@
         }, 
         "content": {
             "@id": "moss:content",
+            "@type": "@id"
+        }, 
+        "template": {
+            "@id": "moss:template",
             "@type": "@id"
         }, 
         "instanceOf": {
@@ -31,6 +36,11 @@
         },
         "indexers": {
             "@id" : "moss:indexer",
+            "@type": "@id",
+            "@container": "@set"
+        },
+        "layers": {
+            "@id" : "moss:layer",
             "@type": "@id",
             "@container": "@set"
         }

@@ -2,17 +2,15 @@ version: "1.0"
 indexMode: INDEX_SPARQL_ENDPOINT
 sparqlEndpoint: http://virtuoso:8890/sparql
 indexFields:
-  - fieldName: keyword
+  - fieldName: label
     documentVariable: layer
-    type: uri
     query: >
-      SELECT DISTINCT ?layer ?keyword WHERE {
-        GRAPH ?g {
-          ?layer <http://dataid.dbpedia.org/ns/moss#instanceOf> <http://localhost:8080/layer/keyword> .
+      SELECT DISTINCT ?layer ?label WHERE {
+        GRAPH ?g  {
           ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
         }
         GRAPH ?content {
-          ?_ <https://schema.org/keywords> ?keyword .
+          ?_ <https://schema.org/keywords> ?label .
         }
         #VALUES#
       }
