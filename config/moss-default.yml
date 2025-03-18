@@ -1,0 +1,9 @@
+---
+indexerConfigPath: indexers
+templatePath: templates
+templateResourcePlaceholder: $DATABUS_RESOURCE
+layers:
+ontologies:
+- dataPath: ./ontologies/oeo.ttl
+  indexerConfigPath: ./ontologies/oeo-indexer.yml
+indexers:

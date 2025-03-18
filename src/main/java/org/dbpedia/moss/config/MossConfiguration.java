@@ -104,6 +104,18 @@ public class MossConfiguration {
             // Get the directory of the config file for resolving relative paths
             config.configDir = file.getParentFile();
 
+            if(config.getLayers() == null) {
+                config.setLayers(new ArrayList<>());
+            }
+
+            if(config.getIndexers() == null) {
+                config.setIndexers(new ArrayList<>());
+            }
+
+            if(config.getOntologies() == null) {
+                config.setOntologies(new ArrayList<>());
+            }
+
             // Load template content for each MossLayerType
             for (MossLayerConfiguration layer : config.getLayers()) {
 

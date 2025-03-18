@@ -65,10 +65,8 @@ import java.util.EnumSet;
  */
 public class Main {
 
-    private static final String BUILD_NUM = "0.1.1.1";
+    private static final String BUILD_NUM = "0.1.1.2";
 
-    public static String KEY_CONFIG = "config";
-    
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
     public static Model parseJSONLD(String jsonld, String documentURI) {
