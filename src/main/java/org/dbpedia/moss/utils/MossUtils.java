@@ -249,6 +249,7 @@ public final class MossUtils {
 
     public static String getExtensionURI(String baseUrl, String resource, String layerName) 
     throws MalformedURLException, URISyntaxException {
+        resource = resource.replace("#", "/");
         String databusResourceURIFragments = MossUtils.getMossDocumentUriFragments(resource);
         return baseUrl + "/res/" + databusResourceURIFragments + "/" + layerName;
     }

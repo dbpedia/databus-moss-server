@@ -11,6 +11,7 @@ import org.apache.jena.vocabulary.DCTerms;
 import org.apache.jena.vocabulary.RDF;
 import org.dbpedia.moss.utils.RDFUris;
 import org.dbpedia.moss.utils.RDFUtils;
+import org.slf4j.Logger;
 
 /*
 {
@@ -114,7 +115,7 @@ public class MossLayerHeader {
         return model;
     }
 
-    public static MossLayerHeader fromModel(String resourceURI, Model model) {
+    public static MossLayerHeader fromModel(String resourceURI, Model model, Logger logger) {
 
         MossLayerHeader header = new MossLayerHeader();
         header.setURI(resourceURI);
@@ -123,7 +124,7 @@ public class MossLayerHeader {
 
         if(model == null) {
             // Set creation time to the current time and return!
-            
+            logger.info("Creating new header for " + resourceURI);
             header.setCreatedTime(currentTime);
             return header;
         }

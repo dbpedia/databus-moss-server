@@ -84,7 +84,7 @@ public class MetadataWriteServlet extends HttpServlet {
             String resource = MossUtils.pruneSlashes(req.getParameter("resource"));
             String layerId = req.getParameter("layer");
 
-            logger.debug("New write request: {}", req.getRequestURL());
+            logger.info("New write request: {}", req.getRequestURL());
 
             MossLayerConfiguration layer = mossConfiguration.getLayer(layerId);
            
@@ -133,7 +133,7 @@ public class MetadataWriteServlet extends HttpServlet {
             GstoreResource headerDocument = new GstoreResource(headerDocumentPath);
 
             // Read header document, update fields and write back to header document
-            MossLayerHeader header = MossLayerHeader.fromModel(entryURI, headerDocument.readModel(Lang.JSONLD));
+            MossLayerHeader header = MossLayerHeader.fromModel(entryURI, headerDocument.readModel(Lang.JSONLD), logger);
             header.setModifiedTime(currentTime);
             header.setLayerURI(layer.getURI());
             header.setDatabusResourceURI(resource);
