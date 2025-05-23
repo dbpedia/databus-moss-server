@@ -1,10 +1,14 @@
 ---
 indexerConfigPath: indexers
 templatePath: templates
+contextPath: context
 templateResourcePlaceholder: $DATABUS_RESOURCE
 layers:
 - id: layer:keyword
   formatMimeType: text/turtle
+  resourceTypes: []
+- id: layer:openenergy
+  formatMimeType: application/ld+json
   resourceTypes: []
 ontologies:
 - dataPath: ./ontologies/oeo.ttl
@@ -13,3 +17,9 @@ indexers:
 - id: indexer:keyword
   layers:
   - layer:keyword
+- id: indexer:openenergy
+  layers:
+  - layer:openenergy
+- id: indexer:annotateCount
+  layers:
+  - layer:openenergy

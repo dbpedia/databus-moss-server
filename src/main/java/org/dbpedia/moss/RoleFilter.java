@@ -11,6 +11,8 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.dbpedia.moss.db.UserDatabaseManager;
+import org.dbpedia.moss.db.UserInfo;
 import org.dbpedia.moss.utils.ENV;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,15 +29,29 @@ public class RoleFilter implements Filter {
     private static final Logger logger = LoggerFactory.getLogger(RoleFilter.class);
 
     private final String requiredRole;
+    private final String userWithRole;
+
+    private UserDatabaseManager userDatabaseManager;
 
 
     public RoleFilter(String role) {
         this.requiredRole = role;
+        this.userWithRole = null;
+    }
+
+    public RoleFilter(String role, String userWithRole, UserDatabaseManager userDatabaseManager) {
+        this.requiredRole = role;
+        this.userWithRole = userWithRole;
+        this.userDatabaseManager = userDatabaseManager;
     }
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
         logger.info("RoleFilter initialized with required role: {}", requiredRole);
+
+        if(userWithRole != null) {
+            logger.info("RoleFilter initialized with specific user: {}", userWithRole);
+        }
     }
 
     @Override
@@ -50,6 +66,24 @@ public class RoleFilter implements Filter {
             return;
         }
 
+        if(userWithRole != null) {
+            Object subAttribute = request.getAttribute(AuthenticationFilter.OIDC_KEY_SUBJECT);
+
+            if(subAttribute != null) {
+                String sub = subAttribute.toString();
+                UserInfo userInfo = userDatabaseManager.getUserInfoBySub(sub);
+                
+                logger.info("Fetched UserInfo for sub: {}", sub);
+
+                if(userInfo != null && userInfo.getUsername().equals(userWithRole)) {
+                    
+                    logger.info("User with sub {} recognized as admin user {}.", sub, userWithRole);
+                    chain.doFilter(request, response);
+                    return;
+                }
+            }
+        }
+
         // Get Authorization header
         String authorizationHeader = httpRequest.getHeader(AUTHORIZATION_HEADER);
 
@@ -62,9 +96,11 @@ public class RoleFilter implements Filter {
 
         String token = authorizationHeader.substring(7);
 
+
         try {
             DecodedJWT jwt = JWT.decode(token);
 
+            
             // Parse `resource_access` claim
             Claim resourceAccessClaim = jwt.getClaim(JWT_CLAIM_RESOURCE_ACCESS);
             
@@ -75,6 +111,8 @@ public class RoleFilter implements Filter {
                 return;
             }
 
+            logger.info(resourceAccessClaim.asString());
+            
             ObjectMapper mapper = new ObjectMapper();
             JsonNode resourceAccessNode = mapper.readTree(resourceAccessClaim.toString());
 

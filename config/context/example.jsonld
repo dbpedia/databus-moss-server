@@ -1,0 +1,24 @@
+{
+    "@id": "https://databus.dbpedia.org/asdf",
+    "title": "Urban Tree Cover in Exampleville",
+    "description": "Geospatial dataset showing tree cover distribution in urban areas.",
+    "spatial": {
+        "@type": "Location",
+        "label": "Exampleville Urban Area",
+        "geometry": {
+            "@type": "Point",
+            "lat": 45.0,
+            "long": -93.0
+        },
+        "address": {
+            "fullAddress": "123 Geo Street, Exampleville, Country"
+        }
+    },
+    "spatialResolution": 10,
+    "boundingBox": {
+        "south": 44.95,
+        "north": 45.05,
+        "west": -93.05,
+        "east": -92.95
+    }
+}

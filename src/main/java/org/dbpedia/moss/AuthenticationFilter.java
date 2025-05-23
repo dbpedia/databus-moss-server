@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 
 public class AuthenticationFilter implements Filter {
 
@@ -60,6 +61,8 @@ public class AuthenticationFilter implements Filter {
     private String clientId;
 
     private String clientSecret;
+    
+    private String discoveryUrl;
 
     private Instant lastDiscoveryFetchTime;
     
@@ -75,6 +78,7 @@ public class AuthenticationFilter implements Filter {
         issuer = ENV.AUTH_OIDC_ISSUER;
         clientId = ENV.AUTH_OIDC_CLIENT_ID;
         clientSecret = ENV.AUTH_OIDC_CLIENT_SECRET;
+        discoveryUrl = ENV.AUTH_OIDC_DISCOVERY_URL;
 
         JsonNode discoveryDocument = getDiscoveryDocument();
 
@@ -211,7 +215,26 @@ public class AuthenticationFilter implements Filter {
 
     private String validateOpaqueToken(String token) {
       
-        try (CloseableHttpClient client = HttpClientWithProxy.create()) {
+        // TODO FIX THIS METHOD
+        if(discoveryUrl == null) {
+            discoveryUrl = issuer + DISCOVERY_DOCUMENT_PATH;
+        }
+        
+        logger.info("Fetching discovery at: {}", discoveryUrl); 
+
+        URI discoveryURI;
+
+        try {
+            discoveryURI = new URI(discoveryUrl);
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        String scheme = discoveryURI.getScheme();          
+        String targetHost = discoveryURI.getHost();
+
+        try (CloseableHttpClient client = HttpClientWithProxy.create(scheme, targetHost)) {
 
             logger.debug("Checking opaque token");
 
@@ -341,9 +364,27 @@ public class AuthenticationFilter implements Filter {
             return discoveryDocument;
         }
 
-        try (CloseableHttpClient client = HttpClientWithProxy.create()) {
-            
-            HttpGet httpGet = new HttpGet(issuer + DISCOVERY_DOCUMENT_PATH);
+        if(discoveryUrl == null) {
+            discoveryUrl = issuer + DISCOVERY_DOCUMENT_PATH;
+        }
+        
+        logger.info("Fetching discovery at: {}", discoveryUrl); 
+
+        URI discoveryURI;
+
+        try {
+            discoveryURI = new URI(discoveryUrl);
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        String scheme = discoveryURI.getScheme();           // "https"
+        String targetHost = discoveryURI.getHost(); 
+
+        try (CloseableHttpClient client = HttpClientWithProxy.create(scheme, targetHost)) {
+
+            HttpGet httpGet = new HttpGet(discoveryUrl);
             CloseableHttpResponse response = client.execute(httpGet);
             String responseBody = EntityUtils.toString(response.getEntity());
             ObjectMapper mapper = new ObjectMapper();
@@ -374,5 +415,5 @@ public class AuthenticationFilter implements Filter {
     
     private final static String HTTP_HEADER_CONTENT_TYPE = "Content-Type";
 
-    private final static String OIDC_KEY_SUBJECT = "sub";
+    public final static String OIDC_KEY_SUBJECT = "sub";
 }

@@ -11,15 +11,107 @@ indexFields:
           ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
         }
         GRAPH ?content {
+          ?_ ?any ?annotation .
+          FILTER (strstarts(str(?annotation), 'http://openenergy-platform.org/ontology/oeo/OEO_'))
+        }
+        #VALUES#
+      }
+  - fieldName: keyword
+    documentVariable: layer
+    query: >
+      SELECT DISTINCT ?layer ?keyword WHERE {
+        GRAPH ?g  {
+          ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
+        }
+        GRAPH ?content {
           {
-            ?_ <https://saref.etsi.org/core/isAbout> ?annotation .
-            FILTER (strstarts(str(?annotation), 'http://openenergy-platform.org/ontology/oeo/OEO_'))
+            ?_ <http://www.w3.org/ns/dcat#keyword> ?keyword .
           }
           UNION
           {
-            ?_ <http://purl.org/dc/elements/1.1/subject> ?annotation .
-            FILTER (strstarts(str(?annotation), 'http://openenergy-platform.org/ontology/oeo/OEO_'))
+            ?_ <http://purl.org/dc/elements/1.1/subject> ?keyword .
           }
+          FILTER(isLiteral(?keyword))
+        }
+        #VALUES#
+      }
+  - fieldName: publicationDate
+    documentVariable: layer
+    type: time
+    query: >
+      SELECT ?layer ?publicationDate WHERE {
+         GRAPH ?g  {
+          ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
+          ?layer <http://dataid.dbpedia.org/ns/moss#extends> ?resource .
+        }
+        GRAPH ?content {
+          ?resource <http://purl.org/dc/terms/issued> ?publicationDate .
+        }
+        #VALUES#
+      }
+  - fieldName: referenceDate
+    documentVariable: layer
+    type: time
+    query: >
+      SELECT ?layer ?referenceDate WHERE {
+         GRAPH ?g  {
+          ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
+        }
+        GRAPH ?content {
+          ?_ <http://dbpedia.org/ontology/startDateTime> ?referenceDate .
+        }
+        #VALUES#
+      }
+  - fieldName: grantNo
+    documentVariable: layer
+    type: uri
+    query: >
+      SELECT DISTINCT ?layer ?grantNo WHERE {
+        GRAPH ?g {
+          ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
+        }
+        GRAPH ?content {
+          ?_ <http://schema.org/Grant> ?grantNo .
+        }
+        #VALUES#
+      }
+  - fieldName: publisher
+    documentVariable: layer
+    type: uri
+    query: >
+      SELECT DISTINCT ?layer ?publisher WHERE {
+        GRAPH ?g {
+          ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
+        }
+        GRAPH ?content {
+          ?_ <https://openenergyplatform.org/ontology/oeo/OEO_00000107> ?publisher .
+        }
+        #VALUES#
+      }
+  - fieldName: format
+    documentVariable: layer
+    query: >
+      SELECT DISTINCT ?layer ?format WHERE {
+        GRAPH ?g {
+          ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
+        }
+        GRAPH ?content {
+           ?resource <http://purl.org/dc/terms/format> ?format .
+        }
+        #VALUES#
+      }
+  - fieldName: license
+    documentVariable: layer
+    type: uri
+    query: >
+      SELECT DISTINCT ?layer ?license WHERE {
+        GRAPH ?g {
+          ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
+          ?layer <http://dataid.dbpedia.org/ns/moss#extends> ?resource .
+        }
+        GRAPH ?content {
+          ?resource <http://purl.org/dc/terms/license> ?o .
+          ?o <http://www.w3.org/ns/dcat#accessURL> ?license .
         }
         #VALUES#
       }

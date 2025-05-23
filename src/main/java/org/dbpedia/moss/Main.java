@@ -22,6 +22,7 @@ import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.indexer.OntologyLoader;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
+import org.dbpedia.moss.servlets.contexts.ContextServlet;
 import org.dbpedia.moss.servlets.indexers.IndexerListServlet;
 import org.dbpedia.moss.servlets.indexers.IndexerResourceServlet;
 import org.dbpedia.moss.servlets.indexers.IndexerServlet;
@@ -65,7 +66,7 @@ import java.util.EnumSet;
  */
 public class Main {
 
-    private static final String BUILD_NUM = "0.1.1.2";
+    private static final String BUILD_NUM = "0.1.1.3";
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
@@ -153,7 +154,8 @@ public class Main {
 
         ServletContextHandler indexerContext = createSimpleContext("/indexer/", new IndexerResourceServlet());
         ServletContextHandler layerContext = createSimpleContext("/layer/", new LayerResourceServlet());
-                
+        ServletContextHandler contextContext = createSimpleContext("/context/", new ContextServlet());
+             
         // Context handler for the unprotected routes
         ServletContextHandler readContext = new ServletContextHandler();
         readContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
@@ -190,8 +192,13 @@ public class Main {
         // apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
 
         
-        RoleFilter adminFilter = new RoleFilter(ENV.AUTH_ADMIN_ROLE);
-
+        RoleFilter adminFilter;
+        
+        if(ENV.AUTH_ADMIN_USER != null) {
+            adminFilter = new RoleFilter(ENV.AUTH_ADMIN_ROLE, ENV.AUTH_ADMIN_USER, userDatabaseManager);
+        } else {
+            adminFilter = new RoleFilter(ENV.AUTH_ADMIN_ROLE);
+        }
         setupReadOnlyAdminServlet(apiContext, new IndexerServlet(indexerManager), "/indexers/*", authFilter, adminFilter);
         setupReadOnlyAdminServlet(apiContext, new LayerServlet(indexerManager), "/layers/*", authFilter, adminFilter);
         setupReadOnlyAdminServlet(apiContext, new LayerListServlet(), "/layers", authFilter, adminFilter);
@@ -210,6 +217,7 @@ public class Main {
         HandlerList  handlers = new HandlerList();
         handlers.setHandlers(new Handler[] { 
             readContext, 
+            contextContext,
             indexerContext,
             layerContext,
             resourceContext, 

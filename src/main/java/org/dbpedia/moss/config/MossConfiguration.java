@@ -31,7 +31,11 @@ public class MossConfiguration {
     
     private String templatePath;
 
+    private String contextPath;
+
+
     private String templateResourcePlaceholder;
+
 
     public String getTemplateResourcePlaceholder() {
         return templateResourcePlaceholder;
@@ -55,6 +59,14 @@ public class MossConfiguration {
 
     public void setIndexerConfigPath(String indexerPath) {
         this.indexerConfigPath = indexerPath;
+    }
+    
+    public String getContextPath() {
+        return contextPath;
+    }
+
+    public void setContextPath(String contextPath) {
+        this.contextPath = contextPath;
     }
 
     private List<MossLayerConfiguration> layers;

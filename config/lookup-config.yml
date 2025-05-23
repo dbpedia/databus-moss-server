@@ -46,7 +46,45 @@ lookupFields:
   - name: annotatedCount
     type: numeric
     weight: 1
+  - name: grantNo
+    type: uri
+    highlight: false
+    required: true
+    tokenize: true
+    exact: true
+    allowPartialMatch: true
+    weight: 10
+  - name: publisher
+    type: uri
+    highlight: false
+    required: true
+    tokenize: true
+    exact: true
+    allowPartialMatch: true
+    weight: 10
+  - name: publicationDate
+    type: time
+    weight: 1
+  - name: referenceDate
+    type: time
+    weight: 1
   - name: used
     type: uri
     weight: 1
     tokenize: false
+  - name: format
+    weight: 1
+    highlight: true
+    tokenize: true
+    queryByDefault: true
+    allowPartialMatch: true
+    required: false
+    exact: false
+  - name: license
+    type: uri
+    highlight: false
+    required: true
+    tokenize: true
+    exact: true
+    allowPartialMatch: true
+    weight: 10

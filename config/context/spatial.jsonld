@@ -1,0 +1,36 @@
+{
+    "@context": {
+        "dcat": "https://www.w3.org/ns/dcat#",
+        "dct": "http://purl.org/dc/terms/",
+        "locn": "http://www.w3.org/ns/locn#",
+        "geo": "http://www.w3.org/2003/01/geo/wgs84_pos#",
+        "xsd": "http://www.w3.org/2001/XMLSchema#",
+        "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+        "title": "dct:title",
+        "description": "dct:description",
+        "spatial": "dct:spatial",
+        "label": "rdfs:label",
+        "temporal": "dct:temporal",
+        "Location": "dct:Location",
+        "Point": "geo:Point",
+        "startDate": {
+            "@id": "dct:temporal",
+            "@type": "xsd:dateTime"
+        },
+        "endDate": {
+            "@id": "dct:temporal",
+            "@type": "xsd:dateTime"
+        },
+        "geometry": "locn:geometry",
+        "address": "locn:address",
+        "fullAddress": "locn:fullAddress",
+        "lat": "geo:lat",
+        "long": "geo:long",
+        "boundingBox": "dcat:boundingBox",
+        "south": "dcat:southBoundLatitude",
+        "north": "dcat:northBoundLatitude",
+        "west": "dcat:westBoundLongitude",
+        "east": "dcat:eastBoundLongitude",
+        "spatialResolution": "dcat:spatialResolutionInMeters"
+    }
+}
