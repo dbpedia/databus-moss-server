@@ -61,6 +61,8 @@ public class ContextServlet extends HttpServlet {
 			return;
 		}
 
+		logger.info(configDir.toString());
+
 		// Normalize and avoid path traversal
 		File baseDir = new File(configDir, contextPath).getCanonicalFile();
 		File requestedFile = new File(baseDir, requestedPath).getCanonicalFile();

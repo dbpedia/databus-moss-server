@@ -19,6 +19,8 @@ public class ENV {
     public static final String MOSS_BASE_URL;
     public static final String AUTH_ADMIN_ROLE;
     public static final String AUTH_ADMIN_USER;
+    public static final String MOSS_LOG_LEVEL;
+
 
 
     private static HashMap<String, String> _testVariableMap;
@@ -37,6 +39,7 @@ public class ENV {
         AUTH_ADMIN_ROLE = getVariable("AUTH_ADMIN_ROLE");
         STORE_SPARQL_ENDPOINT = getVariable("STORE_SPARQL_ENDPOINT");
         AUTH_ADMIN_USER = getVariable("AUTH_ADMIN_USER");
+        MOSS_LOG_LEVEL = getVariable("MOSS_LOG_LEVEL");
     }
 
     public static void setTestVariable(String key, String value) {
@@ -67,6 +70,7 @@ public class ENV {
         sb.append("AUTH_OIDC_CLIENT_ID: ").append(AUTH_OIDC_CLIENT_ID).append("\n");
         sb.append("AUTH_OIDC_DISCOVERY_URL: ").append(AUTH_OIDC_DISCOVERY_URL).append("\n");
         sb.append("STORE_SPARQL_ENDPOINT: ").append(STORE_SPARQL_ENDPOINT).append("\n");
+        sb.append("MOSS_LOG_LEVEL: ").append(MOSS_LOG_LEVEL).append("\n");
         return sb.toString();
     }
 }
