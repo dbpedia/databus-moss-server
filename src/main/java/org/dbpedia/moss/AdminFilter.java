@@ -47,7 +47,7 @@ public class AdminFilter implements Filter {
             return;
         }
 
-        // Check admin flag set by AuthenticationFilter
+        // Check admin flag set by AuthenticationFilter.
         Object isAdminAttr = request.getAttribute(AuthenticationFilter.OIDC_KEY_IS_ADMIN);
 
         if (!(isAdminAttr instanceof Boolean) || !((Boolean) isAdminAttr)) {
