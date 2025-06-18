@@ -1,13 +1,10 @@
 package org.dbpedia.moss.servlets;
 
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
+import org.dbpedia.moss.AuthenticationFilter;
 import org.dbpedia.moss.db.APIKeyInfo;
 import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
@@ -19,6 +16,9 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 
 public class UserDatabaseServlet extends HttpServlet {
@@ -27,7 +27,7 @@ public class UserDatabaseServlet extends HttpServlet {
 
 	final static Logger logger = LoggerFactory.getLogger(UserDatabaseServlet.class);
 
-    private UserDatabaseManager userDatabase;
+    private final UserDatabaseManager userDatabase;
 
     public UserDatabaseServlet(UserDatabaseManager sqliteConnector) {
         this.userDatabase = sqliteConnector;
@@ -126,22 +126,26 @@ public class UserDatabaseServlet extends HttpServlet {
         String operation = getAPIOperation(requestURI);
 		
         switch (operation) {
-            case "get-user":
-                handleGetUser(sub, req, res);
-                break;
+            case "get-user" -> handleGetUser(sub, req, res);
         }
     }
 
     private void handleGetUser(String sub, HttpServletRequest req, HttpServletResponse res) throws IOException {
         UserInfo userInfo = userDatabase.getUserInfoBySub(sub);
 
-        if(userInfo == null) {
-            userInfo = new UserInfo();
-            userInfo.setSub(sub);
+       if (userInfo == null) {
+        userInfo = new UserInfo();
+        userInfo.setSub(sub);
         }
-        
+
         List<String> apiKeyNames = userDatabase.getAPIKeyNamesBySub(sub);
-        userInfo.setApiKeys(apiKeyNames.toArray(new String[0]));
+        userInfo.setApiKeys(apiKeyNames.toArray(String[]::new));
+
+        Object isAdminAttr = req.getAttribute(AuthenticationFilter.OIDC_KEY_IS_ADMIN);
+
+        if (isAdminAttr instanceof Boolean aBoolean) {
+            userInfo.setIsAdmin(aBoolean);
+        }
 
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(userInfo);

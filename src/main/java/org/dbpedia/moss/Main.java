@@ -1,15 +1,15 @@
 package org.dbpedia.moss;
 
-import org.dbpedia.moss.servlets.MetadataWriteServlet;
-import org.dbpedia.moss.servlets.MossProxyServlet;
-import org.dbpedia.moss.servlets.ResourceServlet;
-import org.dbpedia.moss.servlets.SparqlProxyServlet;
-import org.dbpedia.moss.utils.Constants;
-import org.dbpedia.moss.utils.ENV;
-import org.dbpedia.moss.utils.MossContext;
-import org.dbpedia.moss.utils.RequestMethodFilterWrapper;
-import org.dbpedia.moss.servlets.MetadataBrowseServlet;
-import org.dbpedia.moss.servlets.MetadataReadServlet;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.EnumSet;
+
 import org.apache.jena.query.ARQ;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -19,8 +19,15 @@ import org.apache.jena.sys.JenaSystem;
 import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
-import org.dbpedia.moss.indexer.OntologyLoader;
 import org.dbpedia.moss.indexer.IndexerManager;
+import org.dbpedia.moss.indexer.OntologyLoader;
+import org.dbpedia.moss.servlets.LayerShaclServlet;
+import org.dbpedia.moss.servlets.MetadataBrowseServlet;
+import org.dbpedia.moss.servlets.MetadataReadServlet;
+import org.dbpedia.moss.servlets.MetadataWriteServlet;
+import org.dbpedia.moss.servlets.MossProxyServlet;
+import org.dbpedia.moss.servlets.ResourceServlet;
+import org.dbpedia.moss.servlets.SparqlProxyServlet;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
 import org.dbpedia.moss.servlets.contexts.ContextServlet;
 import org.dbpedia.moss.servlets.indexers.IndexerListServlet;
@@ -29,7 +36,10 @@ import org.dbpedia.moss.servlets.indexers.IndexerServlet;
 import org.dbpedia.moss.servlets.layers.LayerListServlet;
 import org.dbpedia.moss.servlets.layers.LayerResourceServlet;
 import org.dbpedia.moss.servlets.layers.LayerServlet;
-import org.dbpedia.moss.servlets.LayerShaclServlet;
+import org.dbpedia.moss.utils.Constants;
+import org.dbpedia.moss.utils.ENV;
+import org.dbpedia.moss.utils.MossContext;
+import org.dbpedia.moss.utils.RequestMethodFilterWrapper;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.DefaultIdentityService;
 import org.eclipse.jetty.security.IdentityService;
@@ -47,16 +57,6 @@ import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.http.HttpServlet;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.EnumSet;
 
 
 /**
@@ -192,18 +192,12 @@ public class Main {
         // apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
 
         
-        RoleFilter adminFilter;
+        AdminFilter adminFilter= new AdminFilter();
         
-        if(ENV.AUTH_ADMIN_USER != null) {
-            adminFilter = new RoleFilter(ENV.AUTH_ADMIN_ROLE, ENV.AUTH_ADMIN_USER, userDatabaseManager);
-        } else {
-            adminFilter = new RoleFilter(ENV.AUTH_ADMIN_ROLE);
-        }
         setupReadOnlyAdminServlet(apiContext, new IndexerServlet(indexerManager), "/indexers/*", authFilter, adminFilter);
         setupReadOnlyAdminServlet(apiContext, new LayerServlet(indexerManager), "/layers/*", authFilter, adminFilter);
         setupReadOnlyAdminServlet(apiContext, new LayerListServlet(), "/layers", authFilter, adminFilter);
         setupReadOnlyAdminServlet(apiContext, new IndexerListServlet(), "/indexers", authFilter, adminFilter);
-        
 
         // apiContext.addServlet(layerIndexerConfigurationServlet, "/layers/get-indexers");
         apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");

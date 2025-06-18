@@ -7,6 +7,8 @@ public class UserInfo {
     private String sub;
 
     private String[] apiKeys;
+
+    private boolean isAdmin;
     
     public String[] getApiKeys() {
         return apiKeys;
@@ -30,5 +32,13 @@ public class UserInfo {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public boolean isIsAdmin() {
+        return isAdmin;
+    }
+
+    public void setIsAdmin(boolean isAdmin) {
+        this.isAdmin = isAdmin;
     }
 }

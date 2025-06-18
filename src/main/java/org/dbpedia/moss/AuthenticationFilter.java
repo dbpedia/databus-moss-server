@@ -1,31 +1,18 @@
 package org.dbpedia.moss;
 
-import jakarta.servlet.*;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import com.auth0.jwk.Jwk;
-import com.auth0.jwk.JwkProvider;
-import com.auth0.jwk.UrlJwkProvider;
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.JWTVerifier;
-import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.exceptions.JWTDecodeException;
-import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.auth0.jwt.interfaces.DecodedJWT;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -40,8 +27,29 @@ import org.dbpedia.moss.utils.HttpClientWithProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URI;
-import java.net.URISyntaxException;
+import com.auth0.jwk.Jwk;
+import com.auth0.jwk.JwkProvider;
+import com.auth0.jwk.UrlJwkProvider;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.net.HttpHeaders;
+
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class AuthenticationFilter implements Filter {
 
@@ -133,6 +141,9 @@ public class AuthenticationFilter implements Filter {
 
             if (sub != null) {
                 request.setAttribute(OIDC_KEY_SUBJECT, sub);
+
+                setUserRolesAndAdminFlag(request, token);
+
                 chain.doFilter(request, response); // Token is valid, proceed to the next filter or servlet
             } else {
                 httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -143,6 +154,56 @@ public class AuthenticationFilter implements Filter {
             httpResponse.getWriter().write("Authorization header is missing or invalid");
         }
     }
+
+    private void setUserRolesAndAdminFlag(ServletRequest request, String token) {
+        boolean isAdmin = false;
+        List<String> roles = new ArrayList<>();
+
+        JsonNode userInfo = fetchUserInfoFromEndpoint(token);
+
+        if (userInfo == null) {
+            return;
+        }
+
+        JsonNode rolesNode = userInfo.get(OIDC_KEY_ROLES);
+
+        if (rolesNode != null && rolesNode.isArray()) {
+            for (JsonNode roleNode : rolesNode) {
+                String role = roleNode.asText();
+                roles.add(role);
+                if (role.equals(ENV.AUTH_ADMIN_ROLE)) {
+                    isAdmin = true;
+                }
+            }
+        }
+
+        JsonNode adminNode = userInfo.get(OIDC_KEY_IS_ADMIN);
+        if (adminNode != null && adminNode.isBoolean()) {
+            isAdmin = adminNode.asBoolean(isAdmin);
+        }
+
+        String username = null;
+
+        if (userInfo.has(OIDC_KEY_PREFERRED_USERNAME)) {
+            username = userInfo.get(OIDC_KEY_PREFERRED_USERNAME).asText(null);
+        }
+
+        if (username == null && userInfo.has(OIDC_KEY_SUBJECT)) {
+            username = userInfo.get(OIDC_KEY_SUBJECT).asText(null);
+        }
+
+        String users = ENV.AUTH_ADMIN_USERS;
+
+       if (users != null && !users.isBlank() && username != null) {
+            isAdmin = Arrays.stream(users.split(","))
+                .map(String::trim)
+                .anyMatch(username::equals);
+        }
+
+        request.setAttribute(OIDC_KEY_ROLES, roles);
+        request.setAttribute(OIDC_KEY_IS_ADMIN, isAdmin);
+    }
+
 
     @Override
     public void destroy() {
@@ -161,7 +222,7 @@ public class AuthenticationFilter implements Filter {
 
         try {
             
-            DecodedJWT jwt = null;
+            DecodedJWT jwt;
             
             try {
                 // Check if the token is a JWT
@@ -215,7 +276,6 @@ public class AuthenticationFilter implements Filter {
 
     private String validateOpaqueToken(String token) {
       
-        // TODO FIX THIS METHOD
         if(discoveryUrl == null) {
             discoveryUrl = issuer + DISCOVERY_DOCUMENT_PATH;
         }
@@ -342,6 +402,30 @@ public class AuthenticationFilter implements Filter {
         return null;
     }
 
+    private JsonNode fetchUserInfoFromEndpoint(String token) {
+        String userInfoEndpoint = discoveryDocument.get(DISCOVERY_KEY_USERINFO_ENDPOINT).asText(null);
+        if (userInfoEndpoint == null) {
+            return null;
+        }
+
+        try (CloseableHttpClient client = HttpClientWithProxy.create("https", new URI(userInfoEndpoint).getHost())) {
+            HttpGet get = new HttpGet(userInfoEndpoint);
+            get.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+
+            try (CloseableHttpResponse response = client.execute(get)) {
+                String responseBody = EntityUtils.toString(response.getEntity());
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode json = mapper.readTree(responseBody);
+                if (json.has(OIDC_KEY_SUBJECT)) {
+                    return json;
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to fetch user info from endpoint", e);
+        }
+        return null;
+    }
+    
     private Algorithm getAlgorithmFromHeader(String algorithm, RSAPublicKey publicKey) {
         switch (algorithm) {
             case "RS256":
@@ -402,6 +486,8 @@ public class AuthenticationFilter implements Filter {
         return discoveryDocument;
     }
 
+  
+
 
     private final static String DISCOVERY_DOCUMENT_PATH = "/.well-known/openid-configuration";
     
@@ -416,4 +502,10 @@ public class AuthenticationFilter implements Filter {
     private final static String HTTP_HEADER_CONTENT_TYPE = "Content-Type";
 
     public final static String OIDC_KEY_SUBJECT = "sub";
+
+    public static final String OIDC_KEY_ROLES = "roles";
+
+    public static final String OIDC_KEY_IS_ADMIN = "isAdmin";
+
+    public final static String OIDC_KEY_PREFERRED_USERNAME = "preferred_username";
 }

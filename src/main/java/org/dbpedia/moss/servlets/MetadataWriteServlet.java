@@ -14,15 +14,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
@@ -40,6 +31,15 @@ import org.dbpedia.moss.indexer.MossLayerHeader;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.GstoreResource;
 import org.dbpedia.moss.utils.MossUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Writes to metadata documents
@@ -54,9 +54,9 @@ public class MetadataWriteServlet extends HttpServlet {
 
 	final static Logger logger = LoggerFactory.getLogger(MetadataWriteServlet.class);
 
-    private IndexerManager indexerManager;
+    private final IndexerManager indexerManager;
 
-    private UserDatabaseManager userDatabaseManager;
+    private final UserDatabaseManager userDatabaseManager;
     
     private MossConfiguration mossConfiguration;
     
@@ -161,21 +161,18 @@ public class MetadataWriteServlet extends HttpServlet {
             resp.setStatus(200);
             resp.getWriter().write(jsonResponseString);
 
-        } catch (IllegalArgumentException e) {
-            String message = e.getMessage();
-            resp.setHeader("Content-Type", "application/json");
-            resp.sendError(400, message);
-            return;
-        } catch (UnsupportedEncodingException | URISyntaxException | ValidationException | RiotException e ) {
-            logger.error(e.getMessage());
+       } catch (IllegalArgumentException e) {
+            logger.error("IllegalArgumentException caught", e);
             resp.setHeader("Content-Type", "application/json");
             resp.sendError(400, e.getMessage());
-            return;
+        } catch (UnsupportedEncodingException | URISyntaxException | ValidationException | RiotException e) {
+            logger.error("Client error caught", e);
+            resp.setHeader("Content-Type", "application/json");
+            resp.sendError(400, e.getMessage());
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error("Unexpected exception caught", e);
             resp.setHeader("Content-Type", "application/json");
             resp.sendError(500, e.getMessage());
-            return;
         }
     }
 
