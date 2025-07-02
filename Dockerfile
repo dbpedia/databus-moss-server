@@ -14,4 +14,4 @@ CMD if [[ -n "$EXTRA_ROOT_CERT_PATH" ]]; then \
         echo "WARNING: EXTRA_ROOT_CERT_PATH is set to '$EXTRA_ROOT_CERT_PATH' but file was not found."; \
       fi; \
     fi && \
-    java -Djavax.net.debug=ssl,handshake -jar /opt/app/moss-1.0-jar-with-dependencies.jar
+    java -jar /opt/app/moss-1.0-jar-with-dependencies.jar
