@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,7 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Manages layers - creation, modification, deletion, list and retrieval of related documents such as SHACL
+ * Manages layers - creation, modification, deletion, list and retrieval of
+ * related documents such as SHACL
  */
 public class ContextServlet extends HttpServlet {
 
@@ -24,7 +26,6 @@ public class ContextServlet extends HttpServlet {
 	final static Logger logger = LoggerFactory.getLogger(ContextServlet.class);
 
 	public ContextServlet() {
-
 	}
 
 	@Override
@@ -33,23 +34,77 @@ public class ContextServlet extends HttpServlet {
 
 	@Override
 	protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		
-	
+		MossConfiguration mossConfiguration = MossConfiguration.get();
+		File configDir = mossConfiguration.getConfigDir();
+		String contextPath = mossConfiguration.getContextPath(); // Relative path like "contexts"
+
+		// Extract requested path relative to /contexts/
+		String requestedPath = req.getPathInfo(); // e.g. /example.jsonld
+		if (requestedPath == null || requestedPath.equals("/")) {
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "No file specified");
+			return;
+		}
+
+		File baseDir = new File(configDir, contextPath);
+		File requestedFile = new File(baseDir, requestedPath.substring(1)); // Remove leading '/'
+
+		if (!requestedFile.getParentFile().equals(baseDir)) {
+			resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied");
+			return;
+		}
+
+		try (InputStream inputStream = req.getInputStream()) {
+			Files.copy(inputStream, requestedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException e) {
+			resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error saving file.");
+			e.printStackTrace();
+			return;
+		}
+
+		resp.setStatus(HttpServletResponse.SC_OK);
 	}
 
 	@Override
 	protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		MossConfiguration mossConfiguration = MossConfiguration.get();
+		File configDir = mossConfiguration.getConfigDir();
+		String contextPath = mossConfiguration.getContextPath(); // Relative path like "contexts"
 
-		
+		// Extract requested path relative to /contexts/
+		String requestedPath = req.getPathInfo(); // e.g. /example.jsonld
+		if (requestedPath == null || requestedPath.equals("/")) {
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "No file specified");
+			return;
+		}
+
+		File baseDir = new File(configDir, contextPath);
+		File requestedFile = new File(baseDir, requestedPath.substring(1)); // Remove leading '/'
+
+		if (!requestedFile.getParentFile().equals(baseDir)) {
+			resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied");
+			return;
+		}
+
+		if (!requestedFile.exists() || !requestedFile.isFile()) {
+			resp.sendError(HttpServletResponse.SC_NOT_FOUND, "File not found");
+			return;
+		}
+
+		if (!requestedFile.delete()) {
+			resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to delete file.");
+			return;
+		}
+
+		resp.setStatus(HttpServletResponse.SC_OK);
 	}
-
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		getResource(req, resp);
 	}
 
-	public static void getResource(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+	public static void getResource(HttpServletRequest req, HttpServletResponse resp)
+			throws ServletException, IOException {
 		MossConfiguration mossConfiguration = MossConfiguration.get();
 		File configDir = mossConfiguration.getConfigDir();
 		String contextPath = mossConfiguration.getContextPath(); // Relative path like "contexts"
@@ -63,11 +118,10 @@ public class ContextServlet extends HttpServlet {
 
 		logger.info(configDir.toString());
 
-		// Normalize and avoid path traversal
-		File baseDir = new File(configDir, contextPath).getCanonicalFile();
-		File requestedFile = new File(baseDir, requestedPath).getCanonicalFile();
+		File baseDir = new File(configDir, contextPath);
+		File requestedFile = new File(baseDir, requestedPath.substring(1)); // Remove leading '/'
 
-		if (!requestedFile.getPath().startsWith(baseDir.getPath())) {
+		if (!requestedFile.getParentFile().equals(baseDir)) {
 			resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied");
 			return;
 		}
@@ -80,11 +134,10 @@ public class ContextServlet extends HttpServlet {
 		// Set appropriate content type
 		resp.setContentType("application/ld+json");
 		resp.setContentLengthLong(requestedFile.length());
-		
 		// Send the contents of the config file
 		try (InputStream inputStream = new FileInputStream(requestedFile)) {
 			Files.copy(requestedFile.toPath(), resp.getOutputStream());
-			resp.getOutputStream().flush(); 
+			resp.getOutputStream().flush();
 		}
 	}
 }
