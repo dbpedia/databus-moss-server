@@ -108,16 +108,17 @@ public class Main {
 
       
         
-        waitForGstore(ENV.GSTORE_BASE_URL);
+        // waitForGstore(ENV.GSTORE_BASE_URL);
 
         MossConfiguration config = MossConfiguration.get();
         OntologyLoader.load(config);
 
 
+
         UserDatabaseManager userDatabaseManager = new UserDatabaseManager(ENV.USER_DATABASE_PATH);
 
         
-        IndexerManager indexerManager = new IndexerManager(MossConfiguration.get().getIndexingGroups());
+        IndexerManager indexerManager = new IndexerManager(MossConfiguration.get().getIndexGroups());
         indexerManager.start(1);
         Server server = new Server(8080);
 

@@ -33,8 +33,11 @@ public class MossConfiguration {
 
     private String contextPath;
 
+    private String modulePath;
 
     private String templateResourcePlaceholder;
+
+    private List<MossModuleConfiguration> modules;
 
 
     public String getTemplateResourcePlaceholder() {
@@ -114,9 +117,12 @@ public class MossConfiguration {
             // Load the configuration from the YAML file
             ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
             MossConfiguration config = mapper.readValue(file, MossConfiguration.class);
-    
+
             // Get the directory of the config file for resolving relative paths
             config.configDir = file.getParentFile();
+            
+            File moduleDirectory = new File(config.configDir, config.getModulePath());
+            config.modules = loadModules(moduleDirectory);
 
             if(config.getLayers() == null) {
                 config.setLayers(new ArrayList<>());
@@ -203,6 +209,35 @@ public class MossConfiguration {
             return null;
         }
     }
+
+    private static List<MossModuleConfiguration> loadModules(File directory) throws IOException {
+
+        List<MossModuleConfiguration> result = new ArrayList<>();
+
+        if (directory == null || !directory.isDirectory()) {
+            return result;
+        }
+
+        File[] children = directory.listFiles();
+        if (children == null) {
+            return result;
+        }
+
+        for (File child : children) {
+            if (child.isDirectory()) {
+                File moduleFile = new File(child, "module.yml");
+                if (moduleFile.exists() && moduleFile.isFile()) {
+                    // Handle the module.yml file (e.g., load or parse it)
+                    ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
+                    MossModuleConfiguration config = mapper.readValue(moduleFile, MossModuleConfiguration.class);
+                    result.add(config);
+                }
+            }
+        }
+
+        return result;
+    }
+
 
     public MossLayerConfiguration getLayerByName(String layerName) {
         for (MossLayerConfiguration layer : layers) {
@@ -355,24 +390,36 @@ public class MossConfiguration {
         layers.add(inputLayer);
     }
 
-    @JsonIgnore
-    public List<IndexGroup> getIndexingGroups() {
+     @JsonIgnore
+    public List<IndexGroup> getIndexGroups() {
         List<IndexGroup> groups = new ArrayList<>();
 
-        for (MossLayerConfiguration layerConfiguration : getLayers()) {
-
+        for (MossModuleConfiguration moduleConfiguration : getModules()) {
             List<File> indexConfigFiles = new ArrayList<>();
 
-            for(MossIndexerConfiguration indexerConfiguration : getIndexers()) {
-                if(indexerConfiguration.hasLayer(layerConfiguration.getId())) {
-                    indexConfigFiles.add(indexerConfiguration.getConfigFile());
-                }
-            }
+            String indexerConfiguration = moduleConfiguration.getIndexerConfig();
+            File moduleDirectory = new File(configDir, getModulePath());
+            indexConfigFiles.add(new File(moduleDirectory, indexerConfiguration));
 
-            groups.add(new IndexGroup(layerConfiguration.getId(), indexConfigFiles.toArray(new File[0])));
+            groups.add(new IndexGroup(moduleConfiguration.getId(), indexConfigFiles.toArray(File[]::new)));
         }
         
         return groups;
+    }
+
+
+ 
+
+    public String getModulePath() {
+        return modulePath;
+    }
+
+    public void setModulePath(String modulePath) {
+        this.modulePath = modulePath;
+    }
+
+    public List<MossModuleConfiguration> getModules() {
+        return modules;
     }
     
 

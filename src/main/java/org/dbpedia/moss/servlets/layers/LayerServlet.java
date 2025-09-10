@@ -7,11 +7,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
@@ -24,6 +19,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Manages layers - creation, modification, deletion, list and retrieval of related documents such as SHACL
@@ -65,7 +65,7 @@ public class LayerServlet extends HttpServlet {
 			mossConfiguration.save();
 
 			
-			indexerManager.updateIndexGroup(mossConfiguration.getIndexingGroups());
+			indexerManager.updateIndexGroup(mossConfiguration.getIndexGroups());
 			
 			resp.setStatus(HttpServletResponse.SC_CREATED);
             resp.setHeader(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON);
@@ -119,7 +119,7 @@ public class LayerServlet extends HttpServlet {
 		}
 
         mossConfiguration.save();
-		indexerManager.updateIndexGroup(mossConfiguration.getIndexingGroups());
+		indexerManager.updateIndexGroup(mossConfiguration.getIndexGroups());
 		
 		resp.setStatus(HttpServletResponse.SC_CREATED);
 		resp.setContentType("application/json");
