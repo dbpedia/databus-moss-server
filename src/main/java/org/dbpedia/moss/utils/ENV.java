@@ -7,19 +7,19 @@ import java.util.HashMap;
  */
 public class ENV {
 
-    public static final String GSTORE_BASE_URL;
-    public static final String STORE_SPARQL_ENDPOINT; // TODO: Remove, when gstore sparql proxy is fixed
-    public static final String CONFIG_PATH;
-    public static final String LOOKUP_BASE_URL;
-    public static final String USER_DATABASE_PATH;
-    public static final String AUTH_OIDC_ISSUER;
-    public static final String AUTH_OIDC_CLIENT_ID;
-    public static final String AUTH_OIDC_CLIENT_SECRET;
-    public static final String AUTH_OIDC_DISCOVERY_URL;
-    public static final String MOSS_BASE_URL;
-    public static final String AUTH_ADMIN_ROLE;
-    public static final String AUTH_ADMIN_USERS;
-    public static final String MOSS_LOG_LEVEL;
+    public static String GSTORE_BASE_URL;
+    public static String STORE_SPARQL_ENDPOINT; // TODO: Remove, when gstore sparql proxy is fixed
+    public static String CONFIG_PATH;
+    public static String LOOKUP_BASE_URL;
+    public static String USER_DATABASE_PATH;
+    public static String AUTH_OIDC_ISSUER;
+    public static String AUTH_OIDC_CLIENT_ID;
+    public static String AUTH_OIDC_CLIENT_SECRET;
+    public static String AUTH_OIDC_DISCOVERY_URL;
+    public static String MOSS_BASE_URL;
+    public static String AUTH_ADMIN_ROLE;
+    public static String AUTH_ADMIN_USERS;
+    public static String MOSS_LOG_LEVEL;
 
 
 
@@ -27,6 +27,10 @@ public class ENV {
     
     static {
 
+        init();
+    }
+
+    private static void init() {
         GSTORE_BASE_URL = getVariable("GSTORE_BASE_URL");
         CONFIG_PATH = getVariable("CONFIG_PATH");
         LOOKUP_BASE_URL = getVariable("LOOKUP_BASE_URL");
@@ -47,6 +51,7 @@ public class ENV {
             _testVariableMap = new HashMap<>();
         }
         _testVariableMap.put(key, value);
+        init();
     }
 
     private static String getVariable(String name) {

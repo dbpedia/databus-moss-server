@@ -407,6 +407,11 @@ public class MossConfiguration {
         return groups;
     }
 
+    @JsonIgnore
+    public File getModuleDirectory() {
+        return new File(configDir, getModulePath());
+    }
+
 
  
 

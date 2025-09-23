@@ -29,13 +29,13 @@ import org.dbpedia.moss.servlets.MossProxyServlet;
 import org.dbpedia.moss.servlets.ResourceServlet;
 import org.dbpedia.moss.servlets.SparqlProxyServlet;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
-import org.dbpedia.moss.servlets.contexts.ContextServlet;
 import org.dbpedia.moss.servlets.indexers.IndexerListServlet;
 import org.dbpedia.moss.servlets.indexers.IndexerResourceServlet;
 import org.dbpedia.moss.servlets.indexers.IndexerServlet;
 import org.dbpedia.moss.servlets.layers.LayerListServlet;
 import org.dbpedia.moss.servlets.layers.LayerResourceServlet;
 import org.dbpedia.moss.servlets.layers.LayerServlet;
+import org.dbpedia.moss.servlets.modules.ModulesServlet;
 import org.dbpedia.moss.utils.Constants;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.MossContext;
@@ -58,11 +58,9 @@ import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.http.HttpServlet;
 
-
 /**
  * Run to start a jetty server that hosts the moss servlet and makes it
- * accessible
- * via HTTP
+ * accessible via HTTP
  */
 public class Main {
 
@@ -85,8 +83,7 @@ public class Main {
 
     /**
      * Run to start a jetty server that hosts the moss servlet and makes it
-     * accessible
-     * via HTTP
+     * accessible via HTTP
      *
      * @param args
      * @throws Exception
@@ -98,26 +95,19 @@ public class Main {
         JenaSystem.init();
         ARQ.init();
 
-
         logger.info("ENV:\n{} ", ENV.printAll());
-        
+
         File configFile = new File(ENV.CONFIG_PATH);
 
         MossConfiguration.initialize(configFile);
         MossContext.initialize();
 
-      
-        
         // waitForGstore(ENV.GSTORE_BASE_URL);
-
         MossConfiguration config = MossConfiguration.get();
         OntologyLoader.load(config);
 
-
-
         UserDatabaseManager userDatabaseManager = new UserDatabaseManager(ENV.USER_DATABASE_PATH);
 
-        
         IndexerManager indexerManager = new IndexerManager(MossConfiguration.get().getIndexGroups());
         indexerManager.start(1);
         Server server = new Server(8080);
@@ -125,10 +115,9 @@ public class Main {
         IdentityService identityService = new DefaultIdentityService();
         server.addBean(identityService);
 
-
         Constraint constraint = new Constraint();
         constraint.setName("Authenticate");
-        constraint.setRoles(new String[] { Constraint.ANY_ROLE });
+        constraint.setRoles(new String[]{Constraint.ANY_ROLE});
         constraint.setAuthenticate(true);
         // constraint.setDataConstraint(Constraint.DC_CONFIDENTIAL);
 
@@ -145,8 +134,6 @@ public class Main {
         sparqlProxyContext.setContextPath("/sparql");
         sparqlProxyContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/*");
 
-
-
         // Context handler for the unprotected routes
         ServletContextHandler resourceContext = new ServletContextHandler();
         resourceContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
@@ -155,8 +142,7 @@ public class Main {
 
         ServletContextHandler indexerContext = createSimpleContext("/indexer/", new IndexerResourceServlet());
         ServletContextHandler layerContext = createSimpleContext("/layer/", new LayerResourceServlet());
-        ServletContextHandler contextContext = createSimpleContext("/context/", new ContextServlet());
-             
+
         // Context handler for the unprotected routes
         ServletContextHandler readContext = new ServletContextHandler();
         readContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
@@ -178,48 +164,44 @@ public class Main {
         // ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
         // ServletHolder layerIndexerConfigurationServlet = new ServletHolder(new LayerIndexerConfigurationServlet());
 
-        AuthenticationFilter authFilter = new AuthenticationFilter(new APIKeyValidator(userDatabaseManager));
-
-        FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
         // Context handler for the protected api routes
         ServletContextHandler apiContext = new ServletContextHandler();
-        apiContext.setContextPath("/api");
+        apiContext.setContextPath("/api/v1");
+
+        AdminFilter adminFilter = new AdminFilter();
+        AuthenticationFilter authFilter = new AuthenticationFilter(new APIKeyValidator(userDatabaseManager));
+        setupReadOnlyAdminServlet(apiContext, new ModulesServlet(), "/modules/*", authFilter, adminFilter);
+
         apiContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
         apiContext.addServlet(metadataWriteServletHolder, "/save");
         apiContext.addServlet(searchProxyServlet, "/search");
 
-
         apiContext.addServlet(layerShaclServlet, "/layers/get-shacl");
         // apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
 
-        
-        AdminFilter adminFilter= new AdminFilter();
-        
         setupReadOnlyAdminServlet(apiContext, new IndexerServlet(indexerManager), "/indexers/*", authFilter, adminFilter);
         setupReadOnlyAdminServlet(apiContext, new LayerServlet(indexerManager), "/layers/*", authFilter, adminFilter);
         setupReadOnlyAdminServlet(apiContext, new LayerListServlet(), "/layers", authFilter, adminFilter);
         setupReadOnlyAdminServlet(apiContext, new IndexerListServlet(), "/indexers", authFilter, adminFilter);
+
+        FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
 
         // apiContext.addServlet(layerIndexerConfigurationServlet, "/layers/get-indexers");
         apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
         apiContext.addFilter(authFilterHolder, "/save", null);
         apiContext.addFilter(authFilterHolder, "/users/*", null);
 
-        
         // apiContext.addFilter(adminFilterHolder, "/save", null);
-
         // Set up handler collection
-        HandlerList  handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { 
-            readContext, 
-            contextContext,
+        HandlerList handlers = new HandlerList();
+        handlers.setHandlers(new Handler[]{
+            readContext,
             indexerContext,
             layerContext,
-            resourceContext, 
-            browseContext, 
+            resourceContext,
+            browseContext,
             apiContext,
-            sparqlProxyContext,  
-        });
+            sparqlProxyContext,});
 
         server.setHandler(handlers);
 
@@ -238,13 +220,13 @@ public class Main {
     }
 
     private static void setupReadOnlyAdminServlet(ServletContextHandler apiContext, HttpServlet servlet, String path,
-        Filter authFilter, Filter adminFilter) {
+            Filter authFilter, Filter adminFilter) {
 
         ServletHolder servletHolder = new ServletHolder(servlet);
-        String[] layerListAllowedMethods = new String[] { 
-            Constants.REQ_METHOD_HEAD, 
-            Constants.REQ_METHOD_GET, 
-            Constants.REQ_METHOD_OPTIONS 
+        String[] layerListAllowedMethods = new String[]{
+            Constants.REQ_METHOD_HEAD,
+            Constants.REQ_METHOD_GET,
+            Constants.REQ_METHOD_OPTIONS
         };
 
         RequestMethodFilterWrapper authFilterWrapper = new RequestMethodFilterWrapper(authFilter, layerListAllowedMethods);
@@ -253,13 +235,10 @@ public class Main {
         apiContext.addServlet(servletHolder, path);
         apiContext.addFilter(new FilterHolder(authFilterWrapper), path, null);
         apiContext.addFilter(new FilterHolder(adminFilterWrapper), path, null);
-    }    
-
-    
-
+    }
 
     private static void waitForGstore(String targetUrl) throws URISyntaxException, InterruptedException, IOException {
-        
+
         int attempts = 0;
         int maxAttempts = 20;
 
@@ -291,14 +270,13 @@ public class Main {
                 break;
 
             } catch (IOException e) {
-                
+
                 attempts++;
 
-                if(attempts > maxAttempts) {
+                if (attempts > maxAttempts) {
                     logger.error("Error connecting to gstore after {} attempts: {}", attempts, e.getMessage());
                     throw new IOException(e);
-                }
-                else {
+                } else {
                     logger.info("Error connecting to gstore. Trying again in 1 second.");
                 }
             }
