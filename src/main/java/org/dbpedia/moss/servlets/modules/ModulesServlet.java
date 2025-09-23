@@ -36,14 +36,16 @@ public class ModulesServlet extends HttpServlet {
     // Constants for known sub-resource file names
     private static final String CONTEXTJSONLD = "context.jsonld";
     private static final String SHAPESTTL = "shapes.ttl";
+    private static final String INDEXERYML = "indexer.yml";
 
     // Handler for module-level CRUD
     private final ModuleHandler moduleHandler = new ModuleHandler();
 
     // Registry of sub-resource handlers (keeps servlet thin)
-    private final Map<String, SubResourceHandler> subResourceMap = Map.of(
+    private final Map<String, ISubResourceHandler> subResourceMap = Map.of(
         SHAPESTTL, new ShapesHandler(), 
-        CONTEXTJSONLD, new ContextHandler()
+        CONTEXTJSONLD, new ContextHandler(),
+        INDEXERYML, new IndexerHandler()
     );
 
     /**
@@ -69,7 +71,7 @@ public class ModulesServlet extends HttpServlet {
         }
 
         // Sub-resource present -> delegate if known
-        SubResourceHandler handler = subResourceMap.get(parts.subResource);
+        ISubResourceHandler handler = subResourceMap.get(parts.subResource);
         if (handler != null) {
             handler.get(req, resp, parts.moduleId);
         } else {
@@ -117,7 +119,7 @@ public class ModulesServlet extends HttpServlet {
         }
 
         // Update sub-resource if registered
-        SubResourceHandler handler = subResourceMap.get(parts.subResource);
+        ISubResourceHandler handler = subResourceMap.get(parts.subResource);
         if (handler != null) {
             handler.update(req, resp, parts.moduleId);
         } else {
@@ -146,7 +148,7 @@ public class ModulesServlet extends HttpServlet {
         }
 
         // Delete sub-resource if registered
-        SubResourceHandler handler = subResourceMap.get(parts.subResource);
+        ISubResourceHandler handler = subResourceMap.get(parts.subResource);
         if (handler != null) {
             handler.delete(req, resp, parts.moduleId);
         } else {

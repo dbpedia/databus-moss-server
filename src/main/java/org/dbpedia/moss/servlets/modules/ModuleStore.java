@@ -71,18 +71,63 @@ public class ModuleStore {
         lock.writeLock().lock();
         try {
             Files.walk(moduleDir)
-                .sorted(Comparator.reverseOrder())
-                .forEach(path -> {
-                    try {
-                        Files.delete(path);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+                    .sorted(Comparator.reverseOrder())
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
             return true;
         } finally {
             lock.writeLock().unlock();
             locks.remove(moduleId); // cleanup lock map
+        }
+    }
+
+    public Optional<String> loadSubResource(String moduleId, String filename) throws IOException {
+        Path file = modulesRoot.resolve(moduleId).resolve(filename);
+        if (!Files.exists(file)) {
+            return Optional.empty();
+        }
+
+        ReentrantReadWriteLock lock = locks.computeIfAbsent(moduleId, k -> new ReentrantReadWriteLock());
+        lock.readLock().lock();
+        try {
+            return Optional.of(Files.readString(file));
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    public void saveSubResource(String moduleId, String filename, String content) throws IOException {
+        Path moduleDir = modulesRoot.resolve(moduleId);
+        Files.createDirectories(moduleDir);
+        Path file = moduleDir.resolve(filename);
+
+        ReentrantReadWriteLock lock = locks.computeIfAbsent(moduleId, k -> new ReentrantReadWriteLock());
+        lock.writeLock().lock();
+        try {
+            Files.writeString(file, content);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public boolean deleteSubResource(String moduleId, String filename) throws IOException {
+        Path file = modulesRoot.resolve(moduleId).resolve(filename);
+        if (!Files.exists(file)) {
+            return false;
+        }
+
+        ReentrantReadWriteLock lock = locks.computeIfAbsent(moduleId, k -> new ReentrantReadWriteLock());
+        lock.writeLock().lock();
+        try {
+            Files.delete(file);
+            return true;
+        } finally {
+            lock.writeLock().unlock();
         }
     }
 }
