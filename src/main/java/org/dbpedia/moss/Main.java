@@ -2,12 +2,7 @@ package org.dbpedia.moss;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.EnumSet;
 
 import org.apache.jena.query.ARQ;
@@ -21,7 +16,6 @@ import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.indexer.OntologyLoader;
-import org.dbpedia.moss.servlets.LayerShaclServlet;
 import org.dbpedia.moss.servlets.MetadataBrowseServlet;
 import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
@@ -29,13 +23,8 @@ import org.dbpedia.moss.servlets.MossProxyServlet;
 import org.dbpedia.moss.servlets.ResourceServlet;
 import org.dbpedia.moss.servlets.SparqlProxyServlet;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
-import org.dbpedia.moss.servlets.indexers.IndexerListServlet;
-import org.dbpedia.moss.servlets.indexers.IndexerResourceServlet;
-import org.dbpedia.moss.servlets.indexers.IndexerServlet;
-import org.dbpedia.moss.servlets.layers.LayerListServlet;
-import org.dbpedia.moss.servlets.layers.LayerResourceServlet;
-import org.dbpedia.moss.servlets.layers.LayerServlet;
-import org.dbpedia.moss.servlets.modules.ModulesServlet;
+import org.dbpedia.moss.servlets.modules.ModuleApiServlet;
+import org.dbpedia.moss.servlets.modules.ModuleResourceServlet;
 import org.dbpedia.moss.utils.Constants;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.MossContext;
@@ -108,7 +97,7 @@ public class Main {
 
         UserDatabaseManager userDatabaseManager = new UserDatabaseManager(ENV.USER_DATABASE_PATH);
 
-        IndexerManager indexerManager = new IndexerManager(MossConfiguration.get().getIndexGroups());
+        IndexerManager indexerManager = new IndexerManager();
         indexerManager.start(1);
         Server server = new Server(8080);
 
@@ -140,8 +129,7 @@ public class Main {
         resourceContext.setContextPath("/res/*");
         resourceContext.addServlet(new ServletHolder(new ResourceServlet()), "/*");
 
-        ServletContextHandler indexerContext = createSimpleContext("/indexer/", new IndexerResourceServlet());
-        ServletContextHandler layerContext = createSimpleContext("/layer/", new LayerResourceServlet());
+        ServletContextHandler moduleContext = createSimpleContext("/module/", new ModuleResourceServlet());
 
         // Context handler for the unprotected routes
         ServletContextHandler readContext = new ServletContextHandler();
@@ -155,40 +143,37 @@ public class Main {
         browseContext.setContextPath("/file/*");
         browseContext.addServlet(new ServletHolder(new MetadataBrowseServlet()), "/*");
 
-        ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager, userDatabaseManager));
-        metadataWriteServletHolder.setInitOrder(0);
-        metadataWriteServletHolder.getRegistration().setMultipartConfig(multipartConfig);
-
-        ServletHolder searchProxyServlet = new ServletHolder(new MossProxyServlet(ENV.LOOKUP_BASE_URL));
-        ServletHolder layerShaclServlet = new ServletHolder(new LayerShaclServlet());
+        
+        ServletHolder searchProxyServlet = new ServletHolder(new MossProxyServlet(ENV.LOOKUP_BASE_URL + "/api"));
         // ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
         // ServletHolder layerIndexerConfigurationServlet = new ServletHolder(new LayerIndexerConfigurationServlet());
 
         // Context handler for the protected api routes
         ServletContextHandler apiContext = new ServletContextHandler();
         apiContext.setContextPath("/api/v1");
+        apiContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
+        
 
         AdminFilter adminFilter = new AdminFilter();
         AuthenticationFilter authFilter = new AuthenticationFilter(new APIKeyValidator(userDatabaseManager));
-        setupReadOnlyAdminServlet(apiContext, new ModulesServlet(), "/modules/*", authFilter, adminFilter);
-
-        apiContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
-        apiContext.addServlet(metadataWriteServletHolder, "/save");
-        apiContext.addServlet(searchProxyServlet, "/search");
-
-        apiContext.addServlet(layerShaclServlet, "/layers/get-shacl");
-        // apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
-
-        setupReadOnlyAdminServlet(apiContext, new IndexerServlet(indexerManager), "/indexers/*", authFilter, adminFilter);
-        setupReadOnlyAdminServlet(apiContext, new LayerServlet(indexerManager), "/layers/*", authFilter, adminFilter);
-        setupReadOnlyAdminServlet(apiContext, new LayerListServlet(), "/layers", authFilter, adminFilter);
-        setupReadOnlyAdminServlet(apiContext, new IndexerListServlet(), "/indexers", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(apiContext, new ModuleApiServlet(indexerManager), "/modules/*", authFilter, adminFilter);
 
         FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
+        
+        ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager, userDatabaseManager));
+        metadataWriteServletHolder.setInitOrder(0);
+        metadataWriteServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
+        apiContext.addFilter(authFilterHolder, "/save-entry", null);
+        apiContext.addServlet(metadataWriteServletHolder, "/save-entry");
+
+
+        apiContext.addServlet(searchProxyServlet, "/search");
+        // apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
+
+      
         // apiContext.addServlet(layerIndexerConfigurationServlet, "/layers/get-indexers");
         apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
-        apiContext.addFilter(authFilterHolder, "/save", null);
         apiContext.addFilter(authFilterHolder, "/users/*", null);
 
         // apiContext.addFilter(adminFilterHolder, "/save", null);
@@ -196,8 +181,7 @@ public class Main {
         HandlerList handlers = new HandlerList();
         handlers.setHandlers(new Handler[]{
             readContext,
-            indexerContext,
-            layerContext,
+            moduleContext,
             resourceContext,
             browseContext,
             apiContext,
@@ -236,53 +220,4 @@ public class Main {
         apiContext.addFilter(new FilterHolder(authFilterWrapper), path, null);
         apiContext.addFilter(new FilterHolder(adminFilterWrapper), path, null);
     }
-
-    private static void waitForGstore(String targetUrl) throws URISyntaxException, InterruptedException, IOException {
-
-        int attempts = 0;
-        int maxAttempts = 20;
-
-        while (true) {
-            try {
-                // Create a URL object from the target URL
-                URL url = new URI(targetUrl).toURL();
-
-                logger.info("Connecting to gstore at: {} ", targetUrl);
-
-                // Open a connection to the URL
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-                // Set the request method to "GET"
-                connection.setRequestMethod("GET");
-
-                // Connect to the URL
-                connection.connect();
-
-                // Get the response code
-                int responseCode = connection.getResponseCode();
-
-                // Print the response code
-                logger.info("Gstore detected: status code {} ", responseCode);
-
-                // Disconnect the connection
-                connection.disconnect();
-
-                break;
-
-            } catch (IOException e) {
-
-                attempts++;
-
-                if (attempts > maxAttempts) {
-                    logger.error("Error connecting to gstore after {} attempts: {}", attempts, e.getMessage());
-                    throw new IOException(e);
-                } else {
-                    logger.info("Error connecting to gstore. Trying again in 1 second.");
-                }
-            }
-
-            Thread.sleep(1000);
-        }
-    }
-
 }

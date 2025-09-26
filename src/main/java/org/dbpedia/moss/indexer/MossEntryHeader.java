@@ -27,7 +27,7 @@ import org.slf4j.Logger;
  */
 
 
-public class MossLayerHeader {
+public class MossEntryHeader {
    
     private String URI;
 
@@ -53,7 +53,7 @@ public class MossLayerHeader {
         return layerURI;
     }
 
-    public void setLayerURI(String layerName) {
+    public void setModuleURI(String layerName) {
         this.layerURI = layerName;
     }
 
@@ -115,9 +115,9 @@ public class MossLayerHeader {
         return model;
     }
 
-    public static MossLayerHeader fromModel(String resourceURI, Model model, Logger logger) {
+    public static MossEntryHeader fromModel(String resourceURI, Model model, Logger logger) {
 
-        MossLayerHeader header = new MossLayerHeader();
+        MossEntryHeader header = new MossEntryHeader();
         header.setURI(resourceURI);
 
         String currentTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);

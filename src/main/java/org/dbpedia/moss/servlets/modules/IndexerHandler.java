@@ -10,12 +10,14 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class IndexerHandler implements ISubResourceHandler {
 
-    private static final String INDEXER_FILE = "indexer.yml";
+    public static final String INDEXER_FILE = "indexer.yml";
     private static final String CONTENT_YAML = "application/x-yaml";
 
     private final ModuleStore store;
+    private final IModuleIndexerChangedHandler changedHandler;
 
-    public IndexerHandler() {
+    public IndexerHandler(IModuleIndexerChangedHandler changedHandler) {
+        this.changedHandler = changedHandler;
         store = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
     }
 
@@ -34,6 +36,8 @@ public class IndexerHandler implements ISubResourceHandler {
     public void update(HttpServletRequest req, HttpServletResponse resp, String moduleId) throws IOException {
         String body = req.getReader().lines().reduce("", (acc, line) -> acc + line + "\n");
         store.saveSubResource(moduleId, INDEXER_FILE, body);
+
+        changedHandler.onModuleIndexerChanged(moduleId);
         resp.setContentType(CONTENT_YAML);
         resp.getWriter().write(body);
     }
@@ -45,6 +49,8 @@ public class IndexerHandler implements ISubResourceHandler {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Indexer not found for module: " + moduleId);
             return;
         }
+        
+        changedHandler.onModuleIndexerChanged(moduleId);
         resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
     }
 }

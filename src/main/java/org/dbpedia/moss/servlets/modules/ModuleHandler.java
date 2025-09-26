@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.config.MossModuleConfiguration;
+import org.dbpedia.moss.config.MossModule;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -22,36 +22,50 @@ public class ModuleHandler {
     private final ModuleStore store = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
     private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
     private final ObjectMapper jsonMapper = new ObjectMapper();
+    private final IModuleIndexerChangedHandler indexerChangedHandler;
+
+    public ModuleHandler(IModuleIndexerChangedHandler indexerChangedHandler) {
+        this.indexerChangedHandler = indexerChangedHandler;   
+    }
 
     public void listModules(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        List<String> modules = store.listModules();
+        List<MossModule> modules = store.listModules();
 
+        String result = jsonMapper.writeValueAsString(modules);
         resp.setContentType(CONTENT_JSON);
-        resp.getWriter().write(jsonMapper.writeValueAsString(modules));
+        resp.getWriter().write(result);
     }
 
     public void getModule(HttpServletRequest req, HttpServletResponse resp, String moduleId) throws IOException {
-        Optional<String> content = store.loadModule(moduleId);
+        Optional<MossModule> content = store.loadModule(moduleId);
         if (content.isEmpty()) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Module not found: " + moduleId);
             return;
         }
+
         resp.setContentType(CONTENT_JSONLD);
-        resp.getWriter().write(content.get());
+        resp.getWriter().write(yamlMapper.writeValueAsString(content.get()));
     }
 
     public void createModule(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        MossModuleConfiguration module = yamlMapper.readValue(req.getReader(), MossModuleConfiguration.class);
+        MossModule module = yamlMapper.readValue(req.getReader(), MossModule.class);
 
         if (module.getId() == null || module.getId().isBlank()) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Module ID must be provided");
             return;
         }
 
-        // enforce ID consistency
         module.setId(module.getId().trim());
 
-        store.saveModule(module.getId(), yamlMapper.writeValueAsString(module));
+        try {
+            store.saveModule(module);
+        } catch (IllegalArgumentException e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
+            return;
+        } catch (IOException e) {
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to save module: " + e.getMessage());
+            return;
+        }
 
         resp.setContentType(CONTENT_JSONLD);
         resp.setStatus(HttpServletResponse.SC_CREATED);
@@ -59,16 +73,24 @@ public class ModuleHandler {
     }
 
     public void updateModule(HttpServletRequest req, HttpServletResponse resp, String moduleId) throws IOException {
-        Optional<String> existing = store.loadModule(moduleId);
+        Optional<MossModule> existing = store.loadModule(moduleId);
         if (existing.isEmpty()) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Module not found: " + moduleId);
             return;
         }
 
-        MossModuleConfiguration module = yamlMapper.readValue(req.getReader(), MossModuleConfiguration.class);
+        MossModule module = yamlMapper.readValue(req.getReader(), MossModule.class);
         module.setId(moduleId);
 
-        store.saveModule(moduleId, yamlMapper.writeValueAsString(module));
+        try {
+            store.saveModule(module);
+        } catch (IllegalArgumentException e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
+            return;
+        } catch (IOException e) {
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to update module: " + e.getMessage());
+            return;
+        }
 
         resp.setContentType(CONTENT_JSONLD);
         resp.getWriter().write(yamlMapper.writeValueAsString(module));
@@ -76,6 +98,9 @@ public class ModuleHandler {
 
     public void deleteModule(HttpServletRequest req, HttpServletResponse resp, String moduleId) throws IOException {
         boolean deleted = store.deleteModule(moduleId);
+
+        indexerChangedHandler.onModuleIndexerChanged(moduleId);
+
         if (!deleted) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Module not found: " + moduleId);
             return;

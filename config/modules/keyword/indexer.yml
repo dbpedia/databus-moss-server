@@ -1,0 +1,18 @@
+version: "1.0"
+indexMode: INDEX_SPARQL_ENDPOINT
+sparqlEndpoint: http://virtuoso:8890/sparql
+indexFields:
+  - fieldName: label
+    documentVariable: entry
+    query: >
+      SELECT DISTINCT ?entry ?label WHERE {
+        GRAPH ?g {
+          ?entry a <http://dataid.dbpedia.org/ns/moss#MetadataEntry> .
+          ?entry <http://dataid.dbpedia.org/ns/moss#content> ?content .
+          ?entry <http://dataid.dbpedia.org/ns/moss#extends> ?resource .
+        }
+        GRAPH ?content {
+          ?resource <https://schema.org/keywords> ?label .
+        }
+        #VALUES#
+      }

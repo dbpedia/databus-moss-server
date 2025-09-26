@@ -13,81 +13,106 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.dbpedia.moss.config.MossModule;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
+
 public class ModuleStore {
 
-    private final Path modulesRoot;
+    private final ObjectMapper yamlMapper;
+    private final Path moduleDirectory;
     private final Map<String, ReentrantReadWriteLock> locks = new ConcurrentHashMap<>();
 
-    public ModuleStore(Path modulesRoot) {
-        this.modulesRoot = modulesRoot;
+    public ModuleStore(Path moduleDirectory) {
+        this.moduleDirectory = moduleDirectory;
+
+        yamlMapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
+        yamlMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
 
-    public List<String> listModules() throws IOException {
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(modulesRoot)) {
-            List<String> ids = new ArrayList<>();
-            for (Path entry : stream) {
-                if (Files.isDirectory(entry)) {
-                    ids.add(entry.getFileName().toString());
+    // ---------------- List Modules ----------------
+    public List<MossModule> listModules() throws IOException {
+        List<MossModule> modules = new ArrayList<>();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(moduleDirectory)) {
+            for (Path moduleDir : stream) {
+                Path moduleFile = moduleDir.resolve("module.yml");
+                if (Files.exists(moduleFile)) {
+                    MossModule module = yamlMapper.readValue(moduleFile.toFile(), MossModule.class);
+                    modules.add(module);
                 }
             }
-            return ids;
         }
+        return modules;
     }
 
-    public Optional<String> loadModule(String moduleId) throws IOException {
-        Path moduleFile = modulesRoot.resolve(moduleId).resolve("module.yml");
+    // ---------------- Module CRUD ----------------
+    public Optional<MossModule> loadModule(String moduleId) throws IOException {
+        Path moduleFile = moduleDirectory.resolve(moduleId).resolve("module.yml");
         if (!Files.exists(moduleFile)) {
             return Optional.empty();
         }
+
         ReentrantReadWriteLock lock = locks.computeIfAbsent(moduleId, k -> new ReentrantReadWriteLock());
         lock.readLock().lock();
         try {
-            return Optional.of(Files.readString(moduleFile));
+            String yamlContent = Files.readString(moduleFile);
+            MossModule module = yamlMapper.readValue(yamlContent, MossModule.class);
+            return Optional.of(module);
         } finally {
             lock.readLock().unlock();
         }
     }
 
-    public void saveModule(String moduleId, String yamlContent) throws IOException {
-        Path moduleDir = modulesRoot.resolve(moduleId);
-        Files.createDirectories(moduleDir);
-        Path moduleFile = moduleDir.resolve("module.yml");
+    public void saveModule(MossModule module) throws IOException {
+        Path moduleFolder = moduleDirectory.resolve(module.getId());
+        Files.createDirectories(moduleFolder);
 
-        ReentrantReadWriteLock lock = locks.computeIfAbsent(moduleId, k -> new ReentrantReadWriteLock());
+        Path moduleFile = moduleFolder.resolve("module.yml");
+        // Path indexerFile = moduleFolder.resolve("indexer.yml");
+        // LookupIndexer indexer = module.generateIndexer();
+
+        // validateIndexer(indexer); // throws if invalid
+
+        ReentrantReadWriteLock lock = locks.computeIfAbsent(module.getId(), k -> new ReentrantReadWriteLock());
         lock.writeLock().lock();
         try {
-            Files.writeString(moduleFile, yamlContent, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            yamlMapper.writeValue(moduleFile.toFile(), module);
+            // yamlMapper.writeValue(indexerFile.toFile(), indexer);
         } finally {
             lock.writeLock().unlock();
         }
     }
 
+    
     public boolean deleteModule(String moduleId) throws IOException {
-        Path moduleDir = modulesRoot.resolve(moduleId);
-        if (!Files.exists(moduleDir)) {
+        Path moduleFolder = moduleDirectory.resolve(moduleId);
+        if (!Files.exists(moduleFolder)) {
             return false;
         }
+
         ReentrantReadWriteLock lock = locks.computeIfAbsent(moduleId, k -> new ReentrantReadWriteLock());
         lock.writeLock().lock();
         try {
-            Files.walk(moduleDir)
+            Files.walk(moduleFolder)
                     .sorted(Comparator.reverseOrder())
                     .forEach(path -> {
                         try {
                             Files.delete(path);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
+                        } catch (IOException ignored) {
                         }
                     });
             return true;
         } finally {
             lock.writeLock().unlock();
-            locks.remove(moduleId); // cleanup lock map
         }
     }
 
-    public Optional<String> loadSubResource(String moduleId, String filename) throws IOException {
-        Path file = modulesRoot.resolve(moduleId).resolve(filename);
+    // ---------------- Subresource CRUD ----------------
+    public Optional<String> loadSubResource(String moduleId, String subResourceFile) throws IOException {
+        Path file = moduleDirectory.resolve(moduleId).resolve(subResourceFile);
         if (!Files.exists(file)) {
             return Optional.empty();
         }
@@ -101,22 +126,22 @@ public class ModuleStore {
         }
     }
 
-    public void saveSubResource(String moduleId, String filename, String content) throws IOException {
-        Path moduleDir = modulesRoot.resolve(moduleId);
-        Files.createDirectories(moduleDir);
-        Path file = moduleDir.resolve(filename);
+    public void saveSubResource(String moduleId, String subResourceFile, String content) throws IOException {
+        Path moduleFolder = moduleDirectory.resolve(moduleId);
+        Files.createDirectories(moduleFolder);
+        Path file = moduleFolder.resolve(subResourceFile);
 
         ReentrantReadWriteLock lock = locks.computeIfAbsent(moduleId, k -> new ReentrantReadWriteLock());
         lock.writeLock().lock();
         try {
-            Files.writeString(file, content);
+            Files.writeString(file, content, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         } finally {
             lock.writeLock().unlock();
         }
     }
 
-    public boolean deleteSubResource(String moduleId, String filename) throws IOException {
-        Path file = modulesRoot.resolve(moduleId).resolve(filename);
+    public boolean deleteSubResource(String moduleId, String subResourceFile) throws IOException {
+        Path file = moduleDirectory.resolve(moduleId).resolve(subResourceFile);
         if (!Files.exists(file)) {
             return false;
         }

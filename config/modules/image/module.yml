@@ -1,6 +1,5 @@
+---
 id: image
 label: Generic Image Data
 description: Generic metadata for images in any format
-schema: ./shapes.ttl
-context: ./context.jsonld
-indexerConfig: ./indexer.yaml
+language: application/ld+json

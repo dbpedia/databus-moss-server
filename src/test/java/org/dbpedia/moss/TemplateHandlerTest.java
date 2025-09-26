@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class IndexerHandlerTest {
+public class TemplateHandlerTest {
 
     private static ServletTester tester;
 
@@ -41,57 +41,73 @@ public class IndexerHandlerTest {
     }
 
     @Test
-    public void testIndexerCrudLifecycle() throws Exception {
-        // create module first
+    public void testTemplateCrudLifecycle() throws Exception {
+        // create a module with Turtle as language
         HttpTester.Response res = TestUtils.sendRequest(tester,
                 "POST",
                 "/api/v1/modules",
-                "{\"id\":\"idx-module\"}"
+                "{\"id\":\"tpl-module\",\"language\":\"text/turtle\"}"
         );
         assertEquals(HttpServletResponse.SC_CREATED, res.getStatus());
 
-        // GET non-existent indexer
+        // GET template -> not found
         res = TestUtils.sendRequest(tester,
                 "GET",
-                "/api/v1/modules/idx-module/indexer.yml"
+                "/api/v1/modules/tpl-module/template.ttl"
         );
         assertEquals(HttpServletResponse.SC_NOT_FOUND, res.getStatus());
 
-        // PUT indexer
-        String yamlBody = "fields:\n  - name: title\n    type: string\n";
+        // PUT invalid RDF (should fail parsing)
         res = TestUtils.sendRequest(tester,
                 "PUT",
-                "/api/v1/modules/idx-module/indexer.yml",
-                yamlBody
+                "/api/v1/modules/tpl-module/template.ttl",
+                "not valid ttl"
+        );
+        assertEquals(HttpServletResponse.SC_BAD_REQUEST, res.getStatus());
+
+        // PUT with wrong file extension
+        res = TestUtils.sendRequest(tester,
+                "PUT",
+                "/api/v1/modules/tpl-module/template.jsonld",
+                "<s> <p> <o> ."
+        );
+        assertEquals(HttpServletResponse.SC_BAD_REQUEST, res.getStatus());
+
+        // PUT valid RDF in Turtle
+        String ttlBody = "<http://ex.org/s> <http://ex.org/p> <http://ex.org/o> .";
+        res = TestUtils.sendRequest(tester,
+                "PUT",
+                "/api/v1/modules/tpl-module/template.ttl",
+                ttlBody
         );
         assertEquals(HttpServletResponse.SC_OK, res.getStatus());
-        assertTrue(res.getContent().contains("title"));
+        assertTrue(res.getContent().contains("http://ex.org/s"));
 
-        // GET indexer -> found
+        // GET template -> should return same content
         res = TestUtils.sendRequest(tester,
                 "GET",
-                "/api/v1/modules/idx-module/indexer.yml"
+                "/api/v1/modules/tpl-module/template.ttl"
         );
         assertEquals(HttpServletResponse.SC_OK, res.getStatus());
-        assertTrue(res.getContent().contains("title"));
+        assertTrue(res.getContent().contains("http://ex.org/s"));
 
         // DELETE the module
         res = TestUtils.sendRequest(tester,
                 "DELETE",
-                "/api/v1/modules/idx-module"
+                "/api/v1/modules/tpl-module"
         );
         assertEquals(HttpServletResponse.SC_NO_CONTENT, res.getStatus());
 
-        // Indexer should be deleted with module
+        // GET again -> should be gone
         res = TestUtils.sendRequest(tester,
                 "GET",
-                "/api/v1/modules/idx-module/indexer.yml"
+                "/api/v1/modules/tpl-module/template.ttl"
         );
         assertEquals(HttpServletResponse.SC_NOT_FOUND, res.getStatus());
     }
 
     @AfterAll
     public static void cleanup() throws Exception {
-        // optional: clean temp dirs/files if needed
+        // cleanup temp dirs/files if necessary
     }
 }

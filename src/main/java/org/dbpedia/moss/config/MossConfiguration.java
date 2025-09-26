@@ -14,6 +14,7 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.indexer.IndexGroup;
+import org.dbpedia.moss.servlets.modules.ModuleStore;
 import org.dbpedia.moss.utils.ENV;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,7 @@ public class MossConfiguration {
 
     private String templateResourcePlaceholder;
 
-    private List<MossModuleConfiguration> modules;
+    private List<MossModule> modules;
 
 
     public String getTemplateResourcePlaceholder() {
@@ -112,7 +113,7 @@ public class MossConfiguration {
         return configDir;
     }
 
-    private static MossConfiguration fromJson(File file) throws ConfigurationException {
+    private static MossConfiguration load(File file) throws ConfigurationException {
         try {
             // Load the configuration from the YAML file
             ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
@@ -210,9 +211,9 @@ public class MossConfiguration {
         }
     }
 
-    private static List<MossModuleConfiguration> loadModules(File directory) throws IOException {
+    private static List<MossModule> loadModules(File directory) throws IOException {
 
-        List<MossModuleConfiguration> result = new ArrayList<>();
+        List<MossModule> result = new ArrayList<>();
 
         if (directory == null || !directory.isDirectory()) {
             return result;
@@ -229,7 +230,7 @@ public class MossConfiguration {
                 if (moduleFile.exists() && moduleFile.isFile()) {
                     // Handle the module.yml file (e.g., load or parse it)
                     ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
-                    MossModuleConfiguration config = mapper.readValue(moduleFile, MossModuleConfiguration.class);
+                    MossModule config = mapper.readValue(moduleFile, MossModule.class);
                     result.add(config);
                 }
             }
@@ -325,8 +326,14 @@ public class MossConfiguration {
         }
 
 
-        MossConfiguration mossConfiguration = MossConfiguration.fromJson(configFile);
+        MossConfiguration mossConfiguration = MossConfiguration.load(configFile);
         mossConfiguration.validate();
+
+        ModuleStore store = new ModuleStore(mossConfiguration.getModuleDirectory().toPath());
+        
+        for(MossModule module : mossConfiguration.getModules()) {
+            store.saveModule(module);
+        }
 
         instance = mossConfiguration;
     }
@@ -394,14 +401,15 @@ public class MossConfiguration {
     public List<IndexGroup> getIndexGroups() {
         List<IndexGroup> groups = new ArrayList<>();
 
-        for (MossModuleConfiguration moduleConfiguration : getModules()) {
+        for (MossModule moduleConfiguration : getModules()) {
             List<File> indexConfigFiles = new ArrayList<>();
 
+            /*
             String indexerConfiguration = moduleConfiguration.getIndexerConfig();
             File moduleDirectory = new File(configDir, getModulePath());
             indexConfigFiles.add(new File(moduleDirectory, indexerConfiguration));
 
-            groups.add(new IndexGroup(moduleConfiguration.getId(), indexConfigFiles.toArray(File[]::new)));
+            groups.add(new IndexGroup(moduleConfiguration.getId(), indexConfigFiles.toArray(File[]::new))); */
         }
         
         return groups;
@@ -423,9 +431,9 @@ public class MossConfiguration {
         this.modulePath = modulePath;
     }
 
-    public List<MossModuleConfiguration> getModules() {
+    public List<MossModule> getModules() {
         return modules;
     }
-    
+
 
 }

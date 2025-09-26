@@ -1,77 +1,58 @@
 package org.dbpedia.moss.servlets.modules;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
+import java.util.Optional;
+import java.util.regex.Pattern;
+
+import org.dbpedia.moss.config.MossConfiguration;
+import org.dbpedia.moss.indexer.IndexerManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-/**
- * Servlet for handling CRUD operations on MOSS modules.
- * 
- * Each module may expose sub-resources in addition to its base metadata:
- *   - context.jsonld (JSON-LD context document)
- *   - shapes.ttl (SHACL shapes in Turtle)
- * 
- * Mapping:
- *   GET    /modules                -> list all modules
- *   POST   /modules                -> create a new module
- *   GET    /modules/{id}           -> get single module metadata (linked data resource)
- *   PUT    /modules/{id}           -> update a module
- *   DELETE /modules/{id}           -> delete a module
- * 
- *   GET    /modules/{id}/shapes.ttl       -> get shapes for module
- *   PUT    /modules/{id}/shapes.ttl       -> update shapes
- *   DELETE /modules/{id}/shapes.ttl       -> delete shapes
- * 
- *   GET    /modules/{id}/context.jsonld   -> get JSON-LD context
- *   PUT    /modules/{id}/context.jsonld   -> update JSON-LD context
- *   DELETE /modules/{id}/context.jsonld   -> delete JSON-LD context
- * 
- * Sub-resources are dispatched to dedicated handlers for modularity.
- */
-public class ModulesServlet extends HttpServlet {
+public class ModuleApiServlet extends HttpServlet implements IModuleIndexerChangedHandler {
 
-    // Constants for known sub-resource file names
-    private static final String CONTEXTJSONLD = "context.jsonld";
-    private static final String SHAPESTTL = "shapes.ttl";
-    private static final String INDEXERYML = "indexer.yml";
+    private final ModuleHandler moduleHandler;
 
-    // Handler for module-level CRUD
-    private final ModuleHandler moduleHandler = new ModuleHandler();
+    private final IndexerManager indexerManager;
+    // Each entry: regex -> handler
+    private final List<RegexHandler> subResourceHandlers;
 
-    // Registry of sub-resource handlers (keeps servlet thin)
-    private final Map<String, ISubResourceHandler> subResourceMap = Map.of(
-        SHAPESTTL, new ShapesHandler(), 
-        CONTEXTJSONLD, new ContextHandler(),
-        INDEXERYML, new IndexerHandler()
-    );
+    private final ModuleStore moduleStore;
 
-    /**
-     * Handles GET requests:
-     * - /modules                  -> list modules
-     * - /modules/{id}             -> single module metadata
-     * - /modules/{id}/{subfile}   -> delegate to sub-resource handler
-     */
+    final static Logger logger = LoggerFactory.getLogger(ModuleApiServlet.class);
+
+    public ModuleApiServlet(IndexerManager indexerManager) {
+        this.indexerManager = indexerManager;
+        moduleHandler = new ModuleHandler(this);
+        moduleStore = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
+        subResourceHandlers = List.of(
+                new RegexHandler(Pattern.compile("^shapes\\.ttl$"), new ShapesHandler()),
+                new RegexHandler(Pattern.compile("^context\\.jsonld$"), new ContextHandler()),
+                new RegexHandler(Pattern.compile("^indexer\\.yml$"), new IndexerHandler(this)),
+                new RegexHandler(Pattern.compile("^template\\..+$"), new TemplateHandler())
+        );
+    }
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         PathParts parts = parsePath(req);
 
         if (parts.moduleId == null) {
-            // No ID provided -> list all modules
             moduleHandler.listModules(req, resp);
             return;
         }
 
         if (parts.subResource == null) {
-            // Only ID -> get module metadata
             moduleHandler.getModule(req, resp, parts.moduleId);
             return;
         }
 
-        // Sub-resource present -> delegate if known
-        ISubResourceHandler handler = subResourceMap.get(parts.subResource);
+        ISubResourceHandler handler = resolveHandler(parts.subResource);
         if (handler != null) {
             handler.get(req, resp, parts.moduleId);
         } else {
@@ -79,18 +60,11 @@ public class ModulesServlet extends HttpServlet {
         }
     }
 
-    /**
-     * Handles POST requests:
-     * - /modules -> create a new module
-     * 
-     * POST on an existing module path is invalid.
-     */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         PathParts parts = parsePath(req);
 
         if (parts.moduleId != null) {
-            // POST only allowed on collection
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "POST allowed only on module collection");
             return;
         }
@@ -98,11 +72,6 @@ public class ModulesServlet extends HttpServlet {
         moduleHandler.createModule(req, resp);
     }
 
-    /**
-     * Handles PUT requests:
-     * - /modules/{id}             -> update a module
-     * - /modules/{id}/{subfile}   -> update sub-resource
-     */
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         PathParts parts = parsePath(req);
@@ -113,13 +82,11 @@ public class ModulesServlet extends HttpServlet {
         }
 
         if (parts.subResource == null) {
-            // Update module itself
             moduleHandler.updateModule(req, resp, parts.moduleId);
             return;
         }
 
-        // Update sub-resource if registered
-        ISubResourceHandler handler = subResourceMap.get(parts.subResource);
+        ISubResourceHandler handler = resolveHandler(parts.subResource);
         if (handler != null) {
             handler.update(req, resp, parts.moduleId);
         } else {
@@ -127,11 +94,6 @@ public class ModulesServlet extends HttpServlet {
         }
     }
 
-    /**
-     * Handles DELETE requests:
-     * - /modules/{id}             -> delete module
-     * - /modules/{id}/{subfile}   -> delete sub-resource
-     */
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         PathParts parts = parsePath(req);
@@ -142,13 +104,11 @@ public class ModulesServlet extends HttpServlet {
         }
 
         if (parts.subResource == null) {
-            // Delete module
             moduleHandler.deleteModule(req, resp, parts.moduleId);
             return;
         }
 
-        // Delete sub-resource if registered
-        ISubResourceHandler handler = subResourceMap.get(parts.subResource);
+        ISubResourceHandler handler = resolveHandler(parts.subResource);
         if (handler != null) {
             handler.delete(req, resp, parts.moduleId);
         } else {
@@ -156,14 +116,31 @@ public class ModulesServlet extends HttpServlet {
         }
     }
 
-    /**
-     * Splits request path into moduleId and optional sub-resource name.
-     * 
-     * Examples:
-     *   /              -> (null, null)
-     *   /123           -> ("123", null)
-     *   /123/shapes.ttl -> ("123", "shapes.ttl")
-     */
+    @Override
+    public void onModuleIndexerChanged(String moduleId) {
+        try {
+            Optional<String> indexerResource = moduleStore.loadSubResource(moduleId,
+                    IndexerHandler.INDEXER_FILE);
+
+            if (indexerResource.isEmpty()) {
+                indexerManager.removeIndexGroup(moduleId);
+            } else {
+                indexerManager.createOrUpdateIndexGroup(moduleId, indexerResource.get());
+            }
+
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    private ISubResourceHandler resolveHandler(String subResource) {
+        return subResourceHandlers.stream()
+                .filter(entry -> entry.pattern.matcher(subResource).matches())
+                .map(entry -> entry.handler)
+                .findFirst()
+                .orElse(null);
+    }
+
     private PathParts parsePath(HttpServletRequest req) {
         String pathInfo = req.getPathInfo();
         if (pathInfo == null || pathInfo.equals("/") || pathInfo.isEmpty()) {
@@ -180,16 +157,25 @@ public class ModulesServlet extends HttpServlet {
         return new PathParts(moduleId, subResource);
     }
 
-    /**
-     * Value object holding parsed path parts (moduleId and sub-resource).
-     */
     private static class PathParts {
+
         final String moduleId;
         final String subResource;
 
         PathParts(String moduleId, String subResource) {
             this.moduleId = moduleId;
             this.subResource = subResource;
+        }
+    }
+
+    private static class RegexHandler {
+
+        final Pattern pattern;
+        final ISubResourceHandler handler;
+
+        RegexHandler(Pattern pattern, ISubResourceHandler handler) {
+            this.pattern = pattern;
+            this.handler = handler;
         }
     }
 }

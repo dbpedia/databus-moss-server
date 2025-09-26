@@ -5,6 +5,8 @@ import java.io.File;
 import javax.servlet.http.HttpServletResponse;
 
 import org.dbpedia.moss.config.MossConfiguration;
+import org.dbpedia.moss.indexer.IndexerManager;
+import org.dbpedia.moss.servlets.modules.ModuleApiServlet;
 import org.dbpedia.moss.utils.ENV;
 import org.eclipse.jetty.http.HttpTester;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -30,9 +32,12 @@ public class ContextHandlerTest {
 
         MossConfiguration.initialize(new File(ENV.CONFIG_PATH));
 
+        IndexerManager indexerManager = new IndexerManager();
+        indexerManager.start(1);
+
         tester = new ServletTester();
         tester.setContextPath("/api/v1");
-        tester.addServlet(new ServletHolder(new org.dbpedia.moss.servlets.modules.ModulesServlet()), "/modules/*");
+        tester.addServlet(new ServletHolder(new ModuleApiServlet(indexerManager)), "/modules/*");
         tester.start();
     }
 
@@ -94,6 +99,6 @@ public class ContextHandlerTest {
 
     @AfterAll
     public static void cleanup() throws Exception {
-        
+
     }
 }

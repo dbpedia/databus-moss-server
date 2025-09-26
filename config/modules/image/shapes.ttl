@@ -1,21 +1,27 @@
-@prefix sh: <http://www.w3.org/ns/shacl#> .
-@prefix exif: <http://www.w3.org/2003/12/exif/ns#> .
-@prefix ex: <http://example.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix exif: <http://www.w3.org/2003/12/exif/ns#>.
+@prefix ex: <http://example.org/>.
+@prefix moss: <http://dataid.dbpedia.org/ns/moss#>.
+@prefix schema: <https://schema.org/>.
+@prefix : <https://moss.dev.dbpedia.link/shapes#>.
 
-ex:ImageShape
-    a sh:NodeShape ;
-    sh:targetClass ex:Image ;
-    
-    sh:property [
-        sh:path exif:width ;
-        sh:minCount 1 ;
-        sh:maxCount 1 ;
-        sh:message "Each Image must have exactly one exif:width." ;
-    ] ;
-    
-    sh:property [
-        sh:path exif:height ;
-        sh:minCount 1 ;
-        sh:maxCount 1 ;
-        sh:message "Each Image must have exactly one exif:height." ;
-    ] .
+:MetadataEntryShape a sh:NodeShape;
+  sh:targetClass moss:MetadataEntry;
+  sh:property [
+    sh:path moss:extends;
+    sh:node [
+      a sh:NodeShape;
+      sh:property [
+        sh:path exif:width;
+        sh:minCount 1;
+        sh:maxCount 1;
+        sh:message "Each Image must have exactly one exif:width.";
+      ];
+      sh:property [
+        sh:path exif:height;
+        sh:minCount 1;
+        sh:maxCount 1;
+        sh:message "Each Image must have exactly one exif:height.";
+      ];
+    ];
+  ].

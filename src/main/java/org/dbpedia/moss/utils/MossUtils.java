@@ -257,7 +257,7 @@ public final class MossUtils {
     public static String getMossDocumentUriFragments(String resourceURI) throws MalformedURLException, URISyntaxException  {
         resourceURI = resourceURI.replace("#", "%23");
 
-        URL resourceURL = null;
+        URL resourceURL;
         resourceURL = new URI(resourceURI).toURL();
         String host = resourceURL.getHost();
         String path = resourceURL.getPath();
@@ -344,7 +344,7 @@ public final class MossUtils {
                 configString.append(line).append("\n"); // Preserve line breaks
             }
         } catch (IOException e) {
-            e.printStackTrace(); // Handle file reading error properly in production
+            
         }
 
         return configString.toString();

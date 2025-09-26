@@ -1,45 +1,33 @@
-version: "1.0"
-indexMode: INDEX_SPARQL_ENDPOINT
+---
+version: 1.0
+indexMode: SPARQL
 sparqlEndpoint: http://virtuoso:8890/sparql
 indexFields:
-  - fieldName: width
-    documentVariable: layer
-    type: uri
-    query: >
-      SELECT DISTINCT ?layer ?width WHERE {
-        GRAPH ?g {
-          ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
-          ?layer <http://dataid.dbpedia.org/ns/moss#extends> ?resource .
-        }
-        GRAPH ?content {
-          ?resource <http://www.w3.org/2003/12/exif/ns#width> ?width .
-        }
-        #VALUES#
+- fieldName: width
+  documentVariable: layer
+  type: numeric
+  query: >
+    SELECT DISTINCT ?layer ?width WHERE {
+      GRAPH ?g {
+        ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
+        ?layer <http://dataid.dbpedia.org/ns/moss#extends> ?resource .
       }
-  - fieldName: height
-    documentVariable: layer
-    type: uri
-    query: >
-      SELECT DISTINCT ?layer ?height WHERE {
-        GRAPH ?g {
-          ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
-          ?layer <http://dataid.dbpedia.org/ns/moss#extends> ?resource .
-        }
-        GRAPH ?content {
-          ?resource <http://www.w3.org/2003/12/exif/ns#height> ?height .
-        }
-        #VALUES#
+      GRAPH ?content {
+        ?resource <http://www.w3.org/2003/12/exif/ns#width> ?width .
       }
-  - fieldName: annotatedCount
-    documentVariable: oeoClass
-    type: numeric
-    query: >
-      SELECT ?oeoClass (COUNT(DISTINCT ?layer) as ?annotatedCount) WHERE {
-        GRAPH ?g {
-          ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
-        }
-        GRAPH ?content {
-          ?_ ?any ?oeoClass .
-          FILTER (strstarts(str(?oeoClass), 'http://openenergy-platform.org/ontology/oeo/OEO_'))
-        }
-      } GROUP BY ?oeoClass
+      #VALUES#
+    }
+- fieldName: height
+  documentVariable: layer
+  type: numeric
+  query: >
+    SELECT DISTINCT ?layer ?height WHERE {
+      GRAPH ?g {
+        ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
+        ?layer <http://dataid.dbpedia.org/ns/moss#extends> ?resource .
+      }
+      GRAPH ?content {
+        ?resource <http://www.w3.org/2003/12/exif/ns#height> ?height .
+      }
+      #VALUES#
+    }
