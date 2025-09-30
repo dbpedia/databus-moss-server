@@ -10,26 +10,21 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.utils.ENV;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 
 public class MetadataReadServlet extends HttpServlet {
 
 	private static final long serialVersionUID = 102831973239L;
-
-	final static Logger logger = LoggerFactory.getLogger(MetadataReadServlet.class);
-
 
 	@Override
 	public void init() throws ServletException {
@@ -91,12 +86,8 @@ public class MetadataReadServlet extends HttpServlet {
 				}
 			}
 			
-		} catch (MalformedURLException e) {
+		} catch (MalformedURLException | URISyntaxException e) {
 			resp.sendError(400, "Failed to fetch the resource from the external server.");
-			e.printStackTrace();
-		} catch (URISyntaxException e) {
-			resp.sendError(400, "Failed to fetch the resource from the external server.");
-			e.printStackTrace();
 		}
 	}
 }

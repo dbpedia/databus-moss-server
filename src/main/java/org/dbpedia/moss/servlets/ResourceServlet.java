@@ -9,7 +9,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.config.MossLayerConfiguration;
+import org.dbpedia.moss.servlets.modules.ModuleStore;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.GstoreResource;
 import org.dbpedia.moss.utils.MossUtils;
@@ -24,64 +24,74 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Manages layers - creation, modification, deletion, list and retrieval of related documents such as SHACL
+ * Manages layers - creation, modification, deletion, list and retrieval of
+ * related documents such as SHACL
  */
 public class ResourceServlet extends HttpServlet {
 
-	private static final long serialVersionUID = 102831973239L;
+    private static final long serialVersionUID = 102831973239L;
 
-	final static Logger logger = LoggerFactory.getLogger(ResourceServlet.class);
+    final static Logger logger = LoggerFactory.getLogger(ResourceServlet.class);
 
-	@Override
-	public void init() throws ServletException {
-	}
+    private ModuleStore moduleStore;
 
+    @Override
+    public void init() throws ServletException {
 
-	@Override
-	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        moduleStore = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
+    }
 
-		String requestURI =	req.getRequestURI();
-		logger.info(requestURI);
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-		Lang contentTypeLanguage = MossUtils.getAcceptLang(req, Lang.JSONLD);
-		String requestPath = requestURI.substring(5);
-		String extension = Lang.JSONLD.getFileExtensions().getFirst();
-		
-		String headerDocumentPath = String.format("/header/%s.%s", requestPath, extension);
-		try {
-			GstoreResource headerDocument = new GstoreResource(headerDocumentPath);
-			Model headerModel = headerDocument.readModel(Lang.JSONLD);
+        String requestURI = req.getRequestURI();
+        logger.info(requestURI);
 
-			if(headerModel == null) {
-				resp.sendError(HttpServletResponse.SC_NOT_FOUND);
-				return;
-			}
-			
-			Resource resource = headerModel.getResource(ENV.MOSS_BASE_URL + requestURI);
+        Lang contentTypeLanguage = MossUtils.getAcceptLang(req, Lang.JSONLD);
+        String requestPath = requestURI.substring(7);
+        String extension = Lang.JSONLD.getFileExtensions().getFirst();
 
-			String contentGraphURI = RDFUtils.getPropertyValue(headerModel, resource, RDFUris.MOSS_CONTENT, null);
-			String layerURI = RDFUtils.getPropertyValue(headerModel, resource, RDFUris.MOSS_INSTANCE_OF, null);
-			String layerName = MossUtils.uriToName(layerURI);
-			MossLayerConfiguration layerConfig = MossConfiguration.get().getLayerByName(layerName);
-			Lang contentLang = RDFLanguages.contentTypeToLang(layerConfig.getFormatMimeType());
+        String headerDocumentPath = String.format("/header/%s.%s", requestPath, extension);
 
-			String contentDocumentPath = contentGraphURI.replace(String.format("%s/g/", ENV.MOSS_BASE_URL), "");
-			GstoreResource contentDocument = new GstoreResource(contentDocumentPath);
-			Model contentModel = contentDocument.readModel(contentLang);
+        try {
+            GstoreResource headerDocument = new GstoreResource(headerDocumentPath);
+            Model headerModel = headerDocument.readModel(Lang.JSONLD);
 
-			Model combinedModel = ModelFactory.createDefaultModel();
-			combinedModel.add(headerModel);
-			combinedModel.add(contentModel);
+            if (headerModel == null) {
+                resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
 
-			MossUtils.sendPrettyRDF(resp, contentTypeLanguage, combinedModel);
+            Resource resource = headerModel.getResource(ENV.MOSS_BASE_URL + requestURI);
 
-		} catch (URISyntaxException e) {
-			logger.error(e.getMessage());
+            String contentGraphURI = RDFUtils.getPropertyValue(headerModel, resource, RDFUris.MOSS_CONTENT, null);
+            String moduleUri = RDFUtils.getPropertyValue(headerModel, resource, RDFUris.MOSS_INSTANCE_OF, null);
+            String moduleId = MossUtils.uriToName(moduleUri);
+
+            var moduleRequest = moduleStore.loadModule(moduleId);
+
+            if (moduleRequest.isEmpty()) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Module not found: " + moduleId);
+                return;
+            }
+
+			var module = moduleRequest.get();
+            Lang contentLang = RDFLanguages.contentTypeToLang(module.getLanguage());
+            String contentDocumentPath = contentGraphURI.replace(String.format("%s/g/", ENV.MOSS_BASE_URL), "");
+            GstoreResource contentDocument = new GstoreResource(contentDocumentPath);
+            Model contentModel = contentDocument.readModel(contentLang);
+
+            Model combinedModel = ModelFactory.createDefaultModel();
+            combinedModel.add(headerModel);
+            combinedModel.add(contentModel);
+
+            MossUtils.sendPrettyRDF(resp, contentTypeLanguage, combinedModel);
+
+        } catch (URISyntaxException e) {
+            logger.error(e.getMessage());
             resp.setHeader("Content-Type", "application/json");
             resp.sendError(400, e.getMessage());
-            return;
-		}
+        }
 
-
-	}
+    }
 }

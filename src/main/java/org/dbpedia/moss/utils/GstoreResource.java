@@ -1,16 +1,6 @@
 package org.dbpedia.moss.utils;
 
 
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.riot.RDFParser;
-import org.dbpedia.moss.GstoreConnector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,6 +14,16 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.riot.RDFParser;
+import org.dbpedia.moss.GstoreConnector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GstoreResource {
 
@@ -118,19 +118,22 @@ public class GstoreResource {
         
     private String getAPIRouteForOperation(GstoreOp operation) {
         switch (operation) {
-            case GstoreOp.Write:
+            case GstoreOp.Write -> {
                 return DOCUMENT_WRITE_ENDPOINT;
-            case GstoreOp.Read:
+            }
+            case GstoreOp.Read -> {
                 return DOCUMENT_READ_ENDPOINT;
-            case GstoreOp.Delete:
+            }
+            case GstoreOp.Delete -> {
                 return DOCUMENT_DELETE_ENDPOINT;
+            }
         }
 
         return null;
     }
 
     public String readDocument() throws URISyntaxException, IOException {
-        String content = null;
+        String content;
             
         try {
             URL readURL = getRequestURL(GstoreOp.Read);
@@ -193,11 +196,10 @@ public class GstoreResource {
             connection.setRequestMethod(Constants.REQ_METHOD_GET);
             connection.setRequestProperty(Constants.HTTP_HEADER_ACCEPT, lang.getHeaderString());
 
-            InputStream inputStream = connection.getInputStream();
-            RDFParser.source(inputStream).forceLang(lang).parse(model);
-
-            logger.info("Loaded model with " + model.size() + " triples.");
-            inputStream.close();
+            try (InputStream inputStream = connection.getInputStream()) {
+                RDFParser.source(inputStream).forceLang(lang).parse(model);
+                logger.info("Loaded model with " + model.size() + " triples.");
+            }
             connection.disconnect();
         } catch(FileNotFoundException e) {
             return null;

@@ -44,7 +44,7 @@ public class ModuleHandler {
         }
 
         resp.setContentType(CONTENT_JSONLD);
-        resp.getWriter().write(yamlMapper.writeValueAsString(content.get()));
+        resp.getWriter().write(jsonMapper.writeValueAsString(content.get()));
     }
 
     public void createModule(HttpServletRequest req, HttpServletResponse resp) throws IOException {

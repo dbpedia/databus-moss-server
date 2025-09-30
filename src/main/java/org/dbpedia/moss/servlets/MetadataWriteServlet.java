@@ -77,7 +77,7 @@ public class MetadataWriteServlet extends HttpServlet {
         try {
             String requestBaseURL = ENV.MOSS_BASE_URL;
 
-            UserInfo userInfo = this.getUserInfo(req);
+            UserInfo userInfo = MossUtils.getUserInfo(userDatabaseManager, req);
             String rdfString = MossUtils.readToString(req.getInputStream());
             Lang contentTypeLanguage = MossUtils.getContentTypeLang(req);
 
@@ -107,7 +107,7 @@ public class MetadataWriteServlet extends HttpServlet {
 
             Lang moduleLanguage = RDFLanguages.contentTypeToLang(module.getLanguage());
 
-            String entryURI = MossUtils.getExtensionURI(requestBaseURL, resource, module.getId());
+            String entryURI = MossUtils.getEntryUri(requestBaseURL, resource, module.getId());
             String headerDocumentPath = MossUtils.getHeaderStoragePath(resource, module.getId(), Lang.JSONLD);
             GstoreResource headerDocument = new GstoreResource(headerDocumentPath);
             String currentTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
@@ -116,7 +116,7 @@ public class MetadataWriteServlet extends HttpServlet {
             header.setModifiedTime(currentTime);
             header.setModuleURI(module.getURI());
             header.setDatabusResourceURI(resource);
-            header.setContentGraphURI(MossUtils.getContentGraphURI(requestBaseURL, resource, module.getId(), moduleLanguage));
+            header.setContentGraphURI(MossUtils.getContentGraphUri(requestBaseURL, resource, module.getId(), moduleLanguage));
             header.setLastModifiedBy(userInfo.getUsername());
 
             Model combinedModel = ModelFactory.createDefaultModel();
@@ -125,17 +125,6 @@ public class MetadataWriteServlet extends HttpServlet {
 
             // SHACL test this!
             doShaclValidation(combinedModel, module);
-
-            /*
-            if (rdfString == null || rdfString.isBlank()) {
-                File templateFile = layer.getTemplateFile();
-
-                if (templateFile != null && templateFile.exists()) {
-                    rdfString = Files.readString(templateFile.toPath(), StandardCharsets.UTF_8);
-                    rdfString = rdfString.replace(mossConfiguration.getTemplateResourcePlaceholder(), resource);
-                }
-            }*/
-            // Validate the input document with SHACL shapes
 
             // Layer language *should* be the same as the request language, but doesn't have to
             if (contentTypeLanguage != moduleLanguage) {
@@ -191,48 +180,6 @@ public class MetadataWriteServlet extends HttpServlet {
         }
     }
 
-    /*
-    private void validateResourceForLayer(String resource, MossLayerConfiguration layer) {
-
-        try {
-            String[] resourceTypes = layer.getResourceTypes();
-
-            if(resourceTypes == null){
-                return;
-            }
-            
-            Model databusModel = RDFDataMgr.loadModel(resource);
-            
-            Resource rdfResource = databusModel.getResource(resource);
-            Property rdfTypeProperty = databusModel.getProperty(RDFUris.RDF_TYPE);
-            NodeIterator types = databusModel.listObjectsOfProperty(rdfResource, rdfTypeProperty);
-            String foundType = null;
-
-            while (types.hasNext()) {
-                RDFNode typeNode = types.next();
-                if (typeNode.isResource()) {
-                    Resource type = typeNode.asResource();
-                    foundType = type.getURI();
-
-                    for(int i = 0; i < resourceTypes.length; i++) {
-                        if (type.getURI().equals(resourceTypes[i])) {
-                            // Found a matching type!
-                            return;
-                        }
-                    }
-                    
-                   
-                }
-            }
-
-            String typesString = String.join(">, <", resourceTypes);
-            throw new IllegalArgumentException("Databus resource <" + resource + "> does not have one of the required types: <" 
-                + typesString + "> (detected type: <" + foundType + ">).");
-
-        } catch(RiotNotFoundException e) {
-            throw new IllegalArgumentException("Databus resource " + resource + " is not reachable");
-        }
-    } */
     private void doShaclValidation(Model model, MossModule module) throws Exception {
 
         // Load the SHACL shape model from the file path provided by the layer
@@ -268,20 +215,6 @@ public class MetadataWriteServlet extends HttpServlet {
         }
     }
 
-    private UserInfo getUserInfo(HttpServletRequest request) throws ValidationException {
-        Object sub = request.getAttribute("sub");
-
-        if (sub == null) {
-            throw new ValidationException("sub zero.");
-        }
-
-        UserInfo userInfo = userDatabaseManager.getUserInfoBySub(sub.toString());
-
-        if (userInfo == null || userInfo.getUsername().isEmpty()) {
-            throw new ValidationException("User null or username missing");
-        }
-
-        return userInfo;
-    }
+   
 
 }

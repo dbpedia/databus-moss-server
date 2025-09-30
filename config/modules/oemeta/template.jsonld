@@ -1,0 +1,8 @@
+{
+  "@context": {
+      "schema": "https://schema.org/",
+      "keywords": "schema:keywords"
+  },
+  "@id": "$DATABUS_RESOURCE",
+  "keywords" : "simple"
+}

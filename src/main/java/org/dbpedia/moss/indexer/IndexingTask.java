@@ -25,9 +25,9 @@ public class IndexingTask implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(IndexingTask.class);
 
-    private String resourceURI;
+    private final String resourceURI;
 
-    private IndexGroup indexGroup;
+    private final IndexGroup indexGroup;
 
     public IndexingTask(String resourceURI, IndexGroup indexGroup) {
         this.resourceURI = resourceURI;
@@ -47,7 +47,7 @@ public class IndexingTask implements Runnable {
                     int responseCode = deleteResponse.getCode();
                     logger.info("Resource <{}> deleted from index with code {} ", resourceURI, responseCode);
                 } catch (IOException e) {
-                    logger.error("Failed to delete resource from index <{}>: {}", resourceURI, e.getMessage());;
+                    logger.error("Failed to delete resource from index <{}>: {}", resourceURI, e.getMessage());
                 }
             }
 

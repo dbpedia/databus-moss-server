@@ -1,5 +1,5 @@
 ---
 id: keyword
-label: Keyword
+label: Keywords
 description: Module for simple keyword tagging
 language: text/turtle
