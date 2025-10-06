@@ -1,0 +1,6 @@
+{
+    "@context": "http://localhost:8080/api/v1/modules/image/context.jsonld",
+    "@id": "$DATABUS_RESOURCE",
+    "width": 0,
+    "height": 0
+}

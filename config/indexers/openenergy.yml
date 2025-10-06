@@ -16,6 +16,19 @@ indexFields:
         }
         #VALUES#
       }
+  - fieldName: annotatedCount
+    documentVariable: oeoClass
+    type: numeric
+    query: >
+      SELECT ?oeoClass (COUNT(DISTINCT ?layer) as ?annotatedCount) WHERE {
+        GRAPH ?g {
+          ?layer <http://dataid.dbpedia.org/ns/moss#content> ?content .
+        }
+        GRAPH ?content {
+          ?_ ?any ?oeoClass .
+          FILTER (strstarts(str(?oeoClass), 'http://openenergy-platform.org/ontology/oeo/OEO_'))
+        }
+      } GROUP BY ?oeoClass
   - fieldName: keyword
     documentVariable: layer
     query: >

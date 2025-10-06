@@ -1,10 +1,5 @@
 package org.dbpedia.moss.servlets;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -18,6 +13,11 @@ import java.util.Enumeration;
 import org.dbpedia.moss.utils.ENV;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class SparqlProxyServlet extends HttpServlet {
 
@@ -48,15 +48,9 @@ public class SparqlProxyServlet extends HttpServlet {
 
 		try {
 			url = new URI(sparqlEndpoint + (queryString != null ? "?" + queryString : "")).toURL();
-		} catch (MalformedURLException e) {
+		} catch (MalformedURLException | URISyntaxException e) {
 			resp.setStatus(400);
-			e.printStackTrace();
 			return;
-		} catch (URISyntaxException e) {			
-			resp.setStatus(400);
-			e.printStackTrace();
-			return;
-
 		}
 
         logger.info("Proxying to: " + url);
@@ -92,7 +86,6 @@ public class SparqlProxyServlet extends HttpServlet {
 
             } catch (IOException e) {
                 // Handle any I/O exceptions
-                e.printStackTrace();
             }
         }
 

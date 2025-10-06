@@ -15,17 +15,16 @@ import com.apicatalog.jsonld.JsonLdError;
 import com.apicatalog.jsonld.document.Document;
 import com.apicatalog.jsonld.document.JsonDocument;
 
+import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
 public final class RDFUtils {
 
-  
-
     public static String getPropertyValue(Model model, Resource resource, Property property, String defaultValue) {
         // Get the statement corresponding to the property URI from the resource
         Statement statement = resource.getProperty(property);
-        
-        if(statement == null) {
+
+        if (statement == null) {
             return defaultValue;
 
         }
@@ -35,12 +34,10 @@ public final class RDFUtils {
             return statement.getObject().asResource().getURI();
         }
 
-        if(statement.getObject().isLiteral()) {
+        if (statement.getObject().isLiteral()) {
             return statement.getObject().asLiteral().getString();
         }
 
-        
-    
         // Return null if the property is not found or the object is not a resource
         return defaultValue;
     }
@@ -52,18 +49,18 @@ public final class RDFUtils {
         InputStream jsonLdInputStream = new ByteArrayInputStream(out.toByteArray());
         return JsonDocument.of(jsonLdInputStream);
     }
-public static JsonObject compact(Model listModel) {
-        try {
-            // Convert the Jena Model to a JSON-LD string
-            Document document = modelToDocument(listModel);
-            return JsonLd.compact(document, MossContext.get()).get();
-        } catch (JsonLdError e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            return null;
-        } 
-    }
 
-    
+    public static JsonObject compact(Model listModel) {
+        try {
+            Document document = modelToDocument(listModel);
+
+            // Empty JSON object as a Document
+            Document emptyContext = JsonDocument.of(Json.createObjectBuilder().build());
+
+            return JsonLd.compact(document, emptyContext).get();
+        } catch (JsonLdError e) {
+            return null;
+        }
+    }
 
 }

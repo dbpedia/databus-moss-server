@@ -1,10 +1,5 @@
 package org.dbpedia.moss.servlets;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URI;
@@ -13,18 +8,20 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.MossUtils;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * HTTP Servlet with handlers for the single lookup API request "/api/search"
@@ -38,7 +35,6 @@ public class MetadataBrowseServlet extends HttpServlet {
 	 */
 	private static final long serialVersionUID = 102831973239L;
 
-	final static Logger logger = LoggerFactory.getLogger(MetadataBrowseServlet.class);
 
 
 	@Override
@@ -95,7 +91,6 @@ public class MetadataBrowseServlet extends HttpServlet {
 
 		} catch (IOException | InterruptedException e) {
 			// Handle any exceptions
-			e.printStackTrace();
 			resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "An error occurred while processing the request.");
 		}
 	}

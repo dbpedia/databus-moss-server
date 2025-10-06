@@ -16,9 +16,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class MossProxyServlet extends HttpServlet {
+
     private static final long serialVersionUID = 1L;
 
-    private String baseUrl;
+    private final String baseUrl;
 
     final static Logger logger = LoggerFactory.getLogger(MossProxyServlet.class);
 
@@ -26,6 +27,7 @@ public class MossProxyServlet extends HttpServlet {
         this.baseUrl = baseUrl;
     }
 
+    @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         // Build the target URL
@@ -49,8 +51,7 @@ public class MossProxyServlet extends HttpServlet {
             });
 
             // Stream the response content from the target URL to the client
-            try (InputStream inputStream = connection.getInputStream();
-                    OutputStream outputStream = response.getOutputStream()) {
+            try (InputStream inputStream = connection.getInputStream(); OutputStream outputStream = response.getOutputStream()) {
                 byte[] buffer = new byte[8192];
                 int bytesRead;
                 while ((bytesRead = inputStream.read(buffer)) != -1) {
@@ -59,7 +60,6 @@ public class MossProxyServlet extends HttpServlet {
             }
         } catch (IOException | URISyntaxException e) {
             logger.error(e.getMessage());
-            e.printStackTrace();
         }
 
     }
@@ -67,11 +67,16 @@ public class MossProxyServlet extends HttpServlet {
     private String buildTargetUrl(HttpServletRequest request) {
         StringBuilder targetUrl = new StringBuilder(baseUrl);
 
-        // Append the request URI
-        String requestUri = request.getRequestURI();
-        targetUrl.append(requestUri);
+        // Path *after* the servlet mapping, e.g. "/search"
+        String pathInContext = request.getRequestURI().substring(
+                request.getContextPath().length()
+        );
 
-        // Append the query string if it exists
+        if (pathInContext != null) {
+            targetUrl.append(pathInContext);
+        }
+
+        // Append query string if present
         String queryString = request.getQueryString();
         if (queryString != null) {
             targetUrl.append('?').append(queryString);

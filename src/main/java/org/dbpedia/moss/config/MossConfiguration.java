@@ -9,11 +9,6 @@ import java.util.List;
 
 import javax.naming.ConfigurationException;
 
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.riot.RDFLanguages;
-import org.dbpedia.moss.indexer.IndexGroup;
 import org.dbpedia.moss.utils.ENV;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +28,11 @@ public class MossConfiguration {
 
     private String contextPath;
 
+    private String modulePath;
 
     private String templateResourcePlaceholder;
+
+    private List<MossModule> modules;
 
 
     public String getTemplateResourcePlaceholder() {
@@ -69,29 +67,8 @@ public class MossConfiguration {
         this.contextPath = contextPath;
     }
 
-    private List<MossLayerConfiguration> layers;
-
     private List<MossOntologyConfiguration> ontologies;
 
-    private List<MossIndexerConfiguration> indexers;
-    
-
-    public void setIndexers(List<MossIndexerConfiguration> indexers) {
-        this.indexers = indexers;
-    }
-
-    // Getters and Setters for indexers, layers, loaders
-    public List<MossIndexerConfiguration> getIndexers() {
-        return indexers;
-    }
-
-    public List<MossLayerConfiguration> getLayers() {
-        return layers;
-    }
-
-    public void setLayers(List<MossLayerConfiguration> layers) {
-        this.layers = layers;
-    }
 
     public List<MossOntologyConfiguration> getOntologies() {
         return ontologies;
@@ -109,73 +86,21 @@ public class MossConfiguration {
         return configDir;
     }
 
-    private static MossConfiguration fromJson(File file) throws ConfigurationException {
+    private static MossConfiguration load(File file) throws ConfigurationException {
         try {
             // Load the configuration from the YAML file
             ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
             MossConfiguration config = mapper.readValue(file, MossConfiguration.class);
-    
+
             // Get the directory of the config file for resolving relative paths
             config.configDir = file.getParentFile();
+            
+            File moduleDirectory = new File(config.configDir, config.getModulePath());
+            config.modules = loadModules(moduleDirectory);
 
-            if(config.getLayers() == null) {
-                config.setLayers(new ArrayList<>());
-            }
-
-            if(config.getIndexers() == null) {
-                config.setIndexers(new ArrayList<>());
-            }
-
+           
             if(config.getOntologies() == null) {
                 config.setOntologies(new ArrayList<>());
-            }
-
-            // Load template content for each MossLayerType
-            for (MossLayerConfiguration layer : config.getLayers()) {
-
-                /* 
-                if(layer.getIndexers() != null) {
-                    for(String indexerId : layer.getIndexers()) {
-                        if(config.getIndexer(indexerId) == null) {
-                            System.err.println("Layer " + layer.getId() + " references missing indexer " + indexerId + ".");
-                        }
-                    }
-                }
-
-                
-                if (layer.getTemplatePath() != null && !layer.getTemplatePath().isEmpty()) {
-                    // Resolve the template file relative to the config file's directory
-                    File templateFile = new File(config.configDir, layer.getTemplatePath());
-    
-                    // Check if the template file exists and is readable
-                    if (templateFile.exists() && templateFile.isFile()) {
-                        // Read the content of the template file
-                        layer.setTemplatePath(templateFile.getAbsolutePath());
-                    } else {
-                        System.err.println("Template file not found or not readable: " + templateFile.getAbsolutePath());
-                    }
-                }
-*/
-                if (layer.getShaclPath() != null && !layer.getShaclPath().isEmpty()) {
-                    // Resolve the template file relative to the config file's directory
-                    File shaclFile = new File(config.configDir, layer.getShaclPath());
-                    // Check if the template file exists and is readable
-                    if (shaclFile.exists() && shaclFile.isFile()) {
-                        // Read the content of the template file
-                        layer.setShaclPath(shaclFile.getAbsolutePath());
-                    } else {
-                        System.err.println("Template file not found or not readable: " + shaclFile.getAbsolutePath());
-                    }
-                }
-            }
-            
-            // HashMap<String, MossIndexerConfiguration> indexerMap = new HashMap<>();
-            for(MossLayerConfiguration layer : config.getLayers()) {
-                layer.createOrFetchTemplateFile(config);
-            }
-            // Load indexer configurations for indexers
-            for(MossIndexerConfiguration indexer : config.getIndexers()) {
-                indexer.createOrFetchConfigFile(config);
             }
 
             /*
@@ -199,41 +124,41 @@ public class MossConfiguration {
 
             return config;
         } catch (IOException e) {
-            e.printStackTrace();
             return null;
         }
     }
 
-    public MossLayerConfiguration getLayerByName(String layerName) {
-        for (MossLayerConfiguration layer : layers) {
-            if(layer.getName().equals(layerName)) {
-                return layer;
+    private static List<MossModule> loadModules(File directory) throws IOException {
+
+        List<MossModule> result = new ArrayList<>();
+
+        if (directory == null || !directory.isDirectory()) {
+            return result;
+        }
+
+        File[] children = directory.listFiles();
+        if (children == null) {
+            return result;
+        }
+
+        for (File child : children) {
+            if (child.isDirectory()) {
+                File moduleFile = new File(child, "module.yml");
+                if (moduleFile.exists() && moduleFile.isFile()) {
+                    // Handle the module.yml file (e.g., load or parse it)
+                    ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
+                    MossModule config = mapper.readValue(moduleFile, MossModule.class);
+                    result.add(config);
+                }
             }
         }
 
-        return null;
+        return result;
     }
 
-    public MossIndexerConfiguration getIndexerByName(String indexerName) {
-        for (MossIndexerConfiguration indexer : indexers) {
-            if(indexer.getName().equals(indexerName)) {
-                return indexer;
-            }
-        }
 
-        return null;
-    }
 
-    public MossIndexerConfiguration getIndexer(String indexerId) {
-        for (MossIndexerConfiguration indexer : indexers) {
-            if(indexer.getId().equals(indexerId)) {
-                return indexer;
-            }
-        }
-
-        return null;
-    }
-
+    /*
 
     public void validate() throws ConfigurationException {
 
@@ -263,7 +188,7 @@ public class MossConfiguration {
         
         logger.info("Configuration OK!");
     }
-    
+     
     
     private void validateSHACL(MossLayerConfiguration layer) throws ConfigurationException {
         Model shaclModel = RDFDataMgr.loadModel(layer.getShaclPath(), Lang.TURTLE);
@@ -271,7 +196,7 @@ public class MossConfiguration {
         if (shaclModel.isEmpty()) {
             throw new ConfigurationException("The specified SHACL file for layer " + layer.getId() + " is empty or invalid.");
         }
-    }
+    }*/
 
    
 
@@ -289,9 +214,23 @@ public class MossConfiguration {
             }
         }
 
+        
 
-        MossConfiguration mossConfiguration = MossConfiguration.fromJson(configFile);
-        mossConfiguration.validate();
+
+        MossConfiguration mossConfiguration = MossConfiguration.load(configFile);
+        // mossConfiguration.validate();
+
+        /*
+
+        try {
+            configDir = configFile.getParentFile();
+        } catch (Exception e) {
+        }
+        ModuleStore store = new ModuleStore(mossConfiguration.getModuleDirectory().toPath());
+        
+        for(MossModule module : mossConfiguration.getModules()) {
+            store.saveModule(module);
+        } */
 
         instance = mossConfiguration;
     }
@@ -321,59 +260,25 @@ public class MossConfiguration {
         }
     }
 
-
-    public MossLayerConfiguration getLayer(String layerId) {
-        for (MossLayerConfiguration layer : layers) {
-            if(layer.getId().equals(layerId)) {
-                return layer;
-            }
-        }
-
-        return null;
-    }
-
-    
-    public void addOrReplaceIndexer(MossIndexerConfiguration newIndexer) {
-        for (int i = 0; i < indexers.size(); i++) {
-            if (indexers.get(i).getName().equals(newIndexer.getName())) {
-                indexers.set(i, newIndexer); 
-                return;
-            }
-        }
-    
-        indexers.add(newIndexer);
-    }
-
-    public void addOrReplaceLayer(MossLayerConfiguration inputLayer) {
-        for (int i = 0; i < layers.size(); i++) {
-            if (layers.get(i).getName().equals(inputLayer.getName())) {
-                layers.set(i, inputLayer); 
-                return;
-            }
-        }
-    
-        layers.add(inputLayer);
-    }
-
     @JsonIgnore
-    public List<IndexGroup> getIndexingGroups() {
-        List<IndexGroup> groups = new ArrayList<>();
-
-        for (MossLayerConfiguration layerConfiguration : getLayers()) {
-
-            List<File> indexConfigFiles = new ArrayList<>();
-
-            for(MossIndexerConfiguration indexerConfiguration : getIndexers()) {
-                if(indexerConfiguration.hasLayer(layerConfiguration.getId())) {
-                    indexConfigFiles.add(indexerConfiguration.getConfigFile());
-                }
-            }
-
-            groups.add(new IndexGroup(layerConfiguration.getId(), indexConfigFiles.toArray(new File[0])));
-        }
-        
-        return groups;
+    public File getModuleDirectory() {
+        return new File(configDir, getModulePath());
     }
-    
+
+
+ 
+
+    public String getModulePath() {
+        return modulePath;
+    }
+
+    public void setModulePath(String modulePath) {
+        this.modulePath = modulePath;
+    }
+
+    public List<MossModule> getModules() {
+        return modules;
+    }
+
 
 }

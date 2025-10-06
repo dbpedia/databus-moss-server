@@ -1,14 +1,12 @@
 package org.dbpedia.moss.indexer;
 
-import java.io.File;
-
 public class IndexGroup {
 
-    private String name;
+    private final String name;
 
-    private File[] indexConfigurations;
+    private final String[] indexConfigurations;
     
-    public IndexGroup(String name, File[] indexConfigurations) {
+    public IndexGroup(String name, String[] indexConfigurations) {
         this.indexConfigurations = indexConfigurations;
         this.name = name;
     }
@@ -17,7 +15,7 @@ public class IndexGroup {
         return name;
     }
 
-    public File[] getIndexConfigurations() {
+    public String[] getIndexConfigurations() {
         return indexConfigurations;
     }
 }

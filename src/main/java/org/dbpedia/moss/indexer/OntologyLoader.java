@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.regex.Pattern;
 
 import javax.naming.ConfigurationException;
@@ -52,14 +51,12 @@ public class OntologyLoader {
                 logger.info("Ontology graph loaded at: " + resource.getGraphURL());
 
                 File indexerConfigFile = new File(configDir, ontologyConfiguration.getIndexerConfigPath());
-                File formattedIndexerConfigFile = formatIndexerConfigFile(indexerConfigFile, resource.getGraphURL());
+                String formattedConfig = formatIndexerConfigString(indexerConfigFile, resource.getGraphURL());
 
-                IndexGroup group = new IndexGroup(null, new File[] { formattedIndexerConfigFile });
+                IndexGroup group = new IndexGroup(null, new String[] { formattedConfig });
 
                 IndexingTask task = new IndexingTask(null, group);
                 task.run();
-
-                formattedIndexerConfigFile.delete();
 
             } catch (IOException | URISyntaxException e) {
                 logger.error("Failed to load annotation data:" + e.getMessage());
@@ -67,27 +64,15 @@ public class OntologyLoader {
         }
     }
 
-    private static File formatIndexerConfigFile(File indexerConfigFile, String graphUri) throws IOException {
-        // Read content from the input file
+    private static String formatIndexerConfigString(File indexerConfigFile, String graphUri) throws IOException {
         String content = Files.readString(indexerConfigFile.toPath(), StandardCharsets.UTF_8);
-
-        // Replace occurrences of "#GRAPH#" with graphUri
-        content = content.replace("#GRAPH#", String.format("GRAPH <%s>", graphUri));
-
-        // Create a temporary file
-        Path tempFile = Files.createTempFile("formatted_indexer_config", ".yml");
-
-        // Write modified content to the temporary file
-        Files.writeString(tempFile, content, StandardCharsets.UTF_8);
-
-        return tempFile.toFile();
+        return content.replace("#GRAPH#", String.format("GRAPH <%s>", graphUri));
     }
 
     public static boolean containsNonUnicode(String str) {
         if (str == null) {
             return false;
         }
-
         return !Pattern.matches("\\A\\p{ASCII}*\\z", str);
     }
 

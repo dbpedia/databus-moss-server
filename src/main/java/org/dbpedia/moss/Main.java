@@ -2,12 +2,7 @@ package org.dbpedia.moss;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.EnumSet;
 
 import org.apache.jena.query.ARQ;
@@ -21,24 +16,19 @@ import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.indexer.OntologyLoader;
-import org.dbpedia.moss.servlets.LayerShaclServlet;
+import org.dbpedia.moss.servlets.IndexerPreviewServlet;
 import org.dbpedia.moss.servlets.MetadataBrowseServlet;
 import org.dbpedia.moss.servlets.MetadataReadServlet;
+import org.dbpedia.moss.servlets.MetadataValidationServlet;
 import org.dbpedia.moss.servlets.MetadataWriteServlet;
 import org.dbpedia.moss.servlets.MossProxyServlet;
 import org.dbpedia.moss.servlets.ResourceServlet;
 import org.dbpedia.moss.servlets.SparqlProxyServlet;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
-import org.dbpedia.moss.servlets.contexts.ContextServlet;
-import org.dbpedia.moss.servlets.indexers.IndexerListServlet;
-import org.dbpedia.moss.servlets.indexers.IndexerResourceServlet;
-import org.dbpedia.moss.servlets.indexers.IndexerServlet;
-import org.dbpedia.moss.servlets.layers.LayerListServlet;
-import org.dbpedia.moss.servlets.layers.LayerResourceServlet;
-import org.dbpedia.moss.servlets.layers.LayerServlet;
+import org.dbpedia.moss.servlets.modules.ModuleApiServlet;
+import org.dbpedia.moss.servlets.modules.ModuleResourceServlet;
 import org.dbpedia.moss.utils.Constants;
 import org.dbpedia.moss.utils.ENV;
-import org.dbpedia.moss.utils.MossContext;
 import org.dbpedia.moss.utils.RequestMethodFilterWrapper;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.DefaultIdentityService;
@@ -58,11 +48,9 @@ import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.http.HttpServlet;
 
-
 /**
  * Run to start a jetty server that hosts the moss servlet and makes it
- * accessible
- * via HTTP
+ * accessible via HTTP
  */
 public class Main {
 
@@ -85,8 +73,7 @@ public class Main {
 
     /**
      * Run to start a jetty server that hosts the moss servlet and makes it
-     * accessible
-     * via HTTP
+     * accessible via HTTP
      *
      * @param args
      * @throws Exception
@@ -98,36 +85,28 @@ public class Main {
         JenaSystem.init();
         ARQ.init();
 
-
         logger.info("ENV:\n{} ", ENV.printAll());
-        
+
         File configFile = new File(ENV.CONFIG_PATH);
 
         MossConfiguration.initialize(configFile);
-        MossContext.initialize();
 
-      
-        
-        waitForGstore(ENV.GSTORE_BASE_URL);
-
+        // waitForGstore(ENV.GSTORE_BASE_URL);
         MossConfiguration config = MossConfiguration.get();
         OntologyLoader.load(config);
 
-
         UserDatabaseManager userDatabaseManager = new UserDatabaseManager(ENV.USER_DATABASE_PATH);
 
-        
-        IndexerManager indexerManager = new IndexerManager(MossConfiguration.get().getIndexingGroups());
+        IndexerManager indexerManager = new IndexerManager();
         indexerManager.start(1);
         Server server = new Server(8080);
 
         IdentityService identityService = new DefaultIdentityService();
         server.addBean(identityService);
 
-
         Constraint constraint = new Constraint();
         constraint.setName("Authenticate");
-        constraint.setRoles(new String[] { Constraint.ANY_ROLE });
+        constraint.setRoles(new String[]{Constraint.ANY_ROLE});
         constraint.setAuthenticate(true);
         // constraint.setDataConstraint(Constraint.DC_CONFIDENTIAL);
 
@@ -144,18 +123,14 @@ public class Main {
         sparqlProxyContext.setContextPath("/sparql");
         sparqlProxyContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/*");
 
-
-
         // Context handler for the unprotected routes
         ServletContextHandler resourceContext = new ServletContextHandler();
         resourceContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        resourceContext.setContextPath("/res/*");
+        resourceContext.setContextPath("/entry/*");
         resourceContext.addServlet(new ServletHolder(new ResourceServlet()), "/*");
 
-        ServletContextHandler indexerContext = createSimpleContext("/indexer/", new IndexerResourceServlet());
-        ServletContextHandler layerContext = createSimpleContext("/layer/", new LayerResourceServlet());
-        ServletContextHandler contextContext = createSimpleContext("/context/", new ContextServlet());
-             
+        ServletContextHandler moduleContext = createSimpleContext("/module/", new ModuleResourceServlet());
+
         // Context handler for the unprotected routes
         ServletContextHandler readContext = new ServletContextHandler();
         readContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
@@ -168,57 +143,56 @@ public class Main {
         browseContext.setContextPath("/file/*");
         browseContext.addServlet(new ServletHolder(new MetadataBrowseServlet()), "/*");
 
+        ServletHolder searchProxyServlet = new ServletHolder(new MossProxyServlet(ENV.LOOKUP_BASE_URL + "/api"));
+        // ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
+        // ServletHolder layerIndexerConfigurationServlet = new ServletHolder(new LayerIndexerConfigurationServlet());
+
+        // Context handler for the protected api routes
+        ServletContextHandler apiContext = new ServletContextHandler();
+        apiContext.setContextPath("/api/v1");
+        apiContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
+
+        AdminFilter adminFilter = new AdminFilter();
+        AuthenticationFilter authFilter = new AuthenticationFilter(new APIKeyValidator(userDatabaseManager));
+        setupReadOnlyAdminServlet(apiContext, new ModuleApiServlet(indexerManager), "/modules/*", authFilter, adminFilter);
+
+        FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
+
         ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager, userDatabaseManager));
         metadataWriteServletHolder.setInitOrder(0);
         metadataWriteServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
-        ServletHolder searchProxyServlet = new ServletHolder(new MossProxyServlet(ENV.LOOKUP_BASE_URL));
-        ServletHolder layerShaclServlet = new ServletHolder(new LayerShaclServlet());
-        // ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
-        // ServletHolder layerIndexerConfigurationServlet = new ServletHolder(new LayerIndexerConfigurationServlet());
+        apiContext.addFilter(authFilterHolder, "/save-entry", null);
+        apiContext.addServlet(metadataWriteServletHolder, "/save-entry");
 
-        AuthenticationFilter authFilter = new AuthenticationFilter(new APIKeyValidator(userDatabaseManager));
+        ServletHolder metadataValidationServletHolder = new ServletHolder(new MetadataValidationServlet(userDatabaseManager));
+        metadataValidationServletHolder.getRegistration().setMultipartConfig(multipartConfig);
+        apiContext.addFilter(authFilterHolder, "/validate-entry", null);
+        apiContext.addServlet(metadataValidationServletHolder, "/validate-entry");
 
-        FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
-        // Context handler for the protected api routes
-        ServletContextHandler apiContext = new ServletContextHandler();
-        apiContext.setContextPath("/api");
-        apiContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
-        apiContext.addServlet(metadataWriteServletHolder, "/save");
+        
+        ServletHolder indexerPreviewServlet = new ServletHolder(new IndexerPreviewServlet(userDatabaseManager));
+        indexerPreviewServlet.getRegistration().setMultipartConfig(multipartConfig);
+        apiContext.addFilter(authFilterHolder, "/get-indexer-preview", null);
+        apiContext.addServlet(indexerPreviewServlet, "/get-indexer-preview");
+
         apiContext.addServlet(searchProxyServlet, "/search");
-
-
-        apiContext.addServlet(layerShaclServlet, "/layers/get-shacl");
         // apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
-
-        
-        AdminFilter adminFilter= new AdminFilter();
-        
-        setupReadOnlyAdminServlet(apiContext, new IndexerServlet(indexerManager), "/indexers/*", authFilter, adminFilter);
-        setupReadOnlyAdminServlet(apiContext, new LayerServlet(indexerManager), "/layers/*", authFilter, adminFilter);
-        setupReadOnlyAdminServlet(apiContext, new LayerListServlet(), "/layers", authFilter, adminFilter);
-        setupReadOnlyAdminServlet(apiContext, new IndexerListServlet(), "/indexers", authFilter, adminFilter);
 
         // apiContext.addServlet(layerIndexerConfigurationServlet, "/layers/get-indexers");
         apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
-        apiContext.addFilter(authFilterHolder, "/save", null);
         apiContext.addFilter(authFilterHolder, "/users/*", null);
 
-        
         // apiContext.addFilter(adminFilterHolder, "/save", null);
-
         // Set up handler collection
-        HandlerList  handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { 
-            readContext, 
-            contextContext,
-            indexerContext,
-            layerContext,
-            resourceContext, 
-            browseContext, 
+        HandlerList handlers = new HandlerList();
+        handlers.setHandlers(new Handler[]{
+            readContext,
+            moduleContext,
+            resourceContext,
+            browseContext,
             apiContext,
-            sparqlProxyContext,  
-        });
+            sparqlProxyContext,});
 
         server.setHandler(handlers);
 
@@ -237,13 +211,13 @@ public class Main {
     }
 
     private static void setupReadOnlyAdminServlet(ServletContextHandler apiContext, HttpServlet servlet, String path,
-        Filter authFilter, Filter adminFilter) {
+            Filter authFilter, Filter adminFilter) {
 
         ServletHolder servletHolder = new ServletHolder(servlet);
-        String[] layerListAllowedMethods = new String[] { 
-            Constants.REQ_METHOD_HEAD, 
-            Constants.REQ_METHOD_GET, 
-            Constants.REQ_METHOD_OPTIONS 
+        String[] layerListAllowedMethods = new String[]{
+            Constants.REQ_METHOD_HEAD,
+            Constants.REQ_METHOD_GET,
+            Constants.REQ_METHOD_OPTIONS
         };
 
         RequestMethodFilterWrapper authFilterWrapper = new RequestMethodFilterWrapper(authFilter, layerListAllowedMethods);
@@ -252,58 +226,5 @@ public class Main {
         apiContext.addServlet(servletHolder, path);
         apiContext.addFilter(new FilterHolder(authFilterWrapper), path, null);
         apiContext.addFilter(new FilterHolder(adminFilterWrapper), path, null);
-    }    
-
-    
-
-
-    private static void waitForGstore(String targetUrl) throws URISyntaxException, InterruptedException, IOException {
-        
-        int attempts = 0;
-        int maxAttempts = 20;
-
-        while (true) {
-            try {
-                // Create a URL object from the target URL
-                URL url = new URI(targetUrl).toURL();
-
-                logger.info("Connecting to gstore at: {} ", targetUrl);
-
-                // Open a connection to the URL
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-                // Set the request method to "GET"
-                connection.setRequestMethod("GET");
-
-                // Connect to the URL
-                connection.connect();
-
-                // Get the response code
-                int responseCode = connection.getResponseCode();
-
-                // Print the response code
-                logger.info("Gstore detected: status code {} ", responseCode);
-
-                // Disconnect the connection
-                connection.disconnect();
-
-                break;
-
-            } catch (IOException e) {
-                
-                attempts++;
-
-                if(attempts > maxAttempts) {
-                    logger.error("Error connecting to gstore after {} attempts: {}", attempts, e.getMessage());
-                    throw new IOException(e);
-                }
-                else {
-                    logger.info("Error connecting to gstore. Trying again in 1 second.");
-                }
-            }
-
-            Thread.sleep(1000);
-        }
     }
-
 }
