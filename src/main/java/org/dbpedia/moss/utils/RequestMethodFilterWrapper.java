@@ -27,11 +27,10 @@ public class RequestMethodFilterWrapper implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        if (request instanceof HttpServletRequest) {
-            HttpServletRequest httpRequest = (HttpServletRequest) request;
+        if (request instanceof HttpServletRequest httpRequest) {
 
-            for(int i = 0; i < allowedMethods.length; i++) {
-                if (allowedMethods[i].equalsIgnoreCase(httpRequest.getMethod())) {
+            for (String allowedMethod : allowedMethods) {
+                if (allowedMethod.equalsIgnoreCase(httpRequest.getMethod())) {
                     chain.doFilter(request, response);
                     return;
                 }

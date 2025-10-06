@@ -15,6 +15,7 @@ import com.apicatalog.jsonld.JsonLdError;
 import com.apicatalog.jsonld.document.Document;
 import com.apicatalog.jsonld.document.JsonDocument;
 
+import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
 public final class RDFUtils {
@@ -51,12 +52,13 @@ public final class RDFUtils {
 
     public static JsonObject compact(Model listModel) {
         try {
-            // Convert the Jena Model to a JSON-LD string
             Document document = modelToDocument(listModel);
-            return JsonLd.compact(document, MossContext.get()).get();
+
+            // Empty JSON object as a Document
+            Document emptyContext = JsonDocument.of(Json.createObjectBuilder().build());
+
+            return JsonLd.compact(document, emptyContext).get();
         } catch (JsonLdError e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
             return null;
         }
     }

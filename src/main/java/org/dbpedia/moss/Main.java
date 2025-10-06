@@ -29,7 +29,6 @@ import org.dbpedia.moss.servlets.modules.ModuleApiServlet;
 import org.dbpedia.moss.servlets.modules.ModuleResourceServlet;
 import org.dbpedia.moss.utils.Constants;
 import org.dbpedia.moss.utils.ENV;
-import org.dbpedia.moss.utils.MossContext;
 import org.dbpedia.moss.utils.RequestMethodFilterWrapper;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.DefaultIdentityService;
@@ -91,7 +90,6 @@ public class Main {
         File configFile = new File(ENV.CONFIG_PATH);
 
         MossConfiguration.initialize(configFile);
-        MossContext.initialize();
 
         // waitForGstore(ENV.GSTORE_BASE_URL);
         MossConfiguration config = MossConfiguration.get();
