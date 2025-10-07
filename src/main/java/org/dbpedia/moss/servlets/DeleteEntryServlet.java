@@ -1,32 +1,18 @@
 package org.dbpedia.moss.servlets;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFLanguages;
-import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.RiotException;
-import org.apache.jena.shacl.ShaclValidator;
-import org.apache.jena.shacl.ValidationReport;
 import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.config.MossModule;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.db.UserInfo;
 import org.dbpedia.moss.indexer.IndexerManager;
-import org.dbpedia.moss.indexer.MossEntryHeader;
 import org.dbpedia.moss.servlets.modules.ModuleStore;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.GstoreResource;
@@ -45,14 +31,14 @@ import jakarta.servlet.http.HttpServletResponse;
  * Writes to metadata documents Example:
  * /api/write?layerName=openenergy&resource=someurl
  */
-public class MetadataWriteServlet extends HttpServlet {
+public class DeleteEntryServlet extends HttpServlet {
 
     /**
      *
      */
     private static final long serialVersionUID = 102831973239L;
 
-    final static Logger logger = LoggerFactory.getLogger(MetadataWriteServlet.class);
+    final static Logger logger = LoggerFactory.getLogger(DeleteEntryServlet.class);
 
     private final IndexerManager indexerManager;
 
@@ -60,7 +46,7 @@ public class MetadataWriteServlet extends HttpServlet {
 
     private final ModuleStore store;
 
-    public MetadataWriteServlet(IndexerManager indexerManager, UserDatabaseManager userDatabaseManager) {
+    public DeleteEntryServlet(IndexerManager indexerManager, UserDatabaseManager userDatabaseManager) {
         this.indexerManager = indexerManager;
         this.userDatabaseManager = userDatabaseManager;
 
@@ -76,15 +62,9 @@ public class MetadataWriteServlet extends HttpServlet {
 
         try {
             String requestBaseURL = ENV.MOSS_BASE_URL;
-
             UserInfo userInfo = MossUtils.getUserInfo(userDatabaseManager, req);
             String rdfString = MossUtils.readToString(req.getInputStream());
             Lang contentTypeLanguage = MossUtils.getContentTypeLang(req);
-
-            Model dataModel = ModelFactory.createDefaultModel();
-            try (InputStream rdfInput = new ByteArrayInputStream(rdfString.getBytes())) {
-                RDFDataMgr.read(dataModel, rdfInput, contentTypeLanguage);
-            }
 
             // The two important input parameters
             String resource = MossUtils.pruneSlashes(req.getParameter("resource"));
@@ -109,34 +89,8 @@ public class MetadataWriteServlet extends HttpServlet {
 
             String entryURI = MossUtils.getEntryUri(requestBaseURL, resource, module.getId());
             String headerDocumentPath = MossUtils.getHeaderStoragePath(resource, module.getId(), Lang.JSONLD);
-            GstoreResource headerDocument = new GstoreResource(headerDocumentPath);
-            String currentTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
+            GstoreResource headerDocument = new GstoreResource(headerDocumentPath, userInfo);
 
-            MossEntryHeader header = MossEntryHeader.fromModel(entryURI, headerDocument.readModel(Lang.JSONLD), logger);
-            header.setModifiedTime(currentTime);
-            header.setModuleURI(module.getURI());
-            header.setDatabusResourceURI(resource);
-            header.setContentGraphURI(MossUtils.getContentGraphUri(requestBaseURL, resource, module.getId(), moduleLanguage));
-            header.setLastModifiedBy(userInfo.getUsername());
-
-            Model combinedModel = ModelFactory.createDefaultModel();
-            combinedModel.add(dataModel);
-            combinedModel.add(header.toModel());
-
-            // SHACL test this!
-            doShaclValidation(combinedModel, module);
-
-            // Layer language *should* be the same as the request language, but doesn't have to
-            if (contentTypeLanguage != moduleLanguage) {
-                // Log warning
-                logger.warn("Input RDF language " + contentTypeLanguage.toLongString()
-                        + " is different from the RDF language defined for this layer " + moduleLanguage.toLongString()
-                        + ". Automatic conversion will happen.");
-
-                StringWriter out = new StringWriter();
-                RDFDataMgr.write(out, dataModel, moduleLanguage);
-                rdfString = out.toString();
-            }
 
             logger.info("Resource: {}", resource);
             logger.info("Entry URI: {}", entryURI);
@@ -144,17 +98,27 @@ public class MetadataWriteServlet extends HttpServlet {
 
             // validateResourceForLayer(resource, layer);
             // Get the gstore resource for the header 
-            headerDocument.writeModel(header.toModel(), Lang.JSONLD);
+            int deletionResult = headerDocument.delete();
+
+            if (deletionResult != 200) {
+                throw new Exception("Unable to delete entry header from database.");
+            }
 
             // Get the gstore resource for the content
             String contentDocumentPath = MossUtils.getContentStoragePath(resource, module.getId(), moduleLanguage);
-            GstoreResource contentDocument = new GstoreResource(contentDocumentPath);
-            contentDocument.writeDocument(rdfString, moduleLanguage);
+            GstoreResource contentDocument = new GstoreResource(contentDocumentPath, userInfo);
+
+            deletionResult = contentDocument.delete();
+
+            if (deletionResult != 200) {
+                throw new Exception("Unable to delete entry content from database.");
+            }
 
             indexerManager.updateResource(entryURI, moduleId);
 
             // Create JSON response
             Map<String, String> jsonResponse = new HashMap<>();
+            jsonResponse.put("statusCode", "" + deletionResult);
             jsonResponse.put("path", MossUtils.getDocumentStoragePath(resource, module.getId(), moduleLanguage));
 
             // Convert to JSON and send response
@@ -162,7 +126,7 @@ public class MetadataWriteServlet extends HttpServlet {
             String jsonResponseString = objectMapper.writeValueAsString(jsonResponse);
 
             resp.setContentType("application/json");
-            resp.setStatus(200);
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             resp.getWriter().write(jsonResponseString);
 
         } catch (IllegalArgumentException e) {
@@ -179,42 +143,4 @@ public class MetadataWriteServlet extends HttpServlet {
             resp.sendError(500, e.getMessage());
         }
     }
-
-    private void doShaclValidation(Model model, MossModule module) throws Exception {
-
-        // Load the SHACL shape model from the file path provided by the layer
-        var loadShapesResult = store.loadSubResource(module.getId(), "shapes.ttl");
-
-        if (loadShapesResult.isEmpty()) {
-            return;
-        }
-
-        var shaclString = loadShapesResult.get();
-
-        Model shaclModel = ModelFactory.createDefaultModel();
-
-        try {
-            RDFParser.create()
-                    .source(new StringReader(shaclString))
-                    .lang(Lang.TURTLE)
-                    .parse(shaclModel);
-        } catch (RiotException e) {
-            throw new ValidationException("Unable to parse SHACL for module: " + e.getMessage());
-        }
-
-        // Validate the RDF data model against the SHACL shape model
-        ValidationReport report = ShaclValidator.get().validate(shaclModel.getGraph(), model.getGraph());
-
-        // Check if validation passed or failed
-        if (!report.conforms()) {
-            // Validation failed: throw an exception or handle the report as needed
-            throw new ValidationException("RDF data does not conform to SHACL shapes of layer " + module.getId()
-                    + ": " + report.getEntries().toString());
-        } else {
-            logger.debug("Validation successful: RDF data conforms to SHACL shapes.");
-        }
-    }
-
-   
-
 }

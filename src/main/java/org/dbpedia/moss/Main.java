@@ -16,13 +16,14 @@ import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.indexer.OntologyLoader;
+import org.dbpedia.moss.servlets.DeleteEntryServlet;
 import org.dbpedia.moss.servlets.IndexerPreviewServlet;
 import org.dbpedia.moss.servlets.MetadataBrowseServlet;
 import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.dbpedia.moss.servlets.MetadataValidationServlet;
-import org.dbpedia.moss.servlets.MetadataWriteServlet;
 import org.dbpedia.moss.servlets.MossProxyServlet;
 import org.dbpedia.moss.servlets.ResourceServlet;
+import org.dbpedia.moss.servlets.SaveEntryServlet;
 import org.dbpedia.moss.servlets.SparqlProxyServlet;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
 import org.dbpedia.moss.servlets.modules.ModuleApiServlet;
@@ -158,12 +159,19 @@ public class Main {
 
         FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
 
-        ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager, userDatabaseManager));
-        metadataWriteServletHolder.setInitOrder(0);
-        metadataWriteServletHolder.getRegistration().setMultipartConfig(multipartConfig);
+        ServletHolder saveEntryServletHolder = new ServletHolder(new SaveEntryServlet(indexerManager, userDatabaseManager));
+        saveEntryServletHolder.setInitOrder(0);
+        saveEntryServletHolder.getRegistration().setMultipartConfig(multipartConfig);
+
+        ServletHolder deleteEntryServletHolder = new ServletHolder(new DeleteEntryServlet(indexerManager, userDatabaseManager));
+        deleteEntryServletHolder.setInitOrder(0);
+        deleteEntryServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
         apiContext.addFilter(authFilterHolder, "/save-entry", null);
-        apiContext.addServlet(metadataWriteServletHolder, "/save-entry");
+        apiContext.addServlet(saveEntryServletHolder, "/save-entry");
+
+        apiContext.addFilter(authFilterHolder, "/delete-entry", null);
+        apiContext.addServlet(deleteEntryServletHolder, "/delete-entry");
 
         ServletHolder metadataValidationServletHolder = new ServletHolder(new MetadataValidationServlet(userDatabaseManager));
         metadataValidationServletHolder.getRegistration().setMultipartConfig(multipartConfig);
