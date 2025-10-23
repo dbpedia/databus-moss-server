@@ -1,7 +1,4 @@
 ---
-indexerConfigPath: indexers
-templatePath: templates
-contextPath: context
 modulePath: modules
 templateResourcePlaceholder: $DATABUS_RESOURCE
 ontologies:

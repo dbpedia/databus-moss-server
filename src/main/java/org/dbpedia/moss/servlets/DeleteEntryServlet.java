@@ -63,8 +63,6 @@ public class DeleteEntryServlet extends HttpServlet {
         try {
             String requestBaseURL = ENV.MOSS_BASE_URL;
             UserInfo userInfo = MossUtils.getUserInfo(userDatabaseManager, req);
-            String rdfString = MossUtils.readToString(req.getInputStream());
-            Lang contentTypeLanguage = MossUtils.getContentTypeLang(req);
 
             // The two important input parameters
             String resource = MossUtils.pruneSlashes(req.getParameter("resource"));
