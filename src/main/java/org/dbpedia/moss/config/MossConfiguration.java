@@ -30,6 +30,8 @@ public class MossConfiguration {
 
     private String modulePath;
 
+    private String terminologyPath;
+
     private String templateResourcePlaceholder;
 
     private List<MossModule> modules;
@@ -67,15 +69,16 @@ public class MossConfiguration {
         this.contextPath = contextPath;
     }
 
-    private List<MossOntologyConfiguration> ontologies;
+
+    private List<MossTerminology> terminologies;
 
 
-    public List<MossOntologyConfiguration> getOntologies() {
-        return ontologies;
+    public List<MossTerminology> getTerminologies() {
+        return terminologies;
     }
 
-    public void setOntologies(List<MossOntologyConfiguration> ontologies) {
-        this.ontologies = ontologies;
+    public void setOntologies(List<MossTerminology> ontologies) {
+        this.terminologies = ontologies;
     }
     
     @JsonIgnore
@@ -95,37 +98,41 @@ public class MossConfiguration {
             // Get the directory of the config file for resolving relative paths
             config.configDir = file.getParentFile();
             
-            File moduleDirectory = new File(config.configDir, config.getModulePath());
-            config.modules = loadModules(moduleDirectory);
-
-           
-            if(config.getOntologies() == null) {
-                config.setOntologies(new ArrayList<>());
-            }
-
-            /*
-            // Load template content for each MossLayerType
-            for (MossLayerConfiguration layer : config.getLayers()) {
-                for(String indexerPath : layer.getIndexers()) {
-
-                    if(!indexerMap.containsKey(indexerPath)) {
-                        MossIndexerConfiguration newIndexerConfig = new MossIndexerConfiguration();
-                        newIndexerConfig.setConfigPath(indexerPath);
-                        indexerMap.put(indexerPath, newIndexerConfig);
-                    }
-
-                    MossIndexerConfiguration indexerConfig = indexerMap.get(indexerPath);
-                    indexerConfig.addLayer(layer.getName());
-                }
-            }
-
-            config.indexers = new ArrayList<>(indexerMap.values());
-            */
+            config.modules = loadModules(config.getModuleDirectory());
+            config.terminologies = loadTerminologies(config.getTerminologyDirectory());
 
             return config;
         } catch (IOException e) {
             return null;
         }
+    }
+
+    private static List<MossTerminology> loadTerminologies(File directory) throws IOException {
+        
+        List<MossTerminology> result = new ArrayList<>();
+
+        if (directory == null || !directory.isDirectory()) {
+            return result;
+        }
+
+        File[] children = directory.listFiles();
+        if (children == null) {
+            return result;
+        }
+
+        for (File child : children) {
+            if (child.isDirectory()) {
+                File terminologyFile = new File(child, "terminology.yml");
+                if (terminologyFile.exists() && terminologyFile.isFile()) {
+                    // Handle the module.yml file (e.g., load or parse it)
+                    ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
+                    MossTerminology terminology = mapper.readValue(terminologyFile, MossTerminology.class);
+                    result.add(terminology);
+                }
+            }
+        }
+
+        return result;
     }
 
     private static List<MossModule> loadModules(File directory) throws IOException {
@@ -214,24 +221,8 @@ public class MossConfiguration {
             }
         }
 
-        
-
-
         MossConfiguration mossConfiguration = MossConfiguration.load(configFile);
-        // mossConfiguration.validate();
-
-        /*
-
-        try {
-            configDir = configFile.getParentFile();
-        } catch (Exception e) {
-        }
-        ModuleStore store = new ModuleStore(mossConfiguration.getModuleDirectory().toPath());
-        
-        for(MossModule module : mossConfiguration.getModules()) {
-            store.saveModule(module);
-        } */
-
+       
         instance = mossConfiguration;
     }
 
@@ -265,7 +256,10 @@ public class MossConfiguration {
         return new File(configDir, getModulePath());
     }
 
-
+    @JsonIgnore
+    public File getTerminologyDirectory() {
+        return new File(configDir, getTerminologyPath());
+    }
  
 
     public String getModulePath() {
@@ -278,6 +272,14 @@ public class MossConfiguration {
 
     public List<MossModule> getModules() {
         return modules;
+    }
+
+    public String getTerminologyPath() {
+        return terminologyPath;
+    }
+
+    public void setTerminologyPath(String terminologyPath) {
+        this.terminologyPath = terminologyPath;
     }
 
 

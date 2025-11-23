@@ -1,40 +1,41 @@
-package org.dbpedia.moss.servlets.modules;
+package org.dbpedia.moss.servlets.terminologies;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.indexer.IndexerManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.dbpedia.moss.servlets.modules.ISubResourceHandler;
+import org.dbpedia.moss.utils.LookupServer;
 
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-public class ModuleApiServlet extends HttpServlet implements IIndexerChangedHandler {
+public class TerminologyServlet extends HttpServlet {
 
-    private final ModuleHandler moduleHandler;
+    private final TerminologyHandler terminologyHandler;
 
-    private final IndexerManager indexerManager;
     // Each entry: regex -> handler
     private final List<RegexHandler> subResourceHandlers;
 
-    private final ModuleStore moduleStore;
+    private final TerminologyStore store = new TerminologyStore(MossConfiguration.get().getTerminologyDirectory().toPath());
 
-    final static Logger logger = LoggerFactory.getLogger(ModuleApiServlet.class);
+    private final DataHandler dataHandler;
 
-    public ModuleApiServlet(IndexerManager indexerManager) {
-        this.indexerManager = indexerManager;
-        moduleHandler = new ModuleHandler(this);
-        moduleStore = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
+    private final IndexerQueryHandler indexQueryHandler;
+
+    // final static Logger logger = LoggerFactory.getLogger(TerminologyApiServlet.class);
+    public TerminologyServlet() {
+        terminologyHandler = new TerminologyHandler();
+        dataHandler = new DataHandler(this::onTerminologyChanged);
+        indexQueryHandler = new IndexerQueryHandler(this::onTerminologyChanged);
+        SearchHandler searchHandler = new SearchHandler();
+
         subResourceHandlers = List.of(
-                new RegexHandler(Pattern.compile("^shapes$"), new ShapesHandler()),
-                new RegexHandler(Pattern.compile("^context$"), new ContextHandler()),
-                new RegexHandler(Pattern.compile("^indexer$"), new IndexerHandler(this)),
-                new RegexHandler(Pattern.compile("^template$"), new TemplateHandler())
+                new RegexHandler(Pattern.compile("^indexer-query$"), indexQueryHandler),
+                new RegexHandler(Pattern.compile("^data$"), dataHandler),
+                new RegexHandler(Pattern.compile("^search$"), searchHandler)
         );
     }
 
@@ -42,19 +43,19 @@ public class ModuleApiServlet extends HttpServlet implements IIndexerChangedHand
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         PathParts parts = parsePath(req);
 
-        if (parts.moduleId == null) {
-            moduleHandler.listModules(req, resp);
+        if (parts.terminologyId == null) {
+            terminologyHandler.listTerminologies(req, resp);
             return;
         }
 
         if (parts.subResource == null) {
-            moduleHandler.getModule(req, resp, parts.moduleId);
+            terminologyHandler.getTerminology(req, resp, parts.terminologyId);
             return;
         }
 
         ISubResourceHandler handler = resolveHandler(parts.subResource);
         if (handler != null) {
-            handler.get(req, resp, parts.moduleId);
+            handler.get(req, resp, parts.terminologyId);
         } else {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Unknown subresource: " + parts.subResource);
         }
@@ -64,31 +65,31 @@ public class ModuleApiServlet extends HttpServlet implements IIndexerChangedHand
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         PathParts parts = parsePath(req);
 
-        if (parts.moduleId != null) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "POST allowed only on module collection");
+        if (parts.terminologyId != null) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "POST allowed only on terminology collection");
             return;
         }
 
-        moduleHandler.createModule(req, resp);
+        terminologyHandler.createTerminology(req, resp);
     }
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         PathParts parts = parsePath(req);
 
-        if (parts.moduleId == null) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "PUT requires moduleId");
+        if (parts.terminologyId == null) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "PUT requires terminologyId");
             return;
         }
 
         if (parts.subResource == null) {
-            moduleHandler.updateModule(req, resp, parts.moduleId);
+            terminologyHandler.updateTerminology(req, resp, parts.terminologyId);
             return;
         }
 
         ISubResourceHandler handler = resolveHandler(parts.subResource);
         if (handler != null) {
-            handler.update(req, resp, parts.moduleId);
+            handler.update(req, resp, parts.terminologyId);
         } else {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Unknown subresource: " + parts.subResource);
         }
@@ -98,38 +99,21 @@ public class ModuleApiServlet extends HttpServlet implements IIndexerChangedHand
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         PathParts parts = parsePath(req);
 
-        if (parts.moduleId == null) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "DELETE requires moduleId");
+        if (parts.terminologyId == null) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "DELETE requires terminologyId");
             return;
         }
 
         if (parts.subResource == null) {
-            moduleHandler.deleteModule(req, resp, parts.moduleId);
+            terminologyHandler.deleteTerminology(req, resp, parts.terminologyId);
             return;
         }
 
         ISubResourceHandler handler = resolveHandler(parts.subResource);
         if (handler != null) {
-            handler.delete(req, resp, parts.moduleId);
+            handler.delete(req, resp, parts.terminologyId);
         } else {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Unknown subresource: " + parts.subResource);
-        }
-    }
-
-    @Override
-    public void onIndexerChanged(String moduleId) {
-        try {
-            Optional<String> indexerResource = moduleStore.loadSubResource(moduleId,
-                    IndexerHandler.INDEXER_FILE);
-
-            if (indexerResource.isEmpty()) {
-                indexerManager.removeIndexGroup(moduleId);
-            } else {
-                indexerManager.createOrUpdateIndexGroup(moduleId, indexerResource.get());
-            }
-
-        } catch (IOException e) {
-            logger.error(e.getMessage());
         }
     }
 
@@ -152,18 +136,18 @@ public class ModuleApiServlet extends HttpServlet implements IIndexerChangedHand
             return new PathParts(null, null);
         }
 
-        String moduleId = segments[1];
+        String terminologyId = segments[1];
         String subResource = segments.length > 2 ? segments[2] : null;
-        return new PathParts(moduleId, subResource);
+        return new PathParts(terminologyId, subResource);
     }
 
     private static class PathParts {
 
-        final String moduleId;
+        final String terminologyId;
         final String subResource;
 
-        PathParts(String moduleId, String subResource) {
-            this.moduleId = moduleId;
+        PathParts(String terminologyId, String subResource) {
+            this.terminologyId = terminologyId;
             this.subResource = subResource;
         }
     }
@@ -178,4 +162,25 @@ public class ModuleApiServlet extends HttpServlet implements IIndexerChangedHand
             this.handler = handler;
         }
     }
+
+    private void onTerminologyChanged(String terminologyId) {
+
+        try {
+            var terminologyResponse = store.loadTerminology(terminologyId);
+
+            if (terminologyResponse.isPresent()) {
+
+                var terminology = terminologyResponse.get();
+                
+                try (LookupServer lookupServer = new LookupServer(terminology.getIndexPath())) {
+                    lookupServer.index(terminology.getDataModel(), terminology.getIndexerQuery());
+                }
+
+            }
+
+        } catch (IOException e) {
+
+        }
+    }
+
 }

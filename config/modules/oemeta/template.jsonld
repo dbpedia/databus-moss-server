@@ -1,8 +1,12 @@
 {
   "@context": {
-      "schema": "https://schema.org/",
-      "keywords": "schema:keywords"
+    "moss": "http://dataid.dbpedia.org/ns/moss#",
+    "related": {
+      "@id": "moss:related",
+      "@type": "@id"
+    }
   },
   "@id": "$DATABUS_RESOURCE",
-  "keywords" : "simple"
+  "related": ""
 }
+

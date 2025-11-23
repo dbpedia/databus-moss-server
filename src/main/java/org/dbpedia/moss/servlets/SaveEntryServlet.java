@@ -74,6 +74,8 @@ public class SaveEntryServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
+        long totalStart = System.currentTimeMillis();
+
         try {
             String requestBaseURL = ENV.MOSS_BASE_URL;
 
@@ -86,7 +88,6 @@ public class SaveEntryServlet extends HttpServlet {
                 RDFDataMgr.read(dataModel, rdfInput, contentTypeLanguage);
             }
 
-            // The two important input parameters
             String resource = MossUtils.pruneSlashes(req.getParameter("resource"));
             String moduleId = req.getParameter("module");
 
@@ -102,7 +103,7 @@ public class SaveEntryServlet extends HttpServlet {
             var module = moduleOpt.get();
 
             if (module == null) {
-                throw new IllegalArgumentException("Specified module is unkown to this MOSS instance: " + moduleId);
+                throw new IllegalArgumentException("Specified module is unknown to this MOSS instance: " + moduleId);
             }
 
             Lang moduleLanguage = RDFLanguages.contentTypeToLang(module.getLanguage());
@@ -123,12 +124,9 @@ public class SaveEntryServlet extends HttpServlet {
             combinedModel.add(dataModel);
             combinedModel.add(header.toModel());
 
-            // SHACL test this!
             doShaclValidation(combinedModel, module);
 
-            // Layer language *should* be the same as the request language, but doesn't have to
             if (contentTypeLanguage != moduleLanguage) {
-                // Log warning
                 logger.warn("Input RDF language " + contentTypeLanguage.toLongString()
                         + " is different from the RDF language defined for this layer " + moduleLanguage.toLongString()
                         + ". Automatic conversion will happen.");
@@ -142,24 +140,48 @@ public class SaveEntryServlet extends HttpServlet {
             logger.info("Entry URI: {}", entryURI);
             logger.info("Storage Language: {}", moduleLanguage);
 
-            // validateResourceForLayer(resource, layer);
-            // Get the gstore resource for the header 
+            long headerStart = System.currentTimeMillis();
             headerDocument.writeModel(header.toModel(), Lang.JSONLD);
+            long headerEnd = System.currentTimeMillis();
 
-            // Get the gstore resource for the content
+            long contentStart = System.currentTimeMillis();
             String contentDocumentPath = MossUtils.getContentStoragePath(resource, module.getId(), moduleLanguage);
             GstoreResource contentDocument = new GstoreResource(contentDocumentPath);
             contentDocument.writeDocument(rdfString, moduleLanguage);
+            long contentEnd = System.currentTimeMillis();
+
+            long totalEnd = System.currentTimeMillis();
 
             indexerManager.updateResource(entryURI, moduleId);
 
-            // Create JSON response
             Map<String, String> jsonResponse = new HashMap<>();
             jsonResponse.put("path", MossUtils.getDocumentStoragePath(resource, module.getId(), moduleLanguage));
 
-            // Convert to JSON and send response
             ObjectMapper objectMapper = new ObjectMapper();
             String jsonResponseString = objectMapper.writeValueAsString(jsonResponse);
+
+            logger.info("Stored: {}", header.getURI());
+
+            long totalTime = totalEnd - totalStart;
+            long headerTime = headerEnd - headerStart;
+            long contentTime = contentEnd - contentStart;
+            long remainingTime = totalTime - headerTime - contentTime;
+
+            double headerPct = 0.0;
+            double contentPct = 0.0;
+            double remainingPct = 0.0;
+
+            if (totalTime > 0) {
+                headerPct = (headerTime * 100.0) / totalTime;
+                contentPct = (contentTime * 100.0) / totalTime;
+                remainingPct = (remainingTime * 100.0) / totalTime;
+            }
+
+            logger.info("Request profiling: total={}ms | header={}ms ({}%) | content={}ms ({}%) | remaining={}ms ({}%)",
+                    totalTime,
+                    headerTime, String.format("%.2f", headerPct),
+                    contentTime, String.format("%.2f", contentPct),
+                    remainingTime, String.format("%.2f", remainingPct));
 
             resp.setContentType("application/json");
             resp.setStatus(200);
@@ -214,7 +236,5 @@ public class SaveEntryServlet extends HttpServlet {
             logger.debug("Validation successful: RDF data conforms to SHACL shapes.");
         }
     }
-
-   
 
 }

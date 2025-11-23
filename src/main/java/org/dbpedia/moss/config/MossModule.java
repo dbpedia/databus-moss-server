@@ -8,6 +8,8 @@ import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.RDFUris;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class MossModule {
 
@@ -59,7 +61,7 @@ public class MossModule {
 
     @JsonIgnore
     public String getURI() {
-        return ENV.MOSS_BASE_URL + "/module/" + getId();
+        return ENV.MOSS_BASE_URL + "/modules/" + getId();
     }
 
     @JsonIgnore
@@ -82,6 +84,19 @@ public class MossModule {
         }
 
         return model;
+    }
+
+    @JsonIgnore
+    public ObjectNode toJson() {
+        ObjectMapper mapper = new ObjectMapper();
+
+        ObjectNode body = mapper.createObjectNode();
+        body.put("id", getId());
+        body.put("label", getLabel());
+        body.put("description", getDescription());
+        body.put("language", getLanguage());
+
+        return body;
     }
 
 }

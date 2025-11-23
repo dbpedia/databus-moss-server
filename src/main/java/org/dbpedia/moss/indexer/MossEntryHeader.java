@@ -33,7 +33,7 @@ public class MossEntryHeader {
 
     private String databusResourceURI;
 
-    private String layerURI;
+    private String moduleURI;
 
     private String contentGraphURI;
 
@@ -49,12 +49,12 @@ public class MossEntryHeader {
         this.databusResourceURI = databusResource;
     }
 
-    public String getLayerURI() {
-        return layerURI;
+    public String getModuleURI() {
+        return moduleURI;
     }
 
-    public void setModuleURI(String layerName) {
-        this.layerURI = layerName;
+    public void setModuleURI(String moduleURI) {
+        this.moduleURI = moduleURI;
     }
 
     public String getCreatedTime() {
@@ -103,7 +103,7 @@ public class MossEntryHeader {
         
         layerResource.addProperty(RDF.type, RDFUris.MOSS_METADATA_ENTRY);
         // layerResource.addProperty(RDFUris.MOSS_LAYER, );
-        layerResource.addProperty(RDFUris.MOSS_INSTANCE_OF, model.createResource(layerURI));
+        layerResource.addProperty(RDFUris.MOSS_INSTANCE_OF, model.createResource(moduleURI));
         layerResource.addProperty(RDFUris.MOSS_EXTENDS, model.createResource(databusResourceURI));
         layerResource.addProperty(DCTerms.created,  model.createTypedLiteral(createdTime, XSDDatatype.XSDdateTime));
         layerResource.addProperty(DCTerms.modified, model.createTypedLiteral(modifiedTime, XSDDatatype.XSDdateTime));

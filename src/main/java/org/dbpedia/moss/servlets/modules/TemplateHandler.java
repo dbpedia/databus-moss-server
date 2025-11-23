@@ -69,15 +69,6 @@ public class TemplateHandler implements ISubResourceHandler {
 
         String body = req.getReader().lines().reduce("", (acc, line) -> acc + line + "\n");
         String expectedFilename = getTemplateFileName(module);
-        String requestedPath = req.getPathInfo();
-        String requestedFilename = requestedPath.substring(requestedPath.lastIndexOf('/') + 1);
-
-        // Reject if file extension does not match module language
-        if (!expectedFilename.equals(requestedFilename)) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST,
-                    "Template file extension does not match module language. Expected: " + expectedFilename);
-            return;
-        }
 
         String contentType = getContentType(module);
         Lang lang = RDFLanguages.contentTypeToLang(contentType);

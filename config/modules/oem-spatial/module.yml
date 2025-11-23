@@ -1,0 +1,5 @@
+---
+id: oem-spatial
+label: OEM Spatial
+description: Spatial data for datasets.
+language: application/ld+json

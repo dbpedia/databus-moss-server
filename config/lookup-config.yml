@@ -7,7 +7,6 @@ prefixMatchBoost: 5
 fuzzyMatchBoost: 2
 fuzzyEditDistance: 2
 fuzzyPrefixLength: 2
-boostFormula: 1 + 0.1 * ln(annotatedCount + 1)
 maxResults: 1000
 format: JSON
 minScore: 0.1
@@ -31,6 +30,20 @@ lookupFields:
     type: uri
     highlight: false
     required: true
+    tokenize: true
+    exact: true
+    allowPartialMatch: true
+    weight: 10
+  - name: spatial
+    type: uri
+    highlight: false
+    tokenize: true
+    exact: true
+    allowPartialMatch: true
+    weight: 10
+  - name: fundingAgency
+    type: uri
+    highlight: false
     tokenize: true
     exact: true
     allowPartialMatch: true

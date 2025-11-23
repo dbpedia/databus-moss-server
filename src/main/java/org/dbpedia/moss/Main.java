@@ -12,24 +12,24 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.sys.JenaSystem;
 import org.dbpedia.moss.config.MossConfiguration;
+import org.dbpedia.moss.config.MossTerminology;
 import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.indexer.IndexerManager;
-import org.dbpedia.moss.indexer.OntologyLoader;
 import org.dbpedia.moss.servlets.DeleteEntryServlet;
+import org.dbpedia.moss.servlets.EntriesServlet;
 import org.dbpedia.moss.servlets.IndexerPreviewServlet;
-import org.dbpedia.moss.servlets.MetadataBrowseServlet;
 import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.dbpedia.moss.servlets.MetadataValidationServlet;
-import org.dbpedia.moss.servlets.MossProxyServlet;
-import org.dbpedia.moss.servlets.ResourceServlet;
+import org.dbpedia.moss.servlets.ProxyServlet;
 import org.dbpedia.moss.servlets.SaveEntryServlet;
 import org.dbpedia.moss.servlets.SparqlProxyServlet;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
 import org.dbpedia.moss.servlets.modules.ModuleApiServlet;
-import org.dbpedia.moss.servlets.modules.ModuleResourceServlet;
+import org.dbpedia.moss.servlets.terminologies.TerminologyServlet;
 import org.dbpedia.moss.utils.Constants;
 import org.dbpedia.moss.utils.ENV;
+import org.dbpedia.moss.utils.LookupServer;
 import org.dbpedia.moss.utils.RequestMethodFilterWrapper;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.DefaultIdentityService;
@@ -94,7 +94,13 @@ public class Main {
 
         // waitForGstore(ENV.GSTORE_BASE_URL);
         MossConfiguration config = MossConfiguration.get();
-        OntologyLoader.load(config);
+        // OntologyLoader.load(config);
+        
+        for(MossTerminology terminology : config.getTerminologies()) {
+            try (LookupServer lookupServer = new LookupServer(terminology.getIndexPath())) {
+                lookupServer.index(terminology.getDataModel(), terminology.getIndexerQuery());
+            }
+        }
 
         UserDatabaseManager userDatabaseManager = new UserDatabaseManager(ENV.USER_DATABASE_PATH);
 
@@ -119,18 +125,22 @@ public class Main {
 
         MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
 
-        ServletContextHandler sparqlProxyContext = new ServletContextHandler();
-        sparqlProxyContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
-        sparqlProxyContext.setContextPath("/sparql");
-        sparqlProxyContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/*");
+        ServletContextHandler rootContext = new ServletContextHandler();
+        rootContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
+        rootContext.setContextPath("");
+        
+        rootContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/sparql");
+        rootContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/sparql/");  
+
+      
 
         // Context handler for the unprotected routes
-        ServletContextHandler resourceContext = new ServletContextHandler();
-        resourceContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        resourceContext.setContextPath("/entry/*");
-        resourceContext.addServlet(new ServletHolder(new ResourceServlet()), "/*");
+        // ServletContextHandler resourceContext = new ServletContextHandler();
+        // resourceContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        // resourceContext.setContextPath("/entries/*");
+        // resourceContext.addServlet(new ServletHolder(new ResourceServlet()), "/*");
 
-        ServletContextHandler moduleContext = createSimpleContext("/module/", new ModuleResourceServlet());
+        // ServletContextHandler moduleContext = createSimpleContext("/module/", new ModuleResourceServlet());
 
         // Context handler for the unprotected routes
         ServletContextHandler readContext = new ServletContextHandler();
@@ -138,13 +148,16 @@ public class Main {
         readContext.setContextPath("/g/*");
         readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
+        
+        ServletHolder browserProxyServlet = new ServletHolder(new EntriesServlet()); //(new ReplaceProxyServlet(ENV.GSTORE_BASE_URL + "/file/content", "/file/content", "/entries"));
         // Context handler for the unprotected routes
-        ServletContextHandler browseContext = new ServletContextHandler();
-        browseContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        browseContext.setContextPath("/file/*");
-        browseContext.addServlet(new ServletHolder(new MetadataBrowseServlet()), "/*");
+        ServletContextHandler entriesContext = new ServletContextHandler();
+        entriesContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
+        entriesContext.setContextPath("/entries/*");
+        entriesContext.addServlet(browserProxyServlet, "/*"); //new ServletHolder(new MetadataBrowseServlet()), "/*");
 
-        ServletHolder searchProxyServlet = new ServletHolder(new MossProxyServlet(ENV.LOOKUP_BASE_URL + "/api"));
+        ServletHolder searchProxyServlet = new ServletHolder(new ProxyServlet(ENV.LOOKUP_BASE_URL + "/api"));
+
         // ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
         // ServletHolder layerIndexerConfigurationServlet = new ServletHolder(new LayerIndexerConfigurationServlet());
 
@@ -155,7 +168,12 @@ public class Main {
 
         AdminFilter adminFilter = new AdminFilter();
         AuthenticationFilter authFilter = new AuthenticationFilter(new APIKeyValidator(userDatabaseManager));
-        setupReadOnlyAdminServlet(apiContext, new ModuleApiServlet(indexerManager), "/modules/*", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(rootContext, new ModuleApiServlet(indexerManager), "/modules/*", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(rootContext, new TerminologyServlet(), "/terminologies/*", authFilter, adminFilter);
+
+        rootContext.addFilter(corsFilterHolder, "/entries/*", EnumSet.of(DispatcherType.REQUEST));
+        rootContext.addServlet(browserProxyServlet, "/entries/*"); //new ServletHolder(new MetadataBrowseServlet()), "/*");
+
 
         FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
 
@@ -178,7 +196,6 @@ public class Main {
         apiContext.addFilter(authFilterHolder, "/validate-entry", null);
         apiContext.addServlet(metadataValidationServletHolder, "/validate-entry");
 
-        
         ServletHolder indexerPreviewServlet = new ServletHolder(new IndexerPreviewServlet(userDatabaseManager));
         indexerPreviewServlet.getRegistration().setMultipartConfig(multipartConfig);
         apiContext.addFilter(authFilterHolder, "/get-indexer-preview", null);
@@ -196,11 +213,9 @@ public class Main {
         HandlerList handlers = new HandlerList();
         handlers.setHandlers(new Handler[]{
             readContext,
-            moduleContext,
-            resourceContext,
-            browseContext,
+            entriesContext,
             apiContext,
-            sparqlProxyContext,});
+            rootContext,});
 
         server.setHandler(handlers);
 

@@ -97,7 +97,8 @@ public class IndexerManager {
 
     public void updateResource(String resourceURI, String indexGroupName) {
         if (indexGroupName != null && !indexGroups.containsKey(indexGroupName)) {
-            throw new IllegalArgumentException(String.format("Index group not found: %s", indexGroupName));
+            return;
+            // throw new IllegalArgumentException(String.format("Index group not found: %s", indexGroupName));
         }
 
         IndexGroup indexGroup = null;

@@ -36,6 +36,8 @@ import java.util.regex.Pattern;
 
 import org.dbpedia.moss.db.UserDatabaseManager;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 public final class MossUtils {
 
     public static final Pattern baseRegex = Pattern.compile("^(https?://[^/]+)");
@@ -238,7 +240,7 @@ public final class MossUtils {
             throws MalformedURLException, URISyntaxException {
         resource = resource.replace("#", "/");
         String databusResourceURIFragments = MossUtils.getMossDocumentUriFragments(resource);
-        return baseUrl + "/entry/" + databusResourceURIFragments + "/" + layerName;
+        return baseUrl + "/entries/" + databusResourceURIFragments + "/" + layerName;
     }
 
     public static String getMossDocumentUriFragments(String resourceURI) throws MalformedURLException, URISyntaxException {
@@ -412,16 +414,35 @@ public final class MossUtils {
         }
     }
 
-    public static String uriToName(String layerURI) {
-        int lastSlashIndex = layerURI.lastIndexOf("/");
+    public static String uriToName(String uri) {
+
+        if (uri == null) {
+            return null;
+        }
+
+        int lastSlashIndex = uri.lastIndexOf("/");
 
         // Ensure there is a valid slash and return the substring after it
-        if (lastSlashIndex != -1 && lastSlashIndex < layerURI.length() - 1) {
-            return layerURI.substring(lastSlashIndex + 1);
+        if (lastSlashIndex != -1 && lastSlashIndex < uri.length() - 1) {
+            return uri.substring(lastSlashIndex + 1);
         }
 
         // Return an empty string or handle cases where no slash is found
-        return layerURI;
+        return uri;
+    }
+
+   
+
+    public static String navigateUp(String requestURI) {
+        if (requestURI == null || requestURI.isBlank()) {
+            return "/";
+        }
+        String trimmed = requestURI.endsWith("/") ? requestURI.substring(0, requestURI.length() - 1) : requestURI;
+        int lastSlash = trimmed.lastIndexOf('/');
+        if (lastSlash <= 0) {
+            return "/";
+        }
+        return trimmed.substring(0, lastSlash);
     }
 
 }
