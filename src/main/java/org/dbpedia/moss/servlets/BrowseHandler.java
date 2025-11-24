@@ -85,6 +85,11 @@ public class BrowseHandler {
 
     private String buildGstoreUrl(HttpServletRequest req) {
         String path = req.getPathInfo();
+
+        if(path == null) {
+            path = "";
+        }
+        
         return gstoreBaseUrl + "/file/header" + path;
     }
 

@@ -1,8 +1,11 @@
 package org.dbpedia.moss.servlets;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -10,9 +13,13 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
+import org.apache.jena.riot.RiotException;
 import org.apache.jena.vocabulary.DCTerms;
 import org.apache.jena.vocabulary.RDF;
 import org.dbpedia.moss.config.MossConfiguration;
+import org.dbpedia.moss.db.UserDatabaseManager;
+import org.dbpedia.moss.db.UserInfo;
+import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.modules.ModuleStore;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.GstoreResource;
@@ -44,8 +51,97 @@ public class ResourceHandler {
 
     private final ObjectMapper jsonMapper = new ObjectMapper();
 
-    public ResourceHandler() {
+    private final UserDatabaseManager userDatabaseManager;
+
+    private final IndexerManager indexerManager;
+
+    public ResourceHandler(IndexerManager indexerManager, UserDatabaseManager userDatabaseManager) {
+        this.indexerManager = indexerManager;
+        this.userDatabaseManager = userDatabaseManager;
         moduleStore = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
+    }
+
+    public void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+        try {
+            UserInfo userInfo = MossUtils.getUserInfo(userDatabaseManager, req);
+
+            // The two important input parameters
+            String requestURI = req.getRequestURI();
+            String requestPath = requestURI.substring(9);
+            String extension = Lang.JSONLD.getFileExtensions().getFirst();
+            String headerDocumentPath = String.format("/header/%s.%s", requestPath, extension);
+
+            GstoreResource headerDocument = new GstoreResource(headerDocumentPath);
+            Model headerModel = headerDocument.readModel(Lang.JSONLD);
+
+            if (headerModel == null) {
+                resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            Resource entryResource = headerModel.listSubjectsWithProperty(RDF.type, RDFUris.MOSS_METADATA_ENTRY).nextResource();
+            var moduleURI = entryResource.getPropertyResourceValue(RDFUris.MOSS_INSTANCE_OF).getURI();
+            var resourceUri = entryResource.getPropertyResourceValue(RDFUris.MOSS_EXTENDS).getURI();
+
+            String moduleId = MossUtils.uriToName(moduleURI);
+            
+            var moduleRequest = moduleStore.loadModule(moduleId);
+
+            if (moduleRequest.isEmpty()) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Module not found: " + moduleId);
+                return;
+            }
+
+            var module = moduleRequest.get();
+
+            Lang moduleLanguage = RDFLanguages.contentTypeToLang(module.getLanguage());
+
+            // Get the gstore resource for the header 
+            int deletionResult = headerDocument.delete();
+
+            if (deletionResult != 200) {
+                throw new Exception("Unable to delete entry header from database.");
+            }
+
+            // Get the gstore resource for the content
+            String contentDocumentPath = MossUtils.getContentStoragePath(resourceUri, module.getId(), moduleLanguage);
+            GstoreResource contentDocument = new GstoreResource(contentDocumentPath, userInfo);
+
+            deletionResult = contentDocument.delete();
+
+            if (deletionResult != 200) {
+                throw new Exception("Unable to delete entry content from database.");
+            }
+
+            indexerManager.updateResource(entryResource.getURI(), moduleId);
+
+            // Create JSON response
+            Map<String, String> jsonResponse = new HashMap<>();
+            jsonResponse.put("statusCode", "" + deletionResult);
+            jsonResponse.put("path", MossUtils.getDocumentStoragePath(resourceUri, module.getId(), moduleLanguage));
+
+            // Convert to JSON and send response
+            ObjectMapper objectMapper = new ObjectMapper();
+            String jsonResponseString = objectMapper.writeValueAsString(jsonResponse);
+
+            resp.setContentType("application/json");
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+            resp.getWriter().write(jsonResponseString);
+
+        } catch (IllegalArgumentException e) {
+            logger.error("IllegalArgumentException caught", e);
+            resp.setHeader("Content-Type", "application/json");
+            resp.sendError(400, e.getMessage());
+        } catch (UnsupportedEncodingException | URISyntaxException | ValidationException | RiotException e) {
+            logger.error("Client error caught", e);
+            resp.setHeader("Content-Type", "application/json");
+            resp.sendError(400, e.getMessage());
+        } catch (Exception e) {
+            logger.error("Unexpected exception caught", e);
+            resp.setHeader("Content-Type", "application/json");
+            resp.sendError(500, e.getMessage());
+        }
     }
 
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -145,6 +241,7 @@ public class ResourceHandler {
 
         Resource resource = headerModel.listSubjectsWithProperty(RDF.type, RDFUris.MOSS_METADATA_ENTRY).nextResource();
 
+        hal.put("uri", resource.getURI());
         hal.put("module", resource.getPropertyResourceValue(RDFUris.MOSS_INSTANCE_OF).getURI());
         hal.put("extends", resource.getPropertyResourceValue(RDFUris.MOSS_EXTENDS).getURI());
 

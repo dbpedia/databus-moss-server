@@ -4,6 +4,8 @@ import java.io.IOException;
 
 import org.apache.jena.rdfconnection.RDFConnection;
 import org.apache.jena.rdfconnection.RDFConnectionRemote;
+import org.dbpedia.moss.db.UserDatabaseManager;
+import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.utils.ENV;
 
 import jakarta.servlet.ServletException;
@@ -13,20 +15,23 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class EntriesServlet extends HttpServlet {
 
-    private ResourceHandler resourceHandler;
-    private BrowseHandler browseHandler;
+    private final ResourceHandler resourceHandler;
+    private final BrowseHandler browseHandler;
 
     private static final String ASK_TEMPLATE
             = "ASK WHERE { <%s> ?p ?o }";
 
-    @Override
-    public void init() throws ServletException {
-        resourceHandler = new ResourceHandler();
+    public EntriesServlet(IndexerManager indexerManager, UserDatabaseManager userDatabaseManager) {
+        resourceHandler = new ResourceHandler(indexerManager, userDatabaseManager);
         browseHandler = new BrowseHandler(ENV.GSTORE_BASE_URL);
     }
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+    public void init() throws ServletException {
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
         String pathInfo = req.getPathInfo();
@@ -35,6 +40,25 @@ public class EntriesServlet extends HttpServlet {
             return;
         }
 
+        String resourceUri = ENV.MOSS_BASE_URL + "/entries" + pathInfo;
+
+        if (resourceExists(resourceUri)) {
+            resourceHandler.doDelete(req, resp);
+        } else {
+            resp.sendError(406, "Method Not Allowed");
+        }
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+
+        String pathInfo = req.getPathInfo();
+
+        if (pathInfo == null) {
+            pathInfo = "";
+        }
+        
         String resourceUri = ENV.MOSS_BASE_URL + "/entries" + pathInfo;
 
         if (resourceExists(resourceUri)) {

@@ -226,7 +226,7 @@ public class GstoreResource {
   
     public int delete() throws URISyntaxException, IOException {
         URL deleteURL = getRequestURL(GstoreOp.Delete);
-        logger.debug("Build delete url <{}>.", deleteURL.toString());
+        logger.info("Build delete url <{}>.", deleteURL.toString());
 
         HttpURLConnection connection = (HttpURLConnection) deleteURL.openConnection();
         connection.setRequestMethod(Constants.REQ_METHOD_DELETE);

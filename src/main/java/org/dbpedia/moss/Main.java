@@ -95,8 +95,8 @@ public class Main {
         // waitForGstore(ENV.GSTORE_BASE_URL);
         MossConfiguration config = MossConfiguration.get();
         // OntologyLoader.load(config);
-        
-        for(MossTerminology terminology : config.getTerminologies()) {
+
+        for (MossTerminology terminology : config.getTerminologies()) {
             try (LookupServer lookupServer = new LookupServer(terminology.getIndexPath())) {
                 lookupServer.index(terminology.getDataModel(), terminology.getIndexerQuery());
             }
@@ -128,39 +128,34 @@ public class Main {
         ServletContextHandler rootContext = new ServletContextHandler();
         rootContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
         rootContext.setContextPath("");
-        
-        rootContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/sparql");
-        rootContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/sparql/");  
 
-      
+        rootContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/sparql");
+        rootContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/sparql/");
 
         // Context handler for the unprotected routes
         // ServletContextHandler resourceContext = new ServletContextHandler();
         // resourceContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         // resourceContext.setContextPath("/entries/*");
         // resourceContext.addServlet(new ServletHolder(new ResourceServlet()), "/*");
-
         // ServletContextHandler moduleContext = createSimpleContext("/module/", new ModuleResourceServlet());
-
         // Context handler for the unprotected routes
         ServletContextHandler readContext = new ServletContextHandler();
         readContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         readContext.setContextPath("/g/*");
         readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
-        
-        ServletHolder browserProxyServlet = new ServletHolder(new EntriesServlet()); //(new ReplaceProxyServlet(ENV.GSTORE_BASE_URL + "/file/content", "/file/content", "/entries"));
+        ServletHolder browserProxyServlet = new ServletHolder(new EntriesServlet(indexerManager, userDatabaseManager)); //(new ReplaceProxyServlet(ENV.GSTORE_BASE_URL + "/file/content", "/file/content", "/entries"));
         // Context handler for the unprotected routes
+        /*
         ServletContextHandler entriesContext = new ServletContextHandler();
         entriesContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         entriesContext.setContextPath("/entries/*");
         entriesContext.addServlet(browserProxyServlet, "/*"); //new ServletHolder(new MetadataBrowseServlet()), "/*");
-
+ */
         ServletHolder searchProxyServlet = new ServletHolder(new ProxyServlet(ENV.LOOKUP_BASE_URL + "/api"));
 
         // ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
         // ServletHolder layerIndexerConfigurationServlet = new ServletHolder(new LayerIndexerConfigurationServlet());
-
         // Context handler for the protected api routes
         ServletContextHandler apiContext = new ServletContextHandler();
         apiContext.setContextPath("/api/v1");
@@ -171,9 +166,7 @@ public class Main {
         setupReadOnlyAdminServlet(rootContext, new ModuleApiServlet(indexerManager), "/modules/*", authFilter, adminFilter);
         setupReadOnlyAdminServlet(rootContext, new TerminologyServlet(), "/terminologies/*", authFilter, adminFilter);
 
-        rootContext.addFilter(corsFilterHolder, "/entries/*", EnumSet.of(DispatcherType.REQUEST));
-        rootContext.addServlet(browserProxyServlet, "/entries/*"); //new ServletHolder(new MetadataBrowseServlet()), "/*");
-
+        setupReadOnlyAuthServlet(rootContext, new EntriesServlet(indexerManager, userDatabaseManager), "/entries/*", authFilter);
 
         FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
 
@@ -213,7 +206,6 @@ public class Main {
         HandlerList handlers = new HandlerList();
         handlers.setHandlers(new Handler[]{
             readContext,
-            entriesContext,
             apiContext,
             rootContext,});
 
@@ -249,5 +241,22 @@ public class Main {
         apiContext.addServlet(servletHolder, path);
         apiContext.addFilter(new FilterHolder(authFilterWrapper), path, null);
         apiContext.addFilter(new FilterHolder(adminFilterWrapper), path, null);
+    }
+
+    private static void setupReadOnlyAuthServlet(ServletContextHandler apiContext, HttpServlet servlet, String path,
+            Filter authFilter) {
+
+        ServletHolder servletHolder = new ServletHolder(servlet);
+        String[] layerListAllowedMethods = new String[]{
+            Constants.REQ_METHOD_HEAD,
+            Constants.REQ_METHOD_GET,
+            Constants.REQ_METHOD_OPTIONS
+        };
+
+        RequestMethodFilterWrapper authFilterWrapper = new RequestMethodFilterWrapper(authFilter, layerListAllowedMethods);
+
+        apiContext.addServlet(servletHolder, path);
+        apiContext.addFilter(new FilterHolder(new CorsFilter()), path, EnumSet.of(DispatcherType.REQUEST));
+        apiContext.addFilter(new FilterHolder(authFilterWrapper), path, null);
     }
 }
