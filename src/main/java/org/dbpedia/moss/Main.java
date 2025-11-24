@@ -10,6 +10,7 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.sys.JenaSystem;
 import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.config.MossTerminology;
@@ -29,6 +30,7 @@ import org.dbpedia.moss.servlets.modules.ModuleApiServlet;
 import org.dbpedia.moss.servlets.terminologies.TerminologyServlet;
 import org.dbpedia.moss.utils.Constants;
 import org.dbpedia.moss.utils.ENV;
+import org.dbpedia.moss.utils.GstoreResource;
 import org.dbpedia.moss.utils.LookupServer;
 import org.dbpedia.moss.utils.RequestMethodFilterWrapper;
 import org.eclipse.jetty.security.ConstraintMapping;
@@ -100,6 +102,14 @@ public class Main {
             try (LookupServer lookupServer = new LookupServer(terminology.getIndexPath())) {
                 lookupServer.index(terminology.getDataModel(), terminology.getIndexerQuery());
             }
+
+            logger.info("Saving Terminology to Gstore: {} ", terminology.getURI());
+
+            Lang terminologyLanguage = RDFLanguages.contentTypeToLang(terminology.getLanguage());
+
+            String gstoreUri = terminology.getURI() + "." + terminologyLanguage.getFileExtensions().getFirst();
+            GstoreResource gstoreTerminologyResource = new GstoreResource(gstoreUri);
+            gstoreTerminologyResource.writeModel(terminology.getDataModel(), RDFLanguages.contentTypeToLang(terminology.getLanguage()));
         }
 
         UserDatabaseManager userDatabaseManager = new UserDatabaseManager(ENV.USER_DATABASE_PATH);
@@ -144,14 +154,14 @@ public class Main {
         readContext.setContextPath("/g/*");
         readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
-        ServletHolder browserProxyServlet = new ServletHolder(new EntriesServlet(indexerManager, userDatabaseManager)); //(new ReplaceProxyServlet(ENV.GSTORE_BASE_URL + "/file/content", "/file/content", "/entries"));
+        // ServletHolder browserProxyServlet = new ServletHolder(new EntriesServlet(indexerManager, userDatabaseManager)); //(new ReplaceProxyServlet(ENV.GSTORE_BASE_URL + "/file/content", "/file/content", "/entries"));
         // Context handler for the unprotected routes
         /*
         ServletContextHandler entriesContext = new ServletContextHandler();
         entriesContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         entriesContext.setContextPath("/entries/*");
         entriesContext.addServlet(browserProxyServlet, "/*"); //new ServletHolder(new MetadataBrowseServlet()), "/*");
- */
+         */
         ServletHolder searchProxyServlet = new ServletHolder(new ProxyServlet(ENV.LOOKUP_BASE_URL + "/api"));
 
         // ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
@@ -213,16 +223,6 @@ public class Main {
 
         server.start();
         server.join();
-    }
-
-    private static ServletContextHandler createSimpleContext(String path, HttpServlet servlet) {
-        FilterHolder corsFilterHolder = new FilterHolder(new CorsFilter());
-
-        ServletContextHandler context = new ServletContextHandler();
-        context.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        context.setContextPath(path);
-        context.addServlet(new ServletHolder(servlet), "/*");
-        return context;
     }
 
     private static void setupReadOnlyAdminServlet(ServletContextHandler apiContext, HttpServlet servlet, String path,

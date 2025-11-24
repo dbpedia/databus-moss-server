@@ -53,7 +53,7 @@ public class MossTerminology {
 
     @JsonIgnore
     public String getURI() {
-        return ENV.MOSS_BASE_URL + "/terminology/" + getId();
+        return ENV.MOSS_BASE_URL + "/terminologies/" + getId();
     }
 
     @JsonIgnore

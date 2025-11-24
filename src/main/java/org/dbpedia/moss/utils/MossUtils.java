@@ -1,21 +1,5 @@
 package org.dbpedia.moss.utils;
 
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.jena.atlas.web.ContentType;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFLanguages;
-import org.dbpedia.moss.db.UserInfo;
-import org.dbpedia.moss.servlets.ValidationException;
-
-import jakarta.json.Json;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonWriter;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -30,22 +14,31 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.jena.atlas.web.ContentType;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.db.UserDatabaseManager;
+import org.dbpedia.moss.db.UserInfo;
+import org.dbpedia.moss.servlets.ValidationException;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonWriter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public final class MossUtils {
 
-    public static final Pattern baseRegex = Pattern.compile("^(https?://[^/]+)");
-
-    // this is intentionally without any # or / ending since json2rdf always appends # to the base uri
-    public static final String json_rdf_base_uri = "http://mods.tools.dbpedia.org/ns/demo";
-    public static final String baseURI = "https://databus.dbpedia.org";
-    public static String contextURL = "https://raw.githubusercontent.com/dbpedia/databus-moss/dev/devenv/context.jsonld";
+    public static final Pattern BASE_REGEX = Pattern.compile("^(https?://[^/]+)");
 
     public static String getValFromArray(String[] str_array) {
         if (str_array == null) {
@@ -56,16 +49,14 @@ public final class MossUtils {
     }
 
     public static String createAnnotationFileURI(String baseURL, String modType, String databusIdentifier) {
-        List<String> pathSegments = new ArrayList<String>();
+        List<String> pathSegments = new ArrayList<>();
 
         databusIdentifier = databusIdentifier.replaceAll("http[s]?://", "");
         String[] resourceSegments = databusIdentifier.split("/");
 
         pathSegments.add("g");
 
-        for (String segment : resourceSegments) {
-            pathSegments.add(segment);
-        }
+        pathSegments.addAll(Arrays.asList(resourceSegments));
 
         String fileName = modType.toLowerCase() + ".jsonld";
         pathSegments.add(fileName);
@@ -81,13 +72,12 @@ public final class MossUtils {
 
             identifier = builder.build().toString();
         } catch (URISyntaxException e) {
-            e.printStackTrace();
         }
         return identifier;
     }
 
     public static String extractBaseFromURL(String uri) {
-        Matcher m = baseRegex.matcher(uri);
+        Matcher m = BASE_REGEX.matcher(uri);
 
         String result;
 
@@ -138,15 +128,14 @@ public final class MossUtils {
     }
 
     public static String readToString(InputStream inputStream) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        StringBuilder stringBuilder = new StringBuilder();
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            stringBuilder.append(line).append("\n");
+        StringBuilder stringBuilder;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+            stringBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                stringBuilder.append(line).append("\n");
+            }
         }
-
-        reader.close();
 
         String result = stringBuilder.toString().replaceAll("^\s+|\s+$", "");
         return result;
@@ -191,7 +180,7 @@ public final class MossUtils {
         try {
             new URI(resourceUri).toURL();
             return true;
-        } catch (Exception e) {
+        } catch (MalformedURLException | URISyntaxException e) {
             return false;
         }
     }
@@ -213,8 +202,7 @@ public final class MossUtils {
     public static String getGStorePath(String resourceURI, String layerName)
             throws MalformedURLException, URISyntaxException {
         resourceURI = resourceURI.replace("#", "%23");
-        URL resourceURL = null;
-        resourceURL = new URI(resourceURI).toURL();
+        URL resourceURL = new URI(resourceURI).toURL();
         String path = resourceURL.getPath();
         return path + "/" + layerName;
     }
@@ -226,7 +214,7 @@ public final class MossUtils {
         }
 
         if (repo.endsWith("/")) {
-            repo.substring(0, repo.length() - 1);
+            repo = repo.substring(0, repo.length() - 1);
         }
 
         if (path.startsWith("/")) {
