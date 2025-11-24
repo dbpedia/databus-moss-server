@@ -179,6 +179,7 @@ public class ResourceHandler {
 
             List<HateoasLink> links = List.of(
                     new HateoasLink("self", requestURI),
+                    new HateoasLink("delete", requestURI),
                     new HateoasLink("alternate", requestURI, false, contentLang.getHeaderString()),
                     new HateoasLink("alternate", requestURI, false, HttpConstants.MediaTypes.TEXT_HTML),
                     new HateoasLink("alternate", requestURI, false, HttpConstants.MediaTypes.APPLICATION_HAL_JSON),
