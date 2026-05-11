@@ -230,26 +230,24 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Lucene core -->
+    <!-- Required for backward codec support 
     <dependency>
         <groupId>org.apache.lucene</groupId>
         <artifactId>lucene-core</artifactId>
         <version>9.10.0</version>
     </dependency>
 
-    <!-- Needed for query parsing or advanced queries -->
     <dependency>
         <groupId>org.apache.lucene</groupId>
         <artifactId>lucene-queryparser</artifactId>
         <version>9.10.0</version>
     </dependency>
 
-    <!-- Required for backward codec support -->
     <dependency>
         <groupId>org.apache.lucene</groupId>
         <artifactId>lucene-backward-codecs</artifactId>
         <version>9.10.0</version>
-    </dependency>
+    </dependency>-->
 
     </dependencies>
     <build>

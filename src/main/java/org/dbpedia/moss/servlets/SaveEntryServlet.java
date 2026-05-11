@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
-import java.net.URISyntaxException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -30,7 +28,9 @@ import org.dbpedia.moss.indexer.MossEntryHeader;
 import org.dbpedia.moss.servlets.modules.ModuleStore;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.GstoreResource;
+import org.dbpedia.moss.utils.HttpConstants;
 import org.dbpedia.moss.utils.MossUtils;
+import org.dbpedia.moss.utils.RDFParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +74,11 @@ public class SaveEntryServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
+        logger.info("Received save entry request.");
         long totalStart = System.currentTimeMillis();
+        resp.setContentType(HttpConstants.MediaTypes.APPLICATION_JSON);
+
+        ObjectMapper objectMapper = new ObjectMapper();
 
         try {
             String requestBaseURL = ENV.MOSS_BASE_URL;
@@ -84,8 +88,14 @@ public class SaveEntryServlet extends HttpServlet {
             Lang contentTypeLanguage = MossUtils.getContentTypeLang(req);
 
             Model dataModel = ModelFactory.createDefaultModel();
+
             try (InputStream rdfInput = new ByteArrayInputStream(rdfString.getBytes())) {
-                RDFDataMgr.read(dataModel, rdfInput, contentTypeLanguage);
+                try {
+                    RDFDataMgr.read(dataModel, rdfInput, contentTypeLanguage);
+                } catch (RiotException e) {
+                    logger.error("RDF syntax error", e);
+                    throw new RDFParseException("Failed to parse RDF: " + e.getMessage(), e);
+                }
             }
 
             String resource = MossUtils.pruneSlashes(req.getParameter("resource"));
@@ -96,16 +106,11 @@ public class SaveEntryServlet extends HttpServlet {
             var moduleOpt = store.loadModule(moduleId);
 
             if (moduleOpt.isEmpty()) {
-                resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Module not found: " + moduleId);
-                return;
+                logger.error("Module not found: {}", moduleId);
+                throw new RDFParseException("Module not found: " + moduleId);
             }
 
             var module = moduleOpt.get();
-
-            if (module == null) {
-                throw new IllegalArgumentException("Specified module is unknown to this MOSS instance: " + moduleId);
-            }
-
             Lang moduleLanguage = RDFLanguages.contentTypeToLang(module.getLanguage());
 
             String entryURI = MossUtils.getEntryUri(requestBaseURL, resource, module.getId());
@@ -124,12 +129,16 @@ public class SaveEntryServlet extends HttpServlet {
             combinedModel.add(dataModel);
             combinedModel.add(header.toModel());
 
-            doShaclValidation(combinedModel, module);
+            try {
+                doShaclValidation(combinedModel, module);
+            } catch (ValidationException e) {
+                logger.error("SHACL validation failed", e);
+                throw new RDFParseException("SHACL validation failure: " + e.getMessage(), e);
+            }
 
             if (contentTypeLanguage != moduleLanguage) {
-                logger.warn("Input RDF language " + contentTypeLanguage.toLongString()
-                        + " is different from the RDF language defined for this layer " + moduleLanguage.toLongString()
-                        + ". Automatic conversion will happen.");
+                logger.warn("Input RDF language {} is different from module language {}. Automatic conversion will occur.",
+                        contentTypeLanguage.toLongString(), moduleLanguage.toLongString());
 
                 StringWriter out = new StringWriter();
                 RDFDataMgr.write(out, dataModel, moduleLanguage);
@@ -155,10 +164,8 @@ public class SaveEntryServlet extends HttpServlet {
             indexerManager.updateResource(entryURI, moduleId);
 
             Map<String, String> jsonResponse = new HashMap<>();
+            jsonResponse.put("message", "Success");
             jsonResponse.put("path", MossUtils.getDocumentStoragePath(resource, module.getId(), moduleLanguage));
-
-            ObjectMapper objectMapper = new ObjectMapper();
-            String jsonResponseString = objectMapper.writeValueAsString(jsonResponse);
 
             logger.info("Stored: {}", header.getURI());
 
@@ -167,15 +174,9 @@ public class SaveEntryServlet extends HttpServlet {
             long contentTime = contentEnd - contentStart;
             long remainingTime = totalTime - headerTime - contentTime;
 
-            double headerPct = 0.0;
-            double contentPct = 0.0;
-            double remainingPct = 0.0;
-
-            if (totalTime > 0) {
-                headerPct = (headerTime * 100.0) / totalTime;
-                contentPct = (contentTime * 100.0) / totalTime;
-                remainingPct = (remainingTime * 100.0) / totalTime;
-            }
+            double headerPct = totalTime > 0 ? (headerTime * 100.0) / totalTime : 0.0;
+            double contentPct = totalTime > 0 ? (contentTime * 100.0) / totalTime : 0.0;
+            double remainingPct = totalTime > 0 ? (remainingTime * 100.0) / totalTime : 0.0;
 
             logger.info("Request profiling: total={}ms | header={}ms ({}%) | content={}ms ({}%) | remaining={}ms ({}%)",
                     totalTime,
@@ -183,22 +184,23 @@ public class SaveEntryServlet extends HttpServlet {
                     contentTime, String.format("%.2f", contentPct),
                     remainingTime, String.format("%.2f", remainingPct));
 
-            resp.setContentType("application/json");
             resp.setStatus(200);
-            resp.getWriter().write(jsonResponseString);
+            resp.getWriter().write(objectMapper.writeValueAsString(jsonResponse));
 
-        } catch (IllegalArgumentException e) {
-            logger.error("IllegalArgumentException caught", e);
-            resp.setHeader("Content-Type", "application/json");
-            resp.sendError(400, e.getMessage());
-        } catch (UnsupportedEncodingException | URISyntaxException | ValidationException | RiotException e) {
-            logger.error("Client error caught", e);
-            resp.setHeader("Content-Type", "application/json");
-            resp.sendError(400, e.getMessage());
+        } catch (RDFParseException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Bad Request");
+            error.put("message", e.getMessage());
+            resp.setStatus(400);
+            resp.getWriter().write(objectMapper.writeValueAsString(error));
+
         } catch (Exception e) {
             logger.error("Unexpected exception caught", e);
-            resp.setHeader("Content-Type", "application/json");
-            resp.sendError(500, e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Internal Server Error");
+            error.put("message", e.getMessage());
+            resp.setStatus(500);
+            resp.getWriter().write(objectMapper.writeValueAsString(error));
         }
     }
 

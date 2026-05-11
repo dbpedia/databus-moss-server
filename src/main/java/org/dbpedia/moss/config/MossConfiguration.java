@@ -23,19 +23,20 @@ public class MossConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(MossConfiguration.class);
 
     private String indexerConfigPath;
-    
+
     private String templatePath;
 
     private String contextPath;
 
     private String modulePath;
 
+    private String facetPath;
+
     private String terminologyPath;
 
     private String templateResourcePlaceholder;
 
     private List<MossModule> modules;
-
 
     public String getTemplateResourcePlaceholder() {
         return templateResourcePlaceholder;
@@ -60,7 +61,7 @@ public class MossConfiguration {
     public void setIndexerConfigPath(String indexerPath) {
         this.indexerConfigPath = indexerPath;
     }
-    
+
     public String getContextPath() {
         return contextPath;
     }
@@ -69,9 +70,7 @@ public class MossConfiguration {
         this.contextPath = contextPath;
     }
 
-
     private List<MossTerminology> terminologies;
-
 
     public List<MossTerminology> getTerminologies() {
         return terminologies;
@@ -80,7 +79,7 @@ public class MossConfiguration {
     public void setOntologies(List<MossTerminology> ontologies) {
         this.terminologies = ontologies;
     }
-    
+
     @JsonIgnore
     private File configDir;
 
@@ -97,18 +96,19 @@ public class MossConfiguration {
 
             // Get the directory of the config file for resolving relative paths
             config.configDir = file.getParentFile();
-            
             config.modules = loadModules(config.getModuleDirectory());
             config.terminologies = loadTerminologies(config.getTerminologyDirectory());
 
             return config;
         } catch (IOException e) {
+            logger.error(e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }
 
     private static List<MossTerminology> loadTerminologies(File directory) throws IOException {
-        
+
         List<MossTerminology> result = new ArrayList<>();
 
         if (directory == null || !directory.isDirectory()) {
@@ -163,50 +163,6 @@ public class MossConfiguration {
         return result;
     }
 
-
-
-    /*
-
-    public void validate() throws ConfigurationException {
-
-        logger.info("Validating MOSS configuration...");
-    
-        // Try to load shacl files:
-        for (MossLayerConfiguration layer : layers) {
-            
-
-            logger.info("Validating layer \"{}\"...", layer.getId());
-            Lang lang = RDFLanguages.contentTypeToLang(layer.getFormatMimeType());
-           
-            if(lang == null) {
-                throw new ConfigurationException("Missing or unknown RDF language in formatMimeType of layer " 
-                    + layer.getId() + ": " + layer.getFormatMimeType());
-            }
-    
-            logger.debug("Language: " +  lang.toLongString());
-
-            if(layer.getShaclPath() != null) {
-                logger.debug("SHACL file: " + layer.getShaclPath());
-                validateSHACL(layer);
-            }
-    
-           
-        }
-        
-        logger.info("Configuration OK!");
-    }
-     
-    
-    private void validateSHACL(MossLayerConfiguration layer) throws ConfigurationException {
-        Model shaclModel = RDFDataMgr.loadModel(layer.getShaclPath(), Lang.TURTLE);
-
-        if (shaclModel.isEmpty()) {
-            throw new ConfigurationException("The specified SHACL file for layer " + layer.getId() + " is empty or invalid.");
-        }
-    }*/
-
-   
-
     public static void initialize(File configFile) throws ConfigurationException, IOException {
 
         if (!configFile.exists()) {
@@ -222,8 +178,32 @@ public class MossConfiguration {
         }
 
         MossConfiguration mossConfiguration = MossConfiguration.load(configFile);
-       
+
+        if (mossConfiguration.facetPath == null) {
+            mossConfiguration.facetPath = "facets";
+        }
+
+        if (mossConfiguration.terminologyPath == null) {
+            mossConfiguration.terminologyPath = "terminologies";
+        }
+
+        if (mossConfiguration.modulePath == null) {
+            mossConfiguration.modulePath = "modules";
+        }
+
         instance = mossConfiguration;
+
+        // Ensure directories exist
+        createDirectoryIfMissing(mossConfiguration.getFacetDirectory());
+        createDirectoryIfMissing(mossConfiguration.getTerminologyDirectory());
+        createDirectoryIfMissing(mossConfiguration.getModuleDirectory());
+    }
+
+    private static void createDirectoryIfMissing(File dir) throws IOException {
+        if (!dir.exists()) {
+            Files.createDirectories(dir.toPath());
+            logger.info("Created missing directory: " + dir.getAbsolutePath());
+        }
     }
 
     private static MossConfiguration instance;
@@ -233,15 +213,15 @@ public class MossConfiguration {
     }
 
     public void save() {
-        
+
         if (configDir == null) {
             logger.error("Configuration directory is not set. Cannot save configuration.");
             return;
         }
-        
+
         File configFile = new File(ENV.CONFIG_PATH);
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
-    
+
         try {
             // Write YAML configuration to file
             mapper.writerWithDefaultPrettyPrinter().writeValue(configFile, this);
@@ -260,7 +240,11 @@ public class MossConfiguration {
     public File getTerminologyDirectory() {
         return new File(configDir, getTerminologyPath());
     }
- 
+
+    @JsonIgnore
+    public File getFacetDirectory() {
+        return new File(configDir, getFacetPath());
+    }
 
     public String getModulePath() {
         return modulePath;
@@ -278,9 +262,12 @@ public class MossConfiguration {
         return terminologyPath;
     }
 
+    public String getFacetPath() {
+        return facetPath;
+    }
+
     public void setTerminologyPath(String terminologyPath) {
         this.terminologyPath = terminologyPath;
     }
-
 
 }

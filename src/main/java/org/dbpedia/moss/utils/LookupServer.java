@@ -2,7 +2,6 @@ package org.dbpedia.moss.utils;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -20,28 +19,6 @@ import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.RDFNode;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.search.BooleanClause;
-import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.FuzzyQuery;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.PrefixQuery;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,22 +31,18 @@ public class LookupServer implements Closeable {
     public static final String BINDING_VALUE = "value";
 
     private final Path indexPath;
-    private final StandardAnalyzer analyzer;
+    //private final StandardAnalyzer analyzer;
 
     private static final Logger logger = LoggerFactory.getLogger(LookupServer.class);
 
     public LookupServer(Path indexPath) throws IOException {
         this.indexPath = indexPath;
-        this.analyzer = new StandardAnalyzer();
+        // this.analyzer = new StandardAnalyzer();
         if (!Files.exists(indexPath)) {
             Files.createDirectories(indexPath);
         }
     }
 
-    /**
-     * Builds a new index from the RDF model and SPARQL query, then atomically
-     * swaps it with the live index.
-     */
     public void index(Model model, String sparqlQuery) throws IOException {
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(sparqlQuery, "sparqlQuery");
@@ -101,6 +74,7 @@ public class LookupServer implements Closeable {
         String firstBinding = null;
         String lastBinding = null;
 
+        /*
         try (Directory tmpDir = FSDirectory.open(tmpIndexPath); IndexWriter writer = new IndexWriter(tmpDir, new IndexWriterConfig(analyzer))) {
 
             for (var entry : entries.entrySet()) {
@@ -127,7 +101,7 @@ public class LookupServer implements Closeable {
             FileUtils.deleteDirectory(tmpIndexPath.toFile());
             throw new IOException("Failed to build temporary index", e);
         }
-
+         */
         Path backupIndex = indexPath.getParent().resolve(indexPath.getFileName() + "_backup");
         if (Files.exists(backupIndex)) {
             FileUtils.deleteDirectory(backupIndex.toFile());
@@ -147,6 +121,11 @@ public class LookupServer implements Closeable {
     }
 
     public List<SearchResult> search(String queryInput, int maxHits) throws IOException {
+
+        List<SearchResult> results = new ArrayList<>();
+        return results;
+
+        /*
         try (DirectoryReader reader = DirectoryReader.open(FSDirectory.open(indexPath))) {
             IndexSearcher searcher = new IndexSearcher(reader);
 
@@ -183,13 +162,13 @@ public class LookupServer implements Closeable {
 
             return results;
         }
+         */
     }
 
-    /**
-     * Tokenizes a string using the same analyzer as indexing.
-     */
+        /*
     private List<String> tokenize(String text) throws IOException {
         List<String> tokens = new ArrayList<>();
+
         try (TokenStream stream = analyzer.tokenStream(FIELD_LABEL, new StringReader(text))) {
             CharTermAttribute attr = stream.addAttribute(CharTermAttribute.class);
             stream.reset();
@@ -197,9 +176,9 @@ public class LookupServer implements Closeable {
                 tokens.add(attr.toString());
             }
             stream.end();
-        }
+        } 
         return tokens;
-    }
+    }*/
 
     public record SearchResult(String id, String[] label, float score) {
 

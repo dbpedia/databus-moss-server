@@ -1,5 +1,7 @@
 ---
 id: oem-project
 label: OEM Project
-description: Information on the project context in which the data was recorded
+description: Information on the project context in which the data was recorded and
+  now I do the same thing everyone seems compelled to do which is insert insanely
+  long text bits to screw with the layout.
 language: application/ld+json

@@ -34,7 +34,7 @@ public class BrowseHandler {
         try {
             halJson = fetchHalJson(targetUrl);
         } catch (IOException e) {
-            resp.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Failed to fetch from gstore: " + e.getMessage());
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Failed to fetch from gstore: " + e.getMessage());
             return;
         }
 

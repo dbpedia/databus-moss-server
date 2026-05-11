@@ -1,18 +1,25 @@
 package org.dbpedia.moss.servlets.terminologies;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFLanguages;
 import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.servlets.modules.ISubResourceHandler;
-import org.dbpedia.moss.utils.LookupServer;
+import org.dbpedia.moss.utils.GstoreResource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class TerminologyServlet extends HttpServlet {
+
+    final static Logger logger = LoggerFactory.getLogger(TerminologyServlet.class);
 
     private final TerminologyHandler terminologyHandler;
 
@@ -168,19 +175,21 @@ public class TerminologyServlet extends HttpServlet {
         try {
             var terminologyResponse = store.loadTerminology(terminologyId);
 
-            if (terminologyResponse.isPresent()) {
-
-                var terminology = terminologyResponse.get();
-                
-                try (LookupServer lookupServer = new LookupServer(terminology.getIndexPath())) {
-                    lookupServer.index(terminology.getDataModel(), terminology.getIndexerQuery());
-                }
-
+            if (!terminologyResponse.isPresent()) {
+                return;
             }
 
-        } catch (IOException e) {
+            var terminology = terminologyResponse.get();
+            logger.info("Saving Terminology to Gstore: {} ", terminology.getURI());
 
+            Lang terminologyLanguage = RDFLanguages.contentTypeToLang(terminology.getLanguage());
+
+            String gstoreUri = terminology.getURI() + "." + terminologyLanguage.getFileExtensions().getFirst();
+            GstoreResource gstoreTerminologyResource = new GstoreResource(gstoreUri);
+            gstoreTerminologyResource.writeModel(terminology.getDataModel(), RDFLanguages.contentTypeToLang(terminology.getLanguage()));
+        } catch (IOException | URISyntaxException e) {
+            logger.error(e.getMessage());
         }
-    }
 
+    }
 }

@@ -2,6 +2,7 @@ package org.dbpedia.moss;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.EnumSet;
 
@@ -26,12 +27,12 @@ import org.dbpedia.moss.servlets.ProxyServlet;
 import org.dbpedia.moss.servlets.SaveEntryServlet;
 import org.dbpedia.moss.servlets.SparqlProxyServlet;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
+import org.dbpedia.moss.servlets.facets.FacetServlet;
 import org.dbpedia.moss.servlets.modules.ModuleApiServlet;
 import org.dbpedia.moss.servlets.terminologies.TerminologyServlet;
 import org.dbpedia.moss.utils.Constants;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.GstoreResource;
-import org.dbpedia.moss.utils.LookupServer;
 import org.dbpedia.moss.utils.RequestMethodFilterWrapper;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.DefaultIdentityService;
@@ -57,7 +58,7 @@ import jakarta.servlet.http.HttpServlet;
  */
 public class Main {
 
-    private static final String BUILD_NUM = "0.1.1.3";
+    private static final String BUILD_NUM = "0.2.0";
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
@@ -91,25 +92,23 @@ public class Main {
         logger.info("ENV:\n{} ", ENV.printAll());
 
         File configFile = new File(ENV.CONFIG_PATH);
-
         MossConfiguration.initialize(configFile);
 
-        // waitForGstore(ENV.GSTORE_BASE_URL);
         MossConfiguration config = MossConfiguration.get();
-        // OntologyLoader.load(config);
 
         for (MossTerminology terminology : config.getTerminologies()) {
-            try (LookupServer lookupServer = new LookupServer(terminology.getIndexPath())) {
-                lookupServer.index(terminology.getDataModel(), terminology.getIndexerQuery());
-            }
-
+        
             logger.info("Saving Terminology to Gstore: {} ", terminology.getURI());
 
-            Lang terminologyLanguage = RDFLanguages.contentTypeToLang(terminology.getLanguage());
+            try {
+                Lang terminologyLanguage = RDFLanguages.contentTypeToLang(terminology.getLanguage());
 
-            String gstoreUri = terminology.getURI() + "." + terminologyLanguage.getFileExtensions().getFirst();
-            GstoreResource gstoreTerminologyResource = new GstoreResource(gstoreUri);
-            gstoreTerminologyResource.writeModel(terminology.getDataModel(), RDFLanguages.contentTypeToLang(terminology.getLanguage()));
+                String gstoreUri = terminology.getURI() + "." + terminologyLanguage.getFileExtensions().getFirst();
+                GstoreResource gstoreTerminologyResource = new GstoreResource(gstoreUri);
+                gstoreTerminologyResource.writeModel(terminology.getDataModel(), RDFLanguages.contentTypeToLang(terminology.getLanguage()));
+            } catch (IOException e) {
+                logger.error(e.getMessage());
+            }
         }
 
         UserDatabaseManager userDatabaseManager = new UserDatabaseManager(ENV.USER_DATABASE_PATH);
@@ -142,30 +141,15 @@ public class Main {
         rootContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/sparql");
         rootContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/sparql/");
 
-        // Context handler for the unprotected routes
-        // ServletContextHandler resourceContext = new ServletContextHandler();
-        // resourceContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        // resourceContext.setContextPath("/entries/*");
-        // resourceContext.addServlet(new ServletHolder(new ResourceServlet()), "/*");
-        // ServletContextHandler moduleContext = createSimpleContext("/module/", new ModuleResourceServlet());
+      
         // Context handler for the unprotected routes
         ServletContextHandler readContext = new ServletContextHandler();
         readContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         readContext.setContextPath("/g/*");
         readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
-        // ServletHolder browserProxyServlet = new ServletHolder(new EntriesServlet(indexerManager, userDatabaseManager)); //(new ReplaceProxyServlet(ENV.GSTORE_BASE_URL + "/file/content", "/file/content", "/entries"));
-        // Context handler for the unprotected routes
-        /*
-        ServletContextHandler entriesContext = new ServletContextHandler();
-        entriesContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        entriesContext.setContextPath("/entries/*");
-        entriesContext.addServlet(browserProxyServlet, "/*"); //new ServletHolder(new MetadataBrowseServlet()), "/*");
-         */
         ServletHolder searchProxyServlet = new ServletHolder(new ProxyServlet(ENV.LOOKUP_BASE_URL + "/api"));
 
-        // ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
-        // ServletHolder layerIndexerConfigurationServlet = new ServletHolder(new LayerIndexerConfigurationServlet());
         // Context handler for the protected api routes
         ServletContextHandler apiContext = new ServletContextHandler();
         apiContext.setContextPath("/api/v1");
@@ -175,6 +159,7 @@ public class Main {
         AuthenticationFilter authFilter = new AuthenticationFilter(new APIKeyValidator(userDatabaseManager));
         setupReadOnlyAdminServlet(rootContext, new ModuleApiServlet(indexerManager), "/modules/*", authFilter, adminFilter);
         setupReadOnlyAdminServlet(rootContext, new TerminologyServlet(), "/terminologies/*", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(rootContext, new FacetServlet(), "/facets/*", authFilter, adminFilter);
 
         setupReadOnlyAuthServlet(rootContext, new EntriesServlet(indexerManager, userDatabaseManager), "/entries/*", authFilter);
 

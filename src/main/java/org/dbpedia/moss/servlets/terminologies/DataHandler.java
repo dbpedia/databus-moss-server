@@ -86,6 +86,7 @@ public class DataHandler implements ISubResourceHandler {
 
                 default -> {
                     if (type.equalsIgnoreCase(terminology.getLanguage())) {
+                        resp.setCharacterEncoding("UTF-8");
                         resp.setContentType(terminology.getLanguage());
                         resp.setStatus(HttpServletResponse.SC_OK);
                         resp.getWriter().write(content);
@@ -110,14 +111,14 @@ public class DataHandler implements ISubResourceHandler {
         String body = req.getReader().lines().reduce("", (acc, line) -> acc + line + "\n");
 
         String expectedFilename = getDataFileName(terminology);
-        String requestedPath = req.getPathInfo();
-        String requestedFilename = requestedPath.substring(requestedPath.lastIndexOf('/') + 1);
+        //String requestedPath = req.getPathInfo();
+        //String requestedFilename = requestedPath.substring(requestedPath.lastIndexOf('/') + 1);
 
-        if (!expectedFilename.equals(requestedFilename)) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST,
-                    "Data file extension does not match terminology language. Expected: " + expectedFilename);
-            return;
-        }
+        //if (!expectedFilename.equals(requestedFilename)) {
+        //    resp.sendError(HttpServletResponse.SC_BAD_REQUEST,
+        //            "Data file extension does not match terminology language. Expected: " + expectedFilename);
+        //    return;
+        //}
 
         String contentType = getContentType(terminology);
         Lang lang = RDFLanguages.contentTypeToLang(contentType);

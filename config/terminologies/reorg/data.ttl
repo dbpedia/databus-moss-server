@@ -63,20 +63,20 @@ reorg:relatedTo a rdf:Property ;
 # Instances
 ###########################
 
-### BMWK – Ministry
+### BMWK ? Ministry
 reorg:BMWK a reorg:Ministry, reorg:GovernmentBody, reorg:Organization ;
-    rdfs:label "Bundesministerium für Wirtschaft und Klimaschutz" ;
+    rdfs:label "BM für Wirtschaft und Klimaschutz" ;
     skos:altLabel "Bundesministerium fuer Wirtschaft und Klimaschutz" ;
     skos:altLabel "Bundesministerium für Wirtschaft und Energie" ;
     skos:altLabel "Bundesministerium für Wirtschaft und Energie (BMWi)" ;
-    skos:altLabel "Bundesministerium fÃ¼r Wirtschaft und Klimaschutz (BMWK)" ;
+    skos:altLabel "Bundesministerium für Wirtschaft und Klimaschutz (BMWK)" ;
     skos:altLabel "BMWK" ;
     skos:altLabel "Federal Ministry for Economic Affairs and Climate Action" ;
     skos:altLabel "german federal ministry for economics and energy" ;
     owl:sameAs <https://www.wikidata.org/wiki/Q488589> .
 
 
-### BMBF – Ministry
+### BMBF ? Ministry
 reorg:BMFTR a reorg:Ministry, reorg:GovernmentBody, reorg:Organization ;
     rdfs:label "Bundesministerium für Bildung und Forschung" ;
     skos:altLabel "BMBF" ;
@@ -88,7 +88,7 @@ reorg:BMFTR a reorg:Ministry, reorg:GovernmentBody, reorg:Organization ;
     owl:sameAs <https://www.wikidata.org/wiki/Q492234> .
 
 
-### BMUKN – Ministry
+### BMUKN ? Ministry
 reorg:BMUKN a reorg:Ministry, reorg:GovernmentBody, reorg:Organization ;
     rdfs:label "Bundesministerium für Umwelt, Klimaschutz, Naturschutz und nukleare Sicherheit"@de ;
     rdfs:label "Federal Ministry for the Environment, Climate Protection, Nature Conservation and Nuclear Safety"@en ;
@@ -101,28 +101,28 @@ reorg:BMUKN a reorg:Ministry, reorg:GovernmentBody, reorg:Organization ;
     owl:sameAs <https://www.wikidata.org/wiki/Q493344> .
 
 
-### Bundesnetzagentur – Agency
+### Bundesnetzagentur ? Agency
 reorg:Bundesnetzagentur a reorg:Agency, reorg:GovernmentBody, reorg:Organization ;
     rdfs:label "Bundesnetzagentur" ;
     skos:altLabel "Bundesnetzagentur für Elektrizität, Gas, Telekommunikation, Post und Eisenbahnen" ;
     reorg:country "DE" .
 
 
-### Umweltbundesamt – Agency
+### Umweltbundesamt ? Agency
 reorg:UBA a reorg:Agency, reorg:GovernmentBody, reorg:Organization ;
     rdfs:label "Umweltbundesamt" ;
     skos:altLabel "UBA" ;
     reorg:country "DE" .
 
 
-### Helmholtz Metadata Collaboration – Network
+### Helmholtz Metadata Collaboration ? Network
 reorg:HMC a reorg:Network, reorg:Organization ;
     rdfs:label "Helmholtz Metadata Collaboration" ;
     reorg:relatedTo "Helmholtz Association" ;
     reorg:country "DE" .
 
 
-### IuK Bayern – Network
+### IuK Bayern ? Network
 reorg:IUKBayern a reorg:Network, reorg:Organization ;
     rdfs:label "Informations- und Kommunikationsnetzwerk Bayern" ;
     skos:altLabel "IuK Bayern" ;
@@ -130,25 +130,21 @@ reorg:IUKBayern a reorg:Network, reorg:Organization ;
     reorg:country "DE" .
 
 
-### Region Gestalten – Network
+### Region Gestalten ? Network
 reorg:RegionGestalten a reorg:Network, reorg:Organization ;
     rdfs:label "Region Gestalten" ;
     reorg:homepage "https://www.region-gestalten.bund.de" ;
     reorg:country "DE" .
 
 
-### Agora Energiewende – Foundation
+### Agora Energiewende ? Foundation
 reorg:AgoraEnergiewende a reorg:Foundation, reorg:Organization ;
     rdfs:label "Agora Energiewende" ;
     reorg:country "DE" .
 
 
-### Reiner Lemoine Stiftung – Foundation
+### Reiner Lemoine Stiftung ? Foundation
 reorg:RLS a reorg:Foundation, reorg:Organization ;
     rdfs:label "Reiner Lemoine Stiftung" ;
     reorg:country "DE" .
 
-### VEA – Network
-reorg:VEA a reorg:Network, reorg:Organization ;
-    rdfs:label "VEA Bundesverband der Energie-Abnehmer e. V." ;
-    reorg:country "DE" .

@@ -58,6 +58,12 @@ public class ContextHandler implements ISubResourceHandler {
                     resp.getWriter().write(content);
                     return;
                 }
+                default -> {
+                    resp.setContentType(HttpConstants.MediaTypes.APPLICATION_LD_JSON);
+                    resp.setStatus(HttpServletResponse.SC_OK);
+                    resp.getWriter().write(content);
+                    return;
+                }
             }
         }
 

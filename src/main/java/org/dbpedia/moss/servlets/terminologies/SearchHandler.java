@@ -62,6 +62,7 @@ public class SearchHandler implements ISubResourceHandler {
                 }
                 docsNode.set("docs", resultsArray);
             }
+       
         }
 
         // Define HATEOAS links once
