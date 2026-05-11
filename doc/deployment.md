@@ -102,7 +102,7 @@ docker run --rm -p 8080:8080 \
 
 ### Docker Compose for dependencies
 
-[`devenv/docker-compose.yml`](devenv/docker-compose.yml) starts supporting services (Lookup, Virtuoso, gstore variants) for development. It **does not** build or run this MOSS JAR—run MOSS separately with env vars pointing at those ports (for example Lookup on host port `5002` → use `http://localhost:5002` for `LOOKUP_BASE_URL`).
+[`devenv/docker-compose.yml`](devenv/docker-compose.yml) starts supporting services (Lookup, Virtuoso, gstore variants) for development. It **does not** build or run this MOSS JAR-run MOSS separately with env vars pointing at those ports (for example Lookup on host port `5002` → use `http://localhost:5002` for `LOOKUP_BASE_URL`).
 
 ## Environment variables
 
