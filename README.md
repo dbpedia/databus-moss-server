@@ -2,11 +2,15 @@
 
 You can find deployment instructions and the Databus MOSS Frontend via the [main repo](https://github.com/dbpedia/databus-moss).
 
+## Installation
+
+See the [installation guide](doc/deployment.md) for setup and deployment.
+
 ## Usage
 
 ### CURL
 
-To create entries on a MOSS instance first create an API using the MOSS web application. Then call `https://moss.dev.dbpedia.link/api/v1/save-entry` with request parameters module and resource. The list of available modules can be requested via `https://moss.dev.dbpedia.link/api/v1/modules`. The resource parameters specifies the Databus resource being extended by the entry.
+To create entries on a MOSS instance first create an API using the MOSS web application. Then call `https://moss.dev.dbpedia.link/api/v1/save-entry` with request parameters module and resource. The list of available modules can be requested via `https://moss.dev.dbpedia.link/modules`. The resource parameters specifies the Databus resource being extended by the entry.
 
 #### Example:
 ```

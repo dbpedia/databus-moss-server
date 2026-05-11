@@ -22,7 +22,7 @@ public class TerminologySubResourceTest {
 
     @BeforeEach
     public void setup() throws Exception {
-        ENV.setTestVariable("CONFIG_PATH", "./config/moss-config.yml");
+        ENV.setTestVariable("CONFIG_PATH", "./config");
         ENV.setTestVariable("MOSS_BASE_URL", "http://localhost:8080");
         ENV.setTestVariable("USER_DATABASE_PATH", "./devenv/users.db");
 

@@ -91,8 +91,8 @@ public class Main {
 
         logger.info("ENV:\n{} ", ENV.printAll());
 
-        File configFile = new File(ENV.CONFIG_PATH);
-        MossConfiguration.initialize(configFile);
+        File configRoot = new File(ENV.CONFIG_PATH);
+        MossConfiguration.initialize(configRoot);
 
         MossConfiguration config = MossConfiguration.get();
 

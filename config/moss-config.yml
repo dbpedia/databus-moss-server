@@ -1,4 +1,0 @@
----
-modulePath: modules
-terminologyPath: terminologies
-templateResourcePlaceholder: $DATABUS_RESOURCE

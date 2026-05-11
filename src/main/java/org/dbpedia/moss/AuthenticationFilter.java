@@ -183,12 +183,10 @@ public class AuthenticationFilter implements Filter {
         String username = null;
 
         if (userInfo.has(OIDC_KEY_PREFERRED_USERNAME)) {
-            // logger.info("Using Preferred Username for Admin-Check: {}", userInfo.get(OIDC_KEY_PREFERRED_USERNAME).asText(null));
             username = userInfo.get(OIDC_KEY_PREFERRED_USERNAME).asText(null);
         }
 
         if (username == null && userInfo.has(OIDC_KEY_SUBJECT)) {
-            // logger.info("Using Subject for Admin-Check: {}", userInfo.get(OIDC_KEY_SUBJECT).asText(null));
             username = userInfo.get(OIDC_KEY_SUBJECT).asText(null);
         }
 

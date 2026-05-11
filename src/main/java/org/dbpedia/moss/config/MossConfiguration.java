@@ -3,13 +3,11 @@ package org.dbpedia.moss.config;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.naming.ConfigurationException;
 
-import org.dbpedia.moss.utils.ENV;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,53 +20,19 @@ public class MossConfiguration {
 
     private static final Logger logger = LoggerFactory.getLogger(MossConfiguration.class);
 
-    private String indexerConfigPath;
+    public static final String DEFAULT_FACET_PATH = "facets";
 
-    private String templatePath;
+    public static final String DEFAULT_MODULE_PATH = "modules";
 
-    private String contextPath;
+    public static final String DEFAULT_TERMINOLOGY_PATH = "terminologies";
 
-    private String modulePath;
+    private String modulePath = DEFAULT_MODULE_PATH;
 
-    private String facetPath;
+    private String facetPath = DEFAULT_FACET_PATH;
 
-    private String terminologyPath;
-
-    private String templateResourcePlaceholder;
+    private String terminologyPath = DEFAULT_TERMINOLOGY_PATH;
 
     private List<MossModule> modules;
-
-    public String getTemplateResourcePlaceholder() {
-        return templateResourcePlaceholder;
-    }
-
-    public void setTemplateResourcePlaceholder(String templateResourcePlaceholder) {
-        this.templateResourcePlaceholder = templateResourcePlaceholder;
-    }
-
-    public String getTemplatePath() {
-        return templatePath;
-    }
-
-    public void setTemplatePath(String templatePath) {
-        this.templatePath = templatePath;
-    }
-
-    public String getIndexerConfigPath() {
-        return indexerConfigPath;
-    }
-
-    public void setIndexerConfigPath(String indexerPath) {
-        this.indexerConfigPath = indexerPath;
-    }
-
-    public String getContextPath() {
-        return contextPath;
-    }
-
-    public void setContextPath(String contextPath) {
-        this.contextPath = contextPath;
-    }
 
     private List<MossTerminology> terminologies;
 
@@ -88,23 +52,23 @@ public class MossConfiguration {
         return configDir;
     }
 
-    private static MossConfiguration load(File file) throws ConfigurationException {
-        try {
-            // Load the configuration from the YAML file
-            ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
-            MossConfiguration config = mapper.readValue(file, MossConfiguration.class);
-
-            // Get the directory of the config file for resolving relative paths
-            config.configDir = file.getParentFile();
-            config.modules = loadModules(config.getModuleDirectory());
-            config.terminologies = loadTerminologies(config.getTerminologyDirectory());
-
-            return config;
-        } catch (IOException e) {
-            logger.error(e.getMessage());
-            e.printStackTrace();
-            return null;
+    /**
+     * Resolves {@code CONFIG_PATH}: directory, or legacy path to a YAML file (uses its parent).
+     */
+    static File resolveConfigRoot(File configPath) throws IOException {
+        if (configPath.exists()) {
+            if (configPath.isDirectory()) {
+                return configPath.getCanonicalFile();
+            }
+            File parent = configPath.getParentFile();
+            return (parent != null ? parent : new File(".")).getCanonicalFile();
         }
+        String name = configPath.getName().toLowerCase();
+        if (name.endsWith(".yml") || name.endsWith(".yaml")) {
+            File parent = configPath.getParentFile();
+            return (parent != null ? parent : new File(".")).getCanonicalFile();
+        }
+        return configPath.getCanonicalFile();
     }
 
     private static List<MossTerminology> loadTerminologies(File directory) throws IOException {
@@ -124,7 +88,6 @@ public class MossConfiguration {
             if (child.isDirectory()) {
                 File terminologyFile = new File(child, "terminology.yml");
                 if (terminologyFile.exists() && terminologyFile.isFile()) {
-                    // Handle the module.yml file (e.g., load or parse it)
                     ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
                     MossTerminology terminology = mapper.readValue(terminologyFile, MossTerminology.class);
                     result.add(terminology);
@@ -152,7 +115,6 @@ public class MossConfiguration {
             if (child.isDirectory()) {
                 File moduleFile = new File(child, "module.yml");
                 if (moduleFile.exists() && moduleFile.isFile()) {
-                    // Handle the module.yml file (e.g., load or parse it)
                     ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
                     MossModule config = mapper.readValue(moduleFile, MossModule.class);
                     result.add(config);
@@ -163,37 +125,24 @@ public class MossConfiguration {
         return result;
     }
 
-    public static void initialize(File configFile) throws ConfigurationException, IOException {
+    public static void initialize(File configPath) throws ConfigurationException, IOException {
 
-        if (!configFile.exists()) {
-            File defaultConfig = new File("./config/moss-default.yml");
-
-            if (defaultConfig.exists()) {
-                // Copy the default config to the new location
-                logger.info("Creating default config at " + configFile.toPath());
-                Files.copy(defaultConfig.toPath(), configFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            } else {
-                throw new ConfigurationException("Default configuration file not found: " + defaultConfig.getAbsolutePath());
-            }
+        File configRoot = resolveConfigRoot(configPath);
+        if (!configRoot.exists()) {
+            Files.createDirectories(configRoot.toPath());
+            logger.info("Created config directory: {}", configRoot.getAbsolutePath());
+        }
+        if (!configRoot.isDirectory()) {
+            throw new ConfigurationException("CONFIG_PATH must resolve to a directory: " + configRoot.getAbsolutePath());
         }
 
-        MossConfiguration mossConfiguration = MossConfiguration.load(configFile);
-
-        if (mossConfiguration.facetPath == null) {
-            mossConfiguration.facetPath = "facets";
-        }
-
-        if (mossConfiguration.terminologyPath == null) {
-            mossConfiguration.terminologyPath = "terminologies";
-        }
-
-        if (mossConfiguration.modulePath == null) {
-            mossConfiguration.modulePath = "modules";
-        }
+        MossConfiguration mossConfiguration = new MossConfiguration();
+        mossConfiguration.configDir = configRoot;
+        mossConfiguration.modules = loadModules(mossConfiguration.getModuleDirectory());
+        mossConfiguration.terminologies = loadTerminologies(mossConfiguration.getTerminologyDirectory());
 
         instance = mossConfiguration;
 
-        // Ensure directories exist
         createDirectoryIfMissing(mossConfiguration.getFacetDirectory());
         createDirectoryIfMissing(mossConfiguration.getTerminologyDirectory());
         createDirectoryIfMissing(mossConfiguration.getModuleDirectory());
@@ -219,11 +168,10 @@ public class MossConfiguration {
             return;
         }
 
-        File configFile = new File(ENV.CONFIG_PATH);
+        File configFile = new File(configDir, "moss-config.yml");
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
 
         try {
-            // Write YAML configuration to file
             mapper.writerWithDefaultPrettyPrinter().writeValue(configFile, this);
             logger.info("Configuration successfully saved to {}", configFile.getAbsolutePath());
         } catch (IOException e) {
@@ -264,6 +212,10 @@ public class MossConfiguration {
 
     public String getFacetPath() {
         return facetPath;
+    }
+
+    public void setFacetPath(String facetPath) {
+        this.facetPath = facetPath;
     }
 
     public void setTerminologyPath(String terminologyPath) {
