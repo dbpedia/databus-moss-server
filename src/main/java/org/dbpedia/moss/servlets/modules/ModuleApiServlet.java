@@ -14,7 +14,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-public class ModuleApiServlet extends HttpServlet implements IModuleIndexerChangedHandler {
+public class ModuleApiServlet extends HttpServlet implements IIndexerChangedHandler {
 
     private final ModuleHandler moduleHandler;
 
@@ -31,10 +31,10 @@ public class ModuleApiServlet extends HttpServlet implements IModuleIndexerChang
         moduleHandler = new ModuleHandler(this);
         moduleStore = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
         subResourceHandlers = List.of(
-                new RegexHandler(Pattern.compile("^shapes\\.ttl$"), new ShapesHandler()),
-                new RegexHandler(Pattern.compile("^context\\.jsonld$"), new ContextHandler()),
-                new RegexHandler(Pattern.compile("^indexer\\.yml$"), new IndexerHandler(this)),
-                new RegexHandler(Pattern.compile("^template\\..+$"), new TemplateHandler())
+                new RegexHandler(Pattern.compile("^shapes$"), new ShapesHandler()),
+                new RegexHandler(Pattern.compile("^context$"), new ContextHandler()),
+                new RegexHandler(Pattern.compile("^indexer$"), new IndexerHandler(this)),
+                new RegexHandler(Pattern.compile("^template$"), new TemplateHandler())
         );
     }
 
@@ -117,7 +117,7 @@ public class ModuleApiServlet extends HttpServlet implements IModuleIndexerChang
     }
 
     @Override
-    public void onModuleIndexerChanged(String moduleId) {
+    public void onIndexerChanged(String moduleId) {
         try {
             Optional<String> indexerResource = moduleStore.loadSubResource(moduleId,
                     IndexerHandler.INDEXER_FILE);

@@ -10,6 +10,33 @@ services:
     volumes:
       - "../config/lookup-config.yml:/resources/config.yml"
       - "./index:/index"
+  oeo-lookup:
+    image: dbpedia/lookup:dev
+    container_name: oeo_lookup
+    ports:
+      - "5005:8082"
+    volumes:
+      - "./oeo/lookup-config.yml:/resources/config.yml"
+      - "./oeo/index:/index"
+      - "./oeo/oeo.ttl:/data/oeo.ttl"
+  oto-lookup:
+    image: dbpedia/lookup:dev
+    container_name: oto_lookup
+    ports:
+      - "5006:8082"
+    volumes:
+      - "./oto/lookup-config.yml:/resources/config.yml"
+      - "./oto/index:/index"
+      - "./oto/oto.ttl:/data/oto.ttl"
+  rokg-lookup:
+    image: dbpedia/lookup:dev
+    container_name: rokg_lookup
+    ports:
+      - "5007:8082"
+    volumes:
+      - "./rokg/lookup-config.yml:/resources/config.yml"
+      - "./rokg/index:/index"
+      - "./rokg/rokg.ttl:/data/rokg.ttl"
   gstore:
     image: dbpedia/gstore:dev
     container_name: moss_dev_gstore

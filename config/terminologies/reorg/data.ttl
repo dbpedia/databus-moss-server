@@ -1,0 +1,150 @@
+@prefix reorg: <https://dbpedia.org/ns/reorg/> .
+@prefix org: <http://www.w3.org/ns/org#> .
+@prefix schema: <http://schema.org/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+###########################
+# Classes
+###########################
+
+reorg:Organization a rdfs:Class ;
+    rdfs:label "Organization" .
+
+reorg:GovernmentBody a rdfs:Class ;
+    rdfs:subClassOf reorg:Organization ;
+    rdfs:label "Government Body" .
+
+reorg:Ministry a rdfs:Class ;
+    rdfs:subClassOf reorg:GovernmentBody ;
+    rdfs:label "Ministry" .
+
+reorg:Agency a rdfs:Class ;
+    rdfs:subClassOf reorg:GovernmentBody ;
+    rdfs:label "Agency" .
+
+reorg:ResearchInstitute a rdfs:Class ;
+    rdfs:subClassOf reorg:Organization ;
+    rdfs:label "Research Institute" .
+
+reorg:Foundation a rdfs:Class ;
+    rdfs:subClassOf reorg:Organization ;
+    rdfs:label "Foundation" .
+
+reorg:Network a rdfs:Class ;
+    rdfs:subClassOf reorg:Organization ;
+    rdfs:label "Network or Collaboration Platform" .
+
+reorg:UnknownEntity a rdfs:Class ;
+    rdfs:subClassOf reorg:Organization ;
+    rdfs:label "Unclassified Entity" .
+
+
+###########################
+# Properties
+###########################
+
+reorg:homepage a rdf:Property ;
+    rdfs:label "Homepage URL" .
+
+reorg:country a rdf:Property ;
+    rdfs:label "Country" .
+
+reorg:parentOrganization a rdf:Property ;
+    rdfs:label "Parent Organization" .
+
+reorg:relatedTo a rdf:Property ;
+    rdfs:label "Related Organization" .
+
+
+###########################
+# Instances
+###########################
+
+### BMWK ? Ministry
+reorg:BMWK a reorg:Ministry, reorg:GovernmentBody, reorg:Organization ;
+    rdfs:label "BM für Wirtschaft und Klimaschutz" ;
+    skos:altLabel "Bundesministerium fuer Wirtschaft und Klimaschutz" ;
+    skos:altLabel "Bundesministerium für Wirtschaft und Energie" ;
+    skos:altLabel "Bundesministerium für Wirtschaft und Energie (BMWi)" ;
+    skos:altLabel "Bundesministerium für Wirtschaft und Klimaschutz (BMWK)" ;
+    skos:altLabel "BMWK" ;
+    skos:altLabel "Federal Ministry for Economic Affairs and Climate Action" ;
+    skos:altLabel "german federal ministry for economics and energy" ;
+    owl:sameAs <https://www.wikidata.org/wiki/Q488589> .
+
+
+### BMBF ? Ministry
+reorg:BMFTR a reorg:Ministry, reorg:GovernmentBody, reorg:Organization ;
+    rdfs:label "Bundesministerium für Bildung und Forschung" ;
+    skos:altLabel "BMBF" ;
+    skos:altLabel "BMFTR" ;
+    skos:altLabel "German Federal Ministry of Education and Research" ;
+    skos:altLabel "German Federal Ministry of Education and Research (BMBF)" ;
+    skos:altLabel "Federal Ministry of Research, Technology and Space" ;
+    skos:altLabel "Bundesministerium für Forschung, Technologie und Raumfahrt" ;
+    owl:sameAs <https://www.wikidata.org/wiki/Q492234> .
+
+
+### BMUKN ? Ministry
+reorg:BMUKN a reorg:Ministry, reorg:GovernmentBody, reorg:Organization ;
+    rdfs:label "Bundesministerium für Umwelt, Klimaschutz, Naturschutz und nukleare Sicherheit"@de ;
+    rdfs:label "Federal Ministry for the Environment, Climate Protection, Nature Conservation and Nuclear Safety"@en ;
+    skos:altLabel "Bundesministerium für Umwelt, Naturschutz und nukleare Sicherheit" ;
+    skos:altLabel "BMU" ;
+    skos:altLabel "BMUKN" ;
+    skos:altLabel "Umweltministerium" ;
+    skos:altLabel "Bundesumweltministerium" ;
+    skos:altLabel "BMUV" ;
+    owl:sameAs <https://www.wikidata.org/wiki/Q493344> .
+
+
+### Bundesnetzagentur ? Agency
+reorg:Bundesnetzagentur a reorg:Agency, reorg:GovernmentBody, reorg:Organization ;
+    rdfs:label "Bundesnetzagentur" ;
+    skos:altLabel "Bundesnetzagentur für Elektrizität, Gas, Telekommunikation, Post und Eisenbahnen" ;
+    reorg:country "DE" .
+
+
+### Umweltbundesamt ? Agency
+reorg:UBA a reorg:Agency, reorg:GovernmentBody, reorg:Organization ;
+    rdfs:label "Umweltbundesamt" ;
+    skos:altLabel "UBA" ;
+    reorg:country "DE" .
+
+
+### Helmholtz Metadata Collaboration ? Network
+reorg:HMC a reorg:Network, reorg:Organization ;
+    rdfs:label "Helmholtz Metadata Collaboration" ;
+    reorg:relatedTo "Helmholtz Association" ;
+    reorg:country "DE" .
+
+
+### IuK Bayern ? Network
+reorg:IUKBayern a reorg:Network, reorg:Organization ;
+    rdfs:label "Informations- und Kommunikationsnetzwerk Bayern" ;
+    skos:altLabel "IuK Bayern" ;
+    reorg:homepage "https://www.iuk-bayern.de/" ;
+    reorg:country "DE" .
+
+
+### Region Gestalten ? Network
+reorg:RegionGestalten a reorg:Network, reorg:Organization ;
+    rdfs:label "Region Gestalten" ;
+    reorg:homepage "https://www.region-gestalten.bund.de" ;
+    reorg:country "DE" .
+
+
+### Agora Energiewende ? Foundation
+reorg:AgoraEnergiewende a reorg:Foundation, reorg:Organization ;
+    rdfs:label "Agora Energiewende" ;
+    reorg:country "DE" .
+
+
+### Reiner Lemoine Stiftung ? Foundation
+reorg:RLS a reorg:Foundation, reorg:Organization ;
+    rdfs:label "Reiner Lemoine Stiftung" ;
+    reorg:country "DE" .
+

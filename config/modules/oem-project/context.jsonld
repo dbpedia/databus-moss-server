@@ -1,0 +1,10 @@
+{
+  "@context": {
+    "reorg": "https://dbpedia.org/ns/reorg/",
+    "oem": "https://dbpedia.org/ns/oem/",
+    "fundingAgency": {
+      "@id": "oem:fundingAgency",
+      "@type": "@id"
+    }
+  }
+}

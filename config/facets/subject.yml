@@ -1,0 +1,5 @@
+---
+id: "subject"
+label: "Subject"
+predicate: "(<http://www.w3.org/ns/dcat#distribution>/<http://purl.org/dc/terms/subject>)|<http://purl.org/dc/elements/1.1/subject>"
+sortOrder: 0

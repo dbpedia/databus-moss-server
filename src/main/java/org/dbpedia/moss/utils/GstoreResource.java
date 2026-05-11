@@ -22,6 +22,7 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFParser;
 import org.dbpedia.moss.GstoreConnector;
+import org.dbpedia.moss.db.UserInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,13 +36,21 @@ public class GstoreResource {
     private static final String REQ_PARAM_REPO = "repo";
     private static final String REQ_PARAM_PATH = "path";
     private static final String REQ_PARAM_PREFIX = "prefix";
+    private static final String REQ_PARAM_AUTHOR = "author";
 
     private String repo;
     private String path;
+    private UserInfo userInfo;
 
     public GstoreResource(String uriString) throws URISyntaxException { 
         initialize(uriString);
     }
+
+       public GstoreResource(String uriString, UserInfo userInfo) throws URISyntaxException { 
+        initialize(uriString);
+        this.userInfo = userInfo;
+    }
+
 
     private void initialize(String uriString) throws URISyntaxException {
         URI uri = new URI(uriString);
@@ -110,6 +119,13 @@ public class GstoreResource {
             .append(REQ_PARAM_PREFIX)
             .append("=")
             .append(URLEncoder.encode(ENV.MOSS_BASE_URL + "/g/", StandardCharsets.UTF_8));
+
+        if(userInfo != null) {
+            uri.append("&")
+            .append(REQ_PARAM_AUTHOR)
+            .append("=")
+            .append(userInfo.getUsername());
+        }
             
         return new URI(uri.toString()).toURL();
     }
@@ -210,7 +226,7 @@ public class GstoreResource {
   
     public int delete() throws URISyntaxException, IOException {
         URL deleteURL = getRequestURL(GstoreOp.Delete);
-        logger.debug("Build delete url <{}>.", deleteURL.toString());
+        logger.info("Build delete url <{}>.", deleteURL.toString());
 
         HttpURLConnection connection = (HttpURLConnection) deleteURL.openConnection();
         connection.setRequestMethod(Constants.REQ_METHOD_DELETE);

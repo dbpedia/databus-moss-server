@@ -1,5 +1,0 @@
----
-id: oemeta
-label: Open Energy Metadata
-description: Metadata for open energy things.
-language: application/ld+json

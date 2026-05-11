@@ -1,0 +1,5 @@
+---
+id: "fundingAgency"
+label: "Funding Agency"
+predicate: "<https://dbpedia.org/ns/oem/fundingAgency>"
+sortOrder: 5

@@ -1,7 +1,0 @@
-{
-    "@context": {
-        "exif": "http://www.w3.org/2003/12/exif/ns#",
-        "width": "exif:width",
-        "height": "exif:height"
-    }
-}

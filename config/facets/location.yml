@@ -1,0 +1,5 @@
+---
+id: "location"
+label: "Location"
+predicate: "<http://purl.org/dc/terms/spatial>"
+sortOrder: 1

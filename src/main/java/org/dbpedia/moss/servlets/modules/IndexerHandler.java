@@ -14,9 +14,9 @@ public class IndexerHandler implements ISubResourceHandler {
     private static final String CONTENT_YAML = "application/x-yaml";
 
     private final ModuleStore store;
-    private final IModuleIndexerChangedHandler changedHandler;
+    private final IIndexerChangedHandler changedHandler;
 
-    public IndexerHandler(IModuleIndexerChangedHandler changedHandler) {
+    public IndexerHandler(IIndexerChangedHandler changedHandler) {
         this.changedHandler = changedHandler;
         store = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
     }
@@ -37,7 +37,7 @@ public class IndexerHandler implements ISubResourceHandler {
         String body = req.getReader().lines().reduce("", (acc, line) -> acc + line + "\n");
         store.saveSubResource(moduleId, INDEXER_FILE, body);
 
-        changedHandler.onModuleIndexerChanged(moduleId);
+        changedHandler.onIndexerChanged(moduleId);
         resp.setContentType(CONTENT_YAML);
         resp.getWriter().write(body);
     }
@@ -50,7 +50,7 @@ public class IndexerHandler implements ISubResourceHandler {
             return;
         }
         
-        changedHandler.onModuleIndexerChanged(moduleId);
+        changedHandler.onIndexerChanged(moduleId);
         resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
     }
 }

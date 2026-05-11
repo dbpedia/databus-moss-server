@@ -11,7 +11,7 @@
             "mainClass": "org.dbpedia.moss.Main",
             "projectName": "moss",
             "env": {
-                "CONFIG_PATH": "./config/moss-config.yml",
+                "CONFIG_PATH": "./config",
                 "MOSS_BASE_URL": "http://localhost:8080",
                 "GSTORE_BASE_URL": "http://localhost:5003",
                 "LOOKUP_BASE_URL": "http://localhost:5002",
@@ -21,8 +21,7 @@
                 "USER_DATABASE_PATH": "./devenv/sqlite/users.db",
                 "AUTH_OIDC_ISSUER": "https://auth.dbpedia.org/realms/dbpedia",
                 "JWT_VERBOSE": true,
-                "AUTH_ADMIN_ROLE": "moss-dev-admin",
-                "AUTH_ADMIN_USERS": "janfo,choyer,dbpedia",
+                "AUTH_ADMIN_USERS": "choyer,dbpedia,janfo",
                 "AUTH_OIDC_CLIENT_ID": "moss-dev"
             }
         }

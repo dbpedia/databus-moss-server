@@ -2,6 +2,7 @@ package org.dbpedia.moss;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.EnumSet;
 
@@ -10,25 +11,28 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.sys.JenaSystem;
 import org.dbpedia.moss.config.MossConfiguration;
+import org.dbpedia.moss.config.MossTerminology;
 import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.indexer.IndexerManager;
-import org.dbpedia.moss.indexer.OntologyLoader;
+import org.dbpedia.moss.servlets.DeleteEntryServlet;
+import org.dbpedia.moss.servlets.EntriesServlet;
 import org.dbpedia.moss.servlets.IndexerPreviewServlet;
-import org.dbpedia.moss.servlets.MetadataBrowseServlet;
 import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.dbpedia.moss.servlets.MetadataValidationServlet;
-import org.dbpedia.moss.servlets.MetadataWriteServlet;
-import org.dbpedia.moss.servlets.MossProxyServlet;
-import org.dbpedia.moss.servlets.ResourceServlet;
+import org.dbpedia.moss.servlets.ProxyServlet;
+import org.dbpedia.moss.servlets.SaveEntryServlet;
 import org.dbpedia.moss.servlets.SparqlProxyServlet;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
+import org.dbpedia.moss.servlets.facets.FacetServlet;
 import org.dbpedia.moss.servlets.modules.ModuleApiServlet;
-import org.dbpedia.moss.servlets.modules.ModuleResourceServlet;
+import org.dbpedia.moss.servlets.terminologies.TerminologyServlet;
 import org.dbpedia.moss.utils.Constants;
 import org.dbpedia.moss.utils.ENV;
+import org.dbpedia.moss.utils.GstoreResource;
 import org.dbpedia.moss.utils.RequestMethodFilterWrapper;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.DefaultIdentityService;
@@ -54,7 +58,7 @@ import jakarta.servlet.http.HttpServlet;
  */
 public class Main {
 
-    private static final String BUILD_NUM = "0.1.1.3";
+    private static final String BUILD_NUM = "0.2.0";
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
@@ -87,13 +91,25 @@ public class Main {
 
         logger.info("ENV:\n{} ", ENV.printAll());
 
-        File configFile = new File(ENV.CONFIG_PATH);
+        File configRoot = new File(ENV.CONFIG_PATH);
+        MossConfiguration.initialize(configRoot);
 
-        MossConfiguration.initialize(configFile);
-
-        // waitForGstore(ENV.GSTORE_BASE_URL);
         MossConfiguration config = MossConfiguration.get();
-        OntologyLoader.load(config);
+
+        for (MossTerminology terminology : config.getTerminologies()) {
+        
+            logger.info("Saving Terminology to Gstore: {} ", terminology.getURI());
+
+            try {
+                Lang terminologyLanguage = RDFLanguages.contentTypeToLang(terminology.getLanguage());
+
+                String gstoreUri = terminology.getURI() + "." + terminologyLanguage.getFileExtensions().getFirst();
+                GstoreResource gstoreTerminologyResource = new GstoreResource(gstoreUri);
+                gstoreTerminologyResource.writeModel(terminology.getDataModel(), RDFLanguages.contentTypeToLang(terminology.getLanguage()));
+            } catch (IOException e) {
+                logger.error(e.getMessage());
+            }
+        }
 
         UserDatabaseManager userDatabaseManager = new UserDatabaseManager(ENV.USER_DATABASE_PATH);
 
@@ -118,34 +134,21 @@ public class Main {
 
         MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
 
-        ServletContextHandler sparqlProxyContext = new ServletContextHandler();
-        sparqlProxyContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
-        sparqlProxyContext.setContextPath("/sparql");
-        sparqlProxyContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/*");
+        ServletContextHandler rootContext = new ServletContextHandler();
+        rootContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
+        rootContext.setContextPath("");
 
-        // Context handler for the unprotected routes
-        ServletContextHandler resourceContext = new ServletContextHandler();
-        resourceContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        resourceContext.setContextPath("/entry/*");
-        resourceContext.addServlet(new ServletHolder(new ResourceServlet()), "/*");
+        rootContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/sparql");
+        rootContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/sparql/");
 
-        ServletContextHandler moduleContext = createSimpleContext("/module/", new ModuleResourceServlet());
-
+      
         // Context handler for the unprotected routes
         ServletContextHandler readContext = new ServletContextHandler();
         readContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
         readContext.setContextPath("/g/*");
         readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
-        // Context handler for the unprotected routes
-        ServletContextHandler browseContext = new ServletContextHandler();
-        browseContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        browseContext.setContextPath("/file/*");
-        browseContext.addServlet(new ServletHolder(new MetadataBrowseServlet()), "/*");
-
-        ServletHolder searchProxyServlet = new ServletHolder(new MossProxyServlet(ENV.LOOKUP_BASE_URL + "/api"));
-        // ServletHolder layerTemplateServlet = new ServletHolder(new LayerTemplateServlet());
-        // ServletHolder layerIndexerConfigurationServlet = new ServletHolder(new LayerIndexerConfigurationServlet());
+        ServletHolder searchProxyServlet = new ServletHolder(new ProxyServlet(ENV.LOOKUP_BASE_URL + "/api"));
 
         // Context handler for the protected api routes
         ServletContextHandler apiContext = new ServletContextHandler();
@@ -154,23 +157,33 @@ public class Main {
 
         AdminFilter adminFilter = new AdminFilter();
         AuthenticationFilter authFilter = new AuthenticationFilter(new APIKeyValidator(userDatabaseManager));
-        setupReadOnlyAdminServlet(apiContext, new ModuleApiServlet(indexerManager), "/modules/*", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(rootContext, new ModuleApiServlet(indexerManager), "/modules/*", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(rootContext, new TerminologyServlet(), "/terminologies/*", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(rootContext, new FacetServlet(), "/facets/*", authFilter, adminFilter);
+
+        setupReadOnlyAuthServlet(rootContext, new EntriesServlet(indexerManager, userDatabaseManager), "/entries/*", authFilter);
 
         FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
 
-        ServletHolder metadataWriteServletHolder = new ServletHolder(new MetadataWriteServlet(indexerManager, userDatabaseManager));
-        metadataWriteServletHolder.setInitOrder(0);
-        metadataWriteServletHolder.getRegistration().setMultipartConfig(multipartConfig);
+        ServletHolder saveEntryServletHolder = new ServletHolder(new SaveEntryServlet(indexerManager, userDatabaseManager));
+        saveEntryServletHolder.setInitOrder(0);
+        saveEntryServletHolder.getRegistration().setMultipartConfig(multipartConfig);
+
+        ServletHolder deleteEntryServletHolder = new ServletHolder(new DeleteEntryServlet(indexerManager, userDatabaseManager));
+        deleteEntryServletHolder.setInitOrder(0);
+        deleteEntryServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
         apiContext.addFilter(authFilterHolder, "/save-entry", null);
-        apiContext.addServlet(metadataWriteServletHolder, "/save-entry");
+        apiContext.addServlet(saveEntryServletHolder, "/save-entry");
+
+        apiContext.addFilter(authFilterHolder, "/delete-entry", null);
+        apiContext.addServlet(deleteEntryServletHolder, "/delete-entry");
 
         ServletHolder metadataValidationServletHolder = new ServletHolder(new MetadataValidationServlet(userDatabaseManager));
         metadataValidationServletHolder.getRegistration().setMultipartConfig(multipartConfig);
         apiContext.addFilter(authFilterHolder, "/validate-entry", null);
         apiContext.addServlet(metadataValidationServletHolder, "/validate-entry");
 
-        
         ServletHolder indexerPreviewServlet = new ServletHolder(new IndexerPreviewServlet(userDatabaseManager));
         indexerPreviewServlet.getRegistration().setMultipartConfig(multipartConfig);
         apiContext.addFilter(authFilterHolder, "/get-indexer-preview", null);
@@ -188,26 +201,13 @@ public class Main {
         HandlerList handlers = new HandlerList();
         handlers.setHandlers(new Handler[]{
             readContext,
-            moduleContext,
-            resourceContext,
-            browseContext,
             apiContext,
-            sparqlProxyContext,});
+            rootContext,});
 
         server.setHandler(handlers);
 
         server.start();
         server.join();
-    }
-
-    private static ServletContextHandler createSimpleContext(String path, HttpServlet servlet) {
-        FilterHolder corsFilterHolder = new FilterHolder(new CorsFilter());
-
-        ServletContextHandler context = new ServletContextHandler();
-        context.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        context.setContextPath(path);
-        context.addServlet(new ServletHolder(servlet), "/*");
-        return context;
     }
 
     private static void setupReadOnlyAdminServlet(ServletContextHandler apiContext, HttpServlet servlet, String path,
@@ -226,5 +226,22 @@ public class Main {
         apiContext.addServlet(servletHolder, path);
         apiContext.addFilter(new FilterHolder(authFilterWrapper), path, null);
         apiContext.addFilter(new FilterHolder(adminFilterWrapper), path, null);
+    }
+
+    private static void setupReadOnlyAuthServlet(ServletContextHandler apiContext, HttpServlet servlet, String path,
+            Filter authFilter) {
+
+        ServletHolder servletHolder = new ServletHolder(servlet);
+        String[] layerListAllowedMethods = new String[]{
+            Constants.REQ_METHOD_HEAD,
+            Constants.REQ_METHOD_GET,
+            Constants.REQ_METHOD_OPTIONS
+        };
+
+        RequestMethodFilterWrapper authFilterWrapper = new RequestMethodFilterWrapper(authFilter, layerListAllowedMethods);
+
+        apiContext.addServlet(servletHolder, path);
+        apiContext.addFilter(new FilterHolder(new CorsFilter()), path, EnumSet.of(DispatcherType.REQUEST));
+        apiContext.addFilter(new FilterHolder(authFilterWrapper), path, null);
     }
 }

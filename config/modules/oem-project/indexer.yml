@@ -1,0 +1,19 @@
+version: "1.0"
+indexMode: INDEX_SPARQL_ENDPOINT
+sparqlEndpoint: http://virtuoso:8890/sparql
+indexFields:
+  - fieldName: fundingAgency
+    documentVariable: entry
+    type: uri
+    query: >
+      SELECT DISTINCT ?entry ?fundingAgency WHERE {
+        GRAPH ?g {
+          ?entry a <http://dataid.dbpedia.org/ns/moss#MetadataEntry> .
+          ?entry <http://dataid.dbpedia.org/ns/moss#content> ?content .
+          ?entry <http://dataid.dbpedia.org/ns/moss#extends> ?resource .
+        }
+        GRAPH ?content {
+          ?resource <https://dbpedia.org/ns/oem/fundingAgency> ?fundingAgency .
+        }
+        #VALUES#
+      }
