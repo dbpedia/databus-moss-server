@@ -104,8 +104,6 @@ public class TerminologyHandler {
                 new HateoasLink("alternate", "/terminologies/" + terminology.getId(), false, HttpConstants.MediaTypes.APPLICATION_HAL_JSON),
                 new HateoasLink("alternate", "/terminologies/" + terminology.getId(), false, HttpConstants.MediaTypes.APPLICATION_JSON),
                 new HateoasLink("data", "/terminologies/" + terminology.getId() + "/data", false, terminology.getLanguage()),
-                new HateoasLink("indexer", "/terminologies/" + terminology.getId() + "/indexer-query", false, HttpConstants.MediaTypes.APPLICATION_SPARQL_QUERY),
-                new HateoasLink("search", "/terminologies/" + terminology.getId() + "/search{?query}", true, null),
                 new HateoasLink("list", "/terminologies"));
 
         HttpUtils.addHateoasLinks(resp, links);

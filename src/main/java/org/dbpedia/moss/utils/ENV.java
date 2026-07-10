@@ -10,7 +10,6 @@ public class ENV {
     public static String GSTORE_BASE_URL;
     public static String STORE_SPARQL_ENDPOINT; // TODO: Remove, when gstore sparql proxy is fixed
     public static String CONFIG_PATH;
-    public static String LOOKUP_BASE_URL;
     public static String USER_DATABASE_PATH;
     public static String AUTH_OIDC_ISSUER;
     public static String AUTH_OIDC_CLIENT_ID;
@@ -33,7 +32,6 @@ public class ENV {
     private static void init() {
         GSTORE_BASE_URL = getVariable("GSTORE_BASE_URL");
         CONFIG_PATH = getVariable("CONFIG_PATH");
-        LOOKUP_BASE_URL = getVariable("LOOKUP_BASE_URL");
         MOSS_BASE_URL = getVariable("MOSS_BASE_URL");
         USER_DATABASE_PATH = getVariable("USER_DATABASE_PATH");
         AUTH_OIDC_ISSUER = getVariable("AUTH_OIDC_ISSUER");
@@ -66,7 +64,6 @@ public class ENV {
 
         sb.append("GSTORE_BASE_URL: ").append(GSTORE_BASE_URL).append("\n");
         sb.append("CONFIG_PATH: ").append(CONFIG_PATH).append("\n");
-        sb.append("LOOKUP_BASE_URL: ").append(LOOKUP_BASE_URL).append("\n");
         sb.append("MOSS_BASE_URL: ").append(MOSS_BASE_URL).append("\n");
         sb.append("USER_DATABASE_PATH: ").append(USER_DATABASE_PATH).append("\n");
         sb.append("AUTH_ADMIN_ROLE: ").append(AUTH_ADMIN_ROLE).append("\n");

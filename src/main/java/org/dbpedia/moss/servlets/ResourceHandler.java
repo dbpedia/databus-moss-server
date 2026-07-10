@@ -19,7 +19,6 @@ import org.apache.jena.vocabulary.RDF;
 import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.db.UserInfo;
-import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.modules.ModuleStore;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.GstoreResource;
@@ -53,10 +52,7 @@ public class ResourceHandler {
 
     private final UserDatabaseManager userDatabaseManager;
 
-    private final IndexerManager indexerManager;
-
-    public ResourceHandler(IndexerManager indexerManager, UserDatabaseManager userDatabaseManager) {
-        this.indexerManager = indexerManager;
+    public ResourceHandler(UserDatabaseManager userDatabaseManager) {
         this.userDatabaseManager = userDatabaseManager;
         moduleStore = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
     }
@@ -113,8 +109,6 @@ public class ResourceHandler {
             if (deletionResult != 200) {
                 throw new Exception("Unable to delete entry content from database.");
             }
-
-            indexerManager.updateResource(entryResource.getURI(), moduleId);
 
             // Create JSON response
             Map<String, String> jsonResponse = new HashMap<>();

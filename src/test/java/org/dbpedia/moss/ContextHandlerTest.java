@@ -5,7 +5,6 @@ import java.io.File;
 import javax.servlet.http.HttpServletResponse;
 
 import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.modules.ModuleApiServlet;
 import org.dbpedia.moss.utils.ENV;
 import org.eclipse.jetty.http.HttpTester;
@@ -27,17 +26,13 @@ public class ContextHandlerTest {
         ENV.setTestVariable("CONFIG_PATH", "./config");
         ENV.setTestVariable("MOSS_BASE_URL", "http://localhost:8080");
         ENV.setTestVariable("GSTORE_BASE_URL", "http://localhost:5003");
-        ENV.setTestVariable("LOOKUP_BASE_URL", "http://localhost:5002");
         ENV.setTestVariable("USER_DATABASE_PATH", "./devenv/users.db");
 
         MossConfiguration.initialize(new File(ENV.CONFIG_PATH));
 
-        IndexerManager indexerManager = new IndexerManager();
-        indexerManager.start(1);
-
         tester = new ServletTester();
         tester.setContextPath("/api/v1");
-        tester.addServlet(new ServletHolder(new ModuleApiServlet(indexerManager)), "/modules/*");
+        tester.addServlet(new ServletHolder(new ModuleApiServlet()), "/modules/*");
         tester.start();
     }
 

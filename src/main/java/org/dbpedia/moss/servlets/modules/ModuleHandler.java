@@ -24,10 +24,8 @@ public class ModuleHandler {
     private final ModuleStore store = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
     private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES));
     private final ObjectMapper jsonMapper = new ObjectMapper();
-    private final IIndexerChangedHandler indexerChangedHandler;
 
-    public ModuleHandler(IIndexerChangedHandler indexerChangedHandler) {
-        this.indexerChangedHandler = indexerChangedHandler;
+    public ModuleHandler() {
     }
 
     public void listModules(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -110,7 +108,6 @@ public class ModuleHandler {
                 new HateoasLink("alternate", "/modules/" + module.getId(), false, HttpConstants.MediaTypes.APPLICATION_JSON),
                 new HateoasLink("shapes", "/modules/" + module.getId() + "/shapes"),
                 new HateoasLink("context", "/modules/" + module.getId() + "/context"),
-                new HateoasLink("indexer", "/modules/" + module.getId() + "/indexer"),
                 new HateoasLink("template", "/modules/" + module.getId() + "/template"),
                 new HateoasLink("list", "/modules")
         );
@@ -195,8 +192,6 @@ public class ModuleHandler {
 
     public void deleteModule(HttpServletRequest req, HttpServletResponse resp, String moduleId) throws IOException {
         boolean deleted = store.deleteModule(moduleId);
-
-        indexerChangedHandler.onIndexerChanged(moduleId);
 
         if (!deleted) {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Module not found: " + moduleId);

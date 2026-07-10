@@ -39,32 +39,6 @@ public class TerminologySubResourceTest {
     }
 
     @Test
-    public void testIndexerSubResource() throws Exception {
-
-        String indexerContent = "SELECT ?s ?p ?o WHERE { ?s ?p ?o }";
-        // PUT indexer.sparql
-        HttpTester.Response response = TestUtils.sendRequest(tester,
-                "PUT",
-                "/terminologies/subres-term/indexer.sparql",
-                indexerContent);
-        assertEquals(HttpServletResponse.SC_OK, response.getStatus());
-        assertTrue(response.getContent().contains("SELECT"));
-
-        // GET indexer.sparql
-        response = TestUtils.sendRequest(tester,
-                "GET",
-                "/terminologies/subres-term/indexer.sparql");
-        assertEquals(HttpServletResponse.SC_OK, response.getStatus());
-        assertTrue(response.getContent().contains("SELECT"));
-
-        // DELETE indexer.sparql
-        response = TestUtils.sendRequest(tester,
-                "DELETE",
-                "/terminologies/subres-term/indexer.sparql");
-        assertEquals(HttpServletResponse.SC_NO_CONTENT, response.getStatus());
-    }
-
-    @Test
     public void testDataSubResource() throws Exception {
         String rdfData = "<http://example.org/s> <http://example.org/p> <http://example.org/o> .";
 

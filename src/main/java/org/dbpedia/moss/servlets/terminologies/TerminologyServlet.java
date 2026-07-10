@@ -23,26 +23,17 @@ public class TerminologyServlet extends HttpServlet {
 
     private final TerminologyHandler terminologyHandler;
 
-    // Each entry: regex -> handler
     private final List<RegexHandler> subResourceHandlers;
 
     private final TerminologyStore store = new TerminologyStore(MossConfiguration.get().getTerminologyDirectory().toPath());
 
     private final DataHandler dataHandler;
 
-    private final IndexerQueryHandler indexQueryHandler;
-
-    // final static Logger logger = LoggerFactory.getLogger(TerminologyApiServlet.class);
     public TerminologyServlet() {
         terminologyHandler = new TerminologyHandler();
         dataHandler = new DataHandler(this::onTerminologyChanged);
-        indexQueryHandler = new IndexerQueryHandler(this::onTerminologyChanged);
-        SearchHandler searchHandler = new SearchHandler();
-
         subResourceHandlers = List.of(
-                new RegexHandler(Pattern.compile("^indexer-query$"), indexQueryHandler),
-                new RegexHandler(Pattern.compile("^data$"), dataHandler),
-                new RegexHandler(Pattern.compile("^search$"), searchHandler)
+                new RegexHandler(Pattern.compile("^data$"), dataHandler)
         );
     }
 

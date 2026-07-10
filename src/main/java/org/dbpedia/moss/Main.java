@@ -17,13 +17,10 @@ import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.config.MossTerminology;
 import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
-import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.DeleteEntryServlet;
 import org.dbpedia.moss.servlets.EntriesServlet;
-import org.dbpedia.moss.servlets.IndexerPreviewServlet;
 import org.dbpedia.moss.servlets.MetadataReadServlet;
 import org.dbpedia.moss.servlets.MetadataValidationServlet;
-import org.dbpedia.moss.servlets.ProxyServlet;
 import org.dbpedia.moss.servlets.SaveEntryServlet;
 import org.dbpedia.moss.servlets.SparqlProxyServlet;
 import org.dbpedia.moss.servlets.UserDatabaseServlet;
@@ -120,9 +117,6 @@ public class Main {
 
         UserDatabaseManager userDatabaseManager = new UserDatabaseManager(ENV.USER_DATABASE_PATH);
 
-        IndexerManager indexerManager = new IndexerManager();
-        indexerManager.start(1);
-
         HttpConfiguration httpConfig = new HttpConfiguration();
         httpConfig.setRequestHeaderSize(32768);
 
@@ -162,8 +156,6 @@ public class Main {
         readContext.setContextPath("/g/*");
         readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
 
-        ServletHolder searchProxyServlet = new ServletHolder(new ProxyServlet(ENV.LOOKUP_BASE_URL + "/api"));
-
         // Context handler for the protected api routes
         ServletContextHandler apiContext = new ServletContextHandler();
         apiContext.setContextPath("/api/v1");
@@ -171,19 +163,19 @@ public class Main {
 
         AdminFilter adminFilter = new AdminFilter();
         AuthenticationFilter authFilter = new AuthenticationFilter(new APIKeyValidator(userDatabaseManager));
-        setupReadOnlyAdminServlet(rootContext, new ModuleApiServlet(indexerManager), "/modules/*", authFilter, adminFilter);
+        setupReadOnlyAdminServlet(rootContext, new ModuleApiServlet(), "/modules/*", authFilter, adminFilter);
         setupReadOnlyAdminServlet(rootContext, new TerminologyServlet(), "/terminologies/*", authFilter, adminFilter);
         setupReadOnlyAdminServlet(rootContext, new FacetServlet(), "/facets/*", authFilter, adminFilter);
 
-        setupReadOnlyAuthServlet(rootContext, new EntriesServlet(indexerManager, userDatabaseManager), "/entries/*", authFilter);
+        setupReadOnlyAuthServlet(rootContext, new EntriesServlet(userDatabaseManager), "/entries/*", authFilter);
 
         FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
 
-        ServletHolder saveEntryServletHolder = new ServletHolder(new SaveEntryServlet(indexerManager, userDatabaseManager));
+        ServletHolder saveEntryServletHolder = new ServletHolder(new SaveEntryServlet(userDatabaseManager));
         saveEntryServletHolder.setInitOrder(0);
         saveEntryServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
-        ServletHolder deleteEntryServletHolder = new ServletHolder(new DeleteEntryServlet(indexerManager, userDatabaseManager));
+        ServletHolder deleteEntryServletHolder = new ServletHolder(new DeleteEntryServlet(userDatabaseManager));
         deleteEntryServletHolder.setInitOrder(0);
         deleteEntryServletHolder.getRegistration().setMultipartConfig(multipartConfig);
 
@@ -198,15 +190,6 @@ public class Main {
         apiContext.addFilter(authFilterHolder, "/validate-entry", null);
         apiContext.addServlet(metadataValidationServletHolder, "/validate-entry");
 
-        ServletHolder indexerPreviewServlet = new ServletHolder(new IndexerPreviewServlet(userDatabaseManager));
-        indexerPreviewServlet.getRegistration().setMultipartConfig(multipartConfig);
-        apiContext.addFilter(authFilterHolder, "/get-indexer-preview", null);
-        apiContext.addServlet(indexerPreviewServlet, "/get-indexer-preview");
-
-        apiContext.addServlet(searchProxyServlet, "/search");
-        // apiContext.addServlet(layerTemplateServlet, "/layers/get-template");
-
-        // apiContext.addServlet(layerIndexerConfigurationServlet, "/layers/get-indexers");
         apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
         apiContext.addFilter(authFilterHolder, "/users/*", null);
 

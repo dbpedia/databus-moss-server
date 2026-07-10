@@ -39,16 +39,6 @@ services:
       - gstore_git:/gstore/git
       - gstore_logs:/gstore/logs
 
-  lookup:
-    image: dbpedia/lookup:dev
-    container_name: moss_lookup
-    restart: unless-stopped
-    ports:
-      - "${LOOKUP_PORT}:8082"
-    volumes:
-      - lookup_index:/index
-      - ./config/lookup-config.yml:/resources/config.yml
-
   moss-server:
     build:
       context: ..
@@ -57,14 +47,12 @@ services:
     restart: unless-stopped
     depends_on:
       - gstore
-      - lookup
       - virtuoso
     environment:
       CONFIG_PATH: /config
       MOSS_BASE_URL: ${MOSS_BASE_URL}
       GSTORE_BASE_URL: http://gstore:8080
       STORE_SPARQL_ENDPOINT: http://virtuoso:8890/sparql
-      LOOKUP_BASE_URL: http://lookup:8082
       USER_DATABASE_PATH: /data/users.db
       AUTH_OIDC_ISSUER: ${AUTH_OIDC_ISSUER}
       AUTH_OIDC_CLIENT_ID: ${AUTH_OIDC_CLIENT_ID}
@@ -113,5 +101,4 @@ volumes:
   virtuoso_data:
   gstore_git:
   gstore_logs:
-  lookup_index:
   moss_data:

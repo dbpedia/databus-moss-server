@@ -5,7 +5,6 @@ import java.io.IOException;
 import org.apache.jena.rdfconnection.RDFConnection;
 import org.apache.jena.rdfconnection.RDFConnectionRemote;
 import org.dbpedia.moss.db.UserDatabaseManager;
-import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.utils.ENV;
 
 import jakarta.servlet.ServletException;
@@ -21,8 +20,8 @@ public class EntriesServlet extends HttpServlet {
     private static final String ASK_TEMPLATE
             = "ASK WHERE { <%s> ?p ?o }";
 
-    public EntriesServlet(IndexerManager indexerManager, UserDatabaseManager userDatabaseManager) {
-        resourceHandler = new ResourceHandler(indexerManager, userDatabaseManager);
+    public EntriesServlet(UserDatabaseManager userDatabaseManager) {
+        resourceHandler = new ResourceHandler(userDatabaseManager);
         browseHandler = new BrowseHandler(ENV.GSTORE_BASE_URL);
     }
 

@@ -12,7 +12,6 @@ import org.apache.jena.riot.RiotException;
 import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.db.UserInfo;
-import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.servlets.modules.ModuleStore;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.GstoreResource;
@@ -40,14 +39,11 @@ public class DeleteEntryServlet extends HttpServlet {
 
     final static Logger logger = LoggerFactory.getLogger(DeleteEntryServlet.class);
 
-    private final IndexerManager indexerManager;
-
     private final UserDatabaseManager userDatabaseManager;
 
     private final ModuleStore store;
 
-    public DeleteEntryServlet(IndexerManager indexerManager, UserDatabaseManager userDatabaseManager) {
-        this.indexerManager = indexerManager;
+    public DeleteEntryServlet(UserDatabaseManager userDatabaseManager) {
         this.userDatabaseManager = userDatabaseManager;
 
         store = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
@@ -111,8 +107,6 @@ public class DeleteEntryServlet extends HttpServlet {
             if (deletionResult != 200) {
                 throw new Exception("Unable to delete entry content from database.");
             }
-
-            indexerManager.updateResource(entryURI, moduleId);
 
             // Create JSON response
             Map<String, String> jsonResponse = new HashMap<>();

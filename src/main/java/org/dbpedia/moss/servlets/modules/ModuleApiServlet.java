@@ -2,38 +2,25 @@ package org.dbpedia.moss.servlets.modules;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.indexer.IndexerManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-public class ModuleApiServlet extends HttpServlet implements IIndexerChangedHandler {
+public class ModuleApiServlet extends HttpServlet {
 
     private final ModuleHandler moduleHandler;
 
-    private final IndexerManager indexerManager;
-    // Each entry: regex -> handler
     private final List<RegexHandler> subResourceHandlers;
 
-    private final ModuleStore moduleStore;
-
-    final static Logger logger = LoggerFactory.getLogger(ModuleApiServlet.class);
-
-    public ModuleApiServlet(IndexerManager indexerManager) {
-        this.indexerManager = indexerManager;
-        moduleHandler = new ModuleHandler(this);
-        moduleStore = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
+    public ModuleApiServlet() {
+        moduleHandler = new ModuleHandler();
         subResourceHandlers = List.of(
                 new RegexHandler(Pattern.compile("^shapes$"), new ShapesHandler()),
                 new RegexHandler(Pattern.compile("^context$"), new ContextHandler()),
-                new RegexHandler(Pattern.compile("^indexer$"), new IndexerHandler(this)),
                 new RegexHandler(Pattern.compile("^template$"), new TemplateHandler())
         );
     }
@@ -113,23 +100,6 @@ public class ModuleApiServlet extends HttpServlet implements IIndexerChangedHand
             handler.delete(req, resp, parts.moduleId);
         } else {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Unknown subresource: " + parts.subResource);
-        }
-    }
-
-    @Override
-    public void onIndexerChanged(String moduleId) {
-        try {
-            Optional<String> indexerResource = moduleStore.loadSubResource(moduleId,
-                    IndexerHandler.INDEXER_FILE);
-
-            if (indexerResource.isEmpty()) {
-                indexerManager.removeIndexGroup(moduleId);
-            } else {
-                indexerManager.createOrUpdateIndexGroup(moduleId, indexerResource.get());
-            }
-
-        } catch (IOException e) {
-            logger.error(e.getMessage());
         }
     }
 

@@ -19,8 +19,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class MossTerminology {
 
-    public static final String INDEXER_FILE = "indexer.sparql";
-    public static final String INDEX_FOLDER = "index";
     public static final String DATA_FILE_NAME = "data";
 
     private String id;
@@ -84,11 +82,6 @@ public class MossTerminology {
     }
 
     @JsonIgnore
-    public Path getIndexPath() {
-        return getDirectory().resolve(INDEX_FOLDER);
-    }
-
-    @JsonIgnore
     public Path getDataFilePath() {
 
         return getDirectory().resolve(getDataFileName());
@@ -121,15 +114,6 @@ public class MossTerminology {
                 .lang(lang)
                 .parse(model);
         return model;
-    }
-
-    @JsonIgnore
-    public String getIndexerQuery() throws IOException {
-        Path queryFile = getDirectory().resolve(INDEXER_FILE);
-        if (!Files.exists(queryFile)) {
-            throw new IOException("Indexer query file not found: " + queryFile);
-        }
-        return Files.readString(queryFile);
     }
 
     @JsonIgnore

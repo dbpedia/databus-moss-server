@@ -23,7 +23,6 @@ import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.config.MossModule;
 import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.db.UserInfo;
-import org.dbpedia.moss.indexer.IndexerManager;
 import org.dbpedia.moss.indexer.MossEntryHeader;
 import org.dbpedia.moss.servlets.modules.ModuleStore;
 import org.dbpedia.moss.utils.ENV;
@@ -54,14 +53,11 @@ public class SaveEntryServlet extends HttpServlet {
 
     final static Logger logger = LoggerFactory.getLogger(SaveEntryServlet.class);
 
-    private final IndexerManager indexerManager;
-
     private final UserDatabaseManager userDatabaseManager;
 
     private final ModuleStore store;
 
-    public SaveEntryServlet(IndexerManager indexerManager, UserDatabaseManager userDatabaseManager) {
-        this.indexerManager = indexerManager;
+    public SaveEntryServlet(UserDatabaseManager userDatabaseManager) {
         this.userDatabaseManager = userDatabaseManager;
 
         store = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
@@ -160,8 +156,6 @@ public class SaveEntryServlet extends HttpServlet {
             long contentEnd = System.currentTimeMillis();
 
             long totalEnd = System.currentTimeMillis();
-
-            indexerManager.updateResource(entryURI, moduleId);
 
             Map<String, String> jsonResponse = new HashMap<>();
             jsonResponse.put("message", "Success");

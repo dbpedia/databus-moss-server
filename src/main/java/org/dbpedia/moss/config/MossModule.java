@@ -16,7 +16,6 @@ public class MossModule {
     public static final String MODULE_FILE = "module.yml";
     public static final String CONTEXT_FILE = "context.jsonld";
     public static final String SHAPES_FILE = "shapes.ttl";
-    public static final String INDEXER_FILE = "indexer.yml";
 
     private String id;
     private String label;

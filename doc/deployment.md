@@ -53,7 +53,6 @@ export CONFIG_PATH="./config"
 export MOSS_BASE_URL="http://localhost:8080"
 export GSTORE_BASE_URL="http://gstore-host:8080"
 export STORE_SPARQL_ENDPOINT="http://virtuoso:8890/sparql"
-export LOOKUP_BASE_URL="http://lookup-host:8082"
 export USER_DATABASE_PATH="./data/users.db"
 export AUTH_OIDC_ISSUER="https://your-idp/realms/your-realm"
 export AUTH_OIDC_CLIENT_ID="moss-resource-server"
@@ -90,7 +89,6 @@ docker run --rm -p 8080:8080 \
   -e MOSS_BASE_URL="https://moss-api.example.com" \
   -e GSTORE_BASE_URL="https://gstore.internal:8080" \
   -e STORE_SPARQL_ENDPOINT="https://sparql.internal/sparql" \
-  -e LOOKUP_BASE_URL="https://lookup.internal:8082" \
   -e USER_DATABASE_PATH="/data/users.db" \
   -e AUTH_OIDC_ISSUER="https://your-idp/realms/your-realm" \
   -e AUTH_OIDC_CLIENT_ID="your-client-id" \
@@ -102,7 +100,7 @@ docker run --rm -p 8080:8080 \
 
 ### Docker Compose for dependencies
 
-[`devenv/docker-compose.yml`](devenv/docker-compose.yml) starts supporting services (Lookup, Virtuoso, gstore variants) for development. It **does not** build or run this MOSS JAR—run MOSS separately with env vars pointing at those ports (for example Lookup on host port `5002` → use `http://localhost:5002` for `LOOKUP_BASE_URL`).
+[`devenv/docker-compose.yml`](devenv/docker-compose.yml) starts supporting services (Virtuoso, gstore) for development. It **does not** build or run this MOSS JAR—run MOSS separately with env vars pointing at those services.
 
 ## Environment variables
 
