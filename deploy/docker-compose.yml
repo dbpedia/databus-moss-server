@@ -1,0 +1,117 @@
+name: moss
+
+services:
+  virtuoso:
+    image: openlink/virtuoso-opensource-7:latest
+    container_name: moss_virtuoso
+    restart: unless-stopped
+    environment:
+      DBA_PASSWORD: ${VIRTUOSO_DBA_PASSWORD}
+      SPARQL_UPDATE: "true"
+      DEFAULT_GRAPH: ${VIRTUOSO_DEFAULT_GRAPH}
+    ports:
+      - "${VIRTUOSO_PORT}:8890"
+    volumes:
+      - virtuoso_data:/database
+    entrypoint: /bin/bash -c "
+        echo 'grant SPARQL_LOAD_SERVICE_DATA to \"SPARQL\";' > /opt/virtuoso-opensource/initdb.d/ini.sql &&
+        echo 'grant SPARQL_SPONGE to \"SPARQL\";' >> /opt/virtuoso-opensource/initdb.d/ini.sql &&
+        echo 'grant SPARQL_SELECT_FED to \"SPARQL\";' >> /opt/virtuoso-opensource/initdb.d/ini.sql &&
+        /virtuoso-entrypoint.sh
+      "
+
+  gstore:
+    image: dbpedia/gstore:dev
+    container_name: moss_gstore
+    restart: unless-stopped
+    depends_on:
+      - virtuoso
+    environment:
+      STORAGE_USER: ${GSTORE_STORAGE_USER}
+      STORAGE_PASS: ${GSTORE_STORAGE_PASS}
+      STORAGE_SPARQL_ENDPOINT_URI: http://virtuoso:8890/sparql
+      GSTORE_LOCALHOST_CONTEXT_FALLBACK_URL: http://172.17.0.1
+      DEFAULT_JSONLD_LOCALHOST_CONTEXT: ${GSTORE_JSONLD_CONTEXT_URL}
+      DEFAULT_JSONLD_LOCALHOST_CONTEXT_LOCATION: ${GSTORE_JSONLD_CONTEXT_LOCATION}
+    ports:
+      - "${GSTORE_PORT}:8080"
+    volumes:
+      - gstore_git:/gstore/git
+      - gstore_logs:/gstore/logs
+
+  lookup:
+    image: dbpedia/lookup:dev
+    container_name: moss_lookup
+    restart: unless-stopped
+    ports:
+      - "${LOOKUP_PORT}:8082"
+    volumes:
+      - lookup_index:/index
+      - ./config/lookup-config.yml:/resources/config.yml
+
+  moss-server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: moss_server
+    restart: unless-stopped
+    depends_on:
+      - gstore
+      - lookup
+      - virtuoso
+    environment:
+      CONFIG_PATH: /config
+      MOSS_BASE_URL: ${MOSS_BASE_URL}
+      GSTORE_BASE_URL: http://gstore:8080
+      STORE_SPARQL_ENDPOINT: http://virtuoso:8890/sparql
+      LOOKUP_BASE_URL: http://lookup:8082
+      USER_DATABASE_PATH: /data/users.db
+      AUTH_OIDC_ISSUER: ${AUTH_OIDC_ISSUER}
+      AUTH_OIDC_CLIENT_ID: ${AUTH_OIDC_CLIENT_ID}
+      AUTH_OIDC_CLIENT_SECRET: ${AUTH_OIDC_CLIENT_SECRET}
+      AUTH_OIDC_DISCOVERY_URL: ${AUTH_OIDC_DISCOVERY_URL}
+      AUTH_ADMIN_USERS: ${AUTH_ADMIN_USERS}
+      AUTH_ADMIN_ROLE: ${AUTH_ADMIN_ROLE}
+      MOSS_LOG_LEVEL: ${MOSS_LOG_LEVEL}
+      EXTRA_ROOT_CERT_PATH: ${EXTRA_ROOT_CERT_PATH}
+      HTTP_PROXY: ${HTTP_PROXY}
+      HTTPS_PROXY: ${HTTPS_PROXY}
+      NO_PROXY: ${NO_PROXY}
+    ports:
+      - "${MOSS_SERVER_PORT}:8080"
+    volumes:
+      - ./config:/config
+      - moss_data:/data
+
+  moss-frontend:
+    build:
+      context: ../../databus-moss-frontend
+      dockerfile: Dockerfile
+    container_name: moss_frontend
+    restart: unless-stopped
+    depends_on:
+      - moss-server
+    environment:
+      PUBLIC_MOSS_BASE_URL: ${PUBLIC_MOSS_BASE_URL}
+      MOSS_API_SERVER_URL: ${MOSS_API_SERVER_URL}
+      ORIGIN: ${ORIGIN}
+      AUTH_OIDC_CLIENT_ID: ${AUTH_OIDC_CLIENT_ID}
+      AUTH_OIDC_CLIENT_SECRET: ${AUTH_OIDC_CLIENT_SECRET}
+      AUTH_OIDC_ISSUER: ${AUTH_OIDC_ISSUER}
+      AUTH_OIDC_CLIENT_SCOPE: ${AUTH_OIDC_CLIENT_SCOPE}
+      AUTH_OIDC_DISCOVERY_URL: ${AUTH_OIDC_DISCOVERY_URL}
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_TRUST_HOST: ${AUTH_TRUST_HOST}
+      AUTH_DEBUG: ${AUTH_DEBUG}
+      HTTP_PROXY: ${HTTP_PROXY}
+      HTTPS_PROXY: ${HTTPS_PROXY}
+      NO_PROXY: ${NO_PROXY}
+    ports:
+      - "${MOSS_FRONTEND_PORT}:3000"
+
+volumes:
+  virtuoso_data:
+  gstore_git:
+  gstore_logs:
+  lookup_index:
+  moss_data:

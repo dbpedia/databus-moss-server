@@ -1,6 +1,12 @@
-FROM eclipse-temurin:latest
+FROM maven:3.9-eclipse-temurin-21 AS builder
+WORKDIR /build
+COPY pom.xml .
+COPY src ./src
+RUN mvn -q -DskipTests package
+
+FROM eclipse-temurin:21-jre
 EXPOSE 8080
-COPY ./target/moss-1.0-jar-with-dependencies.jar /opt/app/
+COPY --from=builder /build/target/moss-1.0-jar-with-dependencies.jar /opt/app/
 
 SHELL ["/bin/bash", "-c"]
 

@@ -68,7 +68,7 @@ The Dockerfile uses **Eclipse Temurin**, exposes **8080**, copies the packaged J
 
 ### Build prerequisites
 
-Produce the fat JAR on the host (or add a builder stage separately), then:
+Build the image (Maven runs inside Docker):
 
 ```bash
 docker build -t moss-server .

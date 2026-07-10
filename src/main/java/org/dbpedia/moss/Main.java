@@ -38,7 +38,10 @@ import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.DefaultIdentityService;
 import org.eclipse.jetty.security.IdentityService;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -102,6 +105,10 @@ public class Main {
 
             try {
                 Lang terminologyLanguage = RDFLanguages.contentTypeToLang(terminology.getLanguage());
+                if (terminologyLanguage == null) {
+                    logger.error("Unknown or missing language for terminology: {}", terminology.getId());
+                    continue;
+                }
 
                 String gstoreUri = terminology.getURI() + "." + terminologyLanguage.getFileExtensions().getFirst();
                 GstoreResource gstoreTerminologyResource = new GstoreResource(gstoreUri);
@@ -115,7 +122,14 @@ public class Main {
 
         IndexerManager indexerManager = new IndexerManager();
         indexerManager.start(1);
-        Server server = new Server(8080);
+
+        HttpConfiguration httpConfig = new HttpConfiguration();
+        httpConfig.setRequestHeaderSize(32768);
+
+        Server server = new Server();
+        ServerConnector connector = new ServerConnector(server, new HttpConnectionFactory(httpConfig));
+        connector.setPort(8080);
+        server.addConnector(connector);
 
         IdentityService identityService = new DefaultIdentityService();
         server.addBean(identityService);
