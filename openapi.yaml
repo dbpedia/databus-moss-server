@@ -206,6 +206,7 @@ paths:
       tags: [modules]
       operationId: listModules
       summary: List all modules
+      x-required-permission: read-metadata
       responses:
         '200':
           description: OK
@@ -219,7 +220,7 @@ paths:
     post:
       tags: [modules]
       operationId: createModule
-      x-required-permission: write-settings
+      x-required-permission: write-modules
       summary: Create a module
       security:
         - bearerAuth: []
@@ -245,6 +246,7 @@ paths:
       tags: [modules]
       operationId: getModule
       summary: Get a module
+      x-required-permission: read-metadata
       parameters:
         - name: moduleId
           in: path
@@ -266,7 +268,7 @@ paths:
     put:
       tags: [modules]
       operationId: updateModule
-      x-required-permission: write-settings
+      x-required-permission: write-modules
       summary: Update a module
       security:
         - bearerAuth: []
@@ -295,7 +297,7 @@ paths:
     delete:
       tags: [modules]
       operationId: deleteModule
-      x-required-permission: write-settings
+      x-required-permission: write-modules
       summary: Delete a module
       security:
         - bearerAuth: []
@@ -316,6 +318,7 @@ paths:
     get:
       tags: [modules]
       operationId: getModuleContext
+      x-required-permission: read-metadata
       parameters:
         - name: moduleId
           in: path
@@ -337,7 +340,7 @@ paths:
     put:
       tags: [modules]
       operationId: updateModuleContext
-      x-required-permission: write-settings
+      x-required-permission: write-modules
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -363,7 +366,7 @@ paths:
     delete:
       tags: [modules]
       operationId: deleteModuleContext
-      x-required-permission: write-settings
+      x-required-permission: write-modules
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -383,6 +386,7 @@ paths:
     get:
       tags: [modules]
       operationId: getModuleShapes
+      x-required-permission: read-metadata
       parameters:
         - name: moduleId
           in: path
@@ -404,7 +408,7 @@ paths:
     put:
       tags: [modules]
       operationId: updateModuleShapes
-      x-required-permission: write-settings
+      x-required-permission: write-modules
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -430,7 +434,7 @@ paths:
     delete:
       tags: [modules]
       operationId: deleteModuleShapes
-      x-required-permission: write-settings
+      x-required-permission: write-modules
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -450,6 +454,7 @@ paths:
     get:
       tags: [modules]
       operationId: getModuleTemplate
+      x-required-permission: read-metadata
       parameters:
         - name: moduleId
           in: path
@@ -471,7 +476,7 @@ paths:
     put:
       tags: [modules]
       operationId: updateModuleTemplate
-      x-required-permission: write-settings
+      x-required-permission: write-modules
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -500,7 +505,7 @@ paths:
     delete:
       tags: [modules]
       operationId: deleteModuleTemplate
-      x-required-permission: write-settings
+      x-required-permission: write-modules
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -520,6 +525,7 @@ paths:
     get:
       tags: [terminologies]
       operationId: listTerminologies
+      x-required-permission: read-metadata
       responses:
         '200':
           description: OK
@@ -530,7 +536,7 @@ paths:
     post:
       tags: [terminologies]
       operationId: createTerminology
-      x-required-permission: write-settings
+      x-required-permission: write-terminologies
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -552,6 +558,7 @@ paths:
     get:
       tags: [terminologies]
       operationId: getTerminology
+      x-required-permission: read-metadata
       parameters:
         - name: terminologyId
           in: path
@@ -570,7 +577,7 @@ paths:
     put:
       tags: [terminologies]
       operationId: updateTerminology
-      x-required-permission: write-settings
+      x-required-permission: write-terminologies
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -596,7 +603,7 @@ paths:
     delete:
       tags: [terminologies]
       operationId: deleteTerminology
-      x-required-permission: write-settings
+      x-required-permission: write-terminologies
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -614,6 +621,7 @@ paths:
     get:
       tags: [terminologies]
       operationId: getTerminologyData
+      x-required-permission: read-metadata
       parameters:
         - name: terminologyId
           in: path
@@ -630,7 +638,7 @@ paths:
     put:
       tags: [terminologies]
       operationId: updateTerminologyData
-      x-required-permission: write-settings
+      x-required-permission: write-terminologies
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -652,7 +660,7 @@ paths:
     delete:
       tags: [terminologies]
       operationId: deleteTerminologyData
-      x-required-permission: write-settings
+      x-required-permission: write-terminologies
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -670,6 +678,7 @@ paths:
     get:
       tags: [facets]
       operationId: listFacets
+      x-required-permission: read-metadata
       responses:
         '200':
           description: OK
@@ -680,7 +689,7 @@ paths:
     post:
       tags: [facets]
       operationId: createFacet
-      x-required-permission: write-settings
+      x-required-permission: write-facets
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -702,6 +711,7 @@ paths:
     get:
       tags: [facets]
       operationId: getFacet
+      x-required-permission: read-metadata
       parameters:
         - name: facetId
           in: path
@@ -718,7 +728,7 @@ paths:
     put:
       tags: [facets]
       operationId: updateFacet
-      x-required-permission: write-settings
+      x-required-permission: write-facets
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -740,7 +750,7 @@ paths:
     delete:
       tags: [facets]
       operationId: deleteFacet
-      x-required-permission: write-settings
+      x-required-permission: write-facets
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -759,6 +769,7 @@ paths:
       tags: [entries]
       operationId: browseEntries
       summary: Browse entries
+      x-required-permission: read-metadata
       responses:
         '200':
           description: OK
@@ -841,6 +852,8 @@ paths:
       tags: [entries]
       operationId: getEntry
       summary: Get an entry
+      x-jaxrs-path: "/{path:.*}"
+      x-required-permission: read-metadata
       parameters:
         - name: path
           in: path
@@ -861,6 +874,7 @@ paths:
       tags: [entries]
       operationId: deleteEntry
       summary: Delete an entry
+      x-jaxrs-path: "/{path:.*}"
       x-required-permission: write-entries
       security:
         - bearerAuth: []
@@ -1192,9 +1206,12 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   /g/{path}:
+    x-jaxrs-base-path: "/g"
     get:
       tags: [metadata]
       operationId: getMetadataResource
+      x-jaxrs-path: "/{path:.*}"
+      x-required-permission: read-metadata
       parameters:
         - name: path
           in: path
@@ -1216,12 +1233,14 @@ paths:
     get:
       tags: [sparql]
       operationId: sparqlGet
+      x-required-permission: read-metadata
       responses:
         '200':
           description: SPARQL result
     post:
       tags: [sparql]
       operationId: sparqlPost
+      x-required-permission: read-metadata
       requestBody:
         content:
           application/sparql-query:

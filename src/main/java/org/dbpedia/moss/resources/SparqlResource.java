@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.util.Enumeration;
+import java.util.Set;
 
 import org.dbpedia.moss.generated.api.SparqlApi;
 import org.dbpedia.moss.utils.ENV;
@@ -21,6 +22,11 @@ import jakarta.ws.rs.core.Response;
  * JAX-RS resource that proxies SPARQL requests to the configured store endpoint.
  */
 public class SparqlResource implements SparqlApi {
+
+    private static final Set<String> SKIP_RESPONSE_HEADERS = Set.of(
+            "content-length",
+            "transfer-encoding"
+    );
 
     @Context
     private HttpServletRequest request;
@@ -105,10 +111,11 @@ public class SparqlResource implements SparqlApi {
                 }
             }
 
-            Response.ResponseBuilder builder = Response.status(responseCode).entity(out.toString());
-            // getHeaderFields() uses a null key for the status line; skip it when copying response headers.
+            byte[] body = out.toByteArray();
+            Response.ResponseBuilder builder = Response.status(responseCode).entity(body);
+            // getHeaderFields() uses a null key for the status line; skip hop-by-hop headers.
             connection.getHeaderFields().forEach((key, values) -> {
-                if (key != null) {
+                if (key != null && !SKIP_RESPONSE_HEADERS.contains(key.toLowerCase())) {
                     values.forEach(value -> builder.header(key, value));
                 }
             });

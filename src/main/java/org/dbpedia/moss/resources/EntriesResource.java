@@ -21,8 +21,6 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.rdfconnection.RDFConnection;
-import org.apache.jena.rdfconnection.RDFConnectionRemote;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFLanguages;
@@ -68,7 +66,6 @@ import jakarta.ws.rs.core.Response;
 public class EntriesResource implements EntriesApi {
 
     private static final Logger logger = LoggerFactory.getLogger(EntriesResource.class);
-    private static final String ASK_TEMPLATE = "ASK WHERE { <%s> ?p ?o }";
 
     @Context
     private HttpServletRequest request;
@@ -92,12 +89,22 @@ public class EntriesResource implements EntriesApi {
 
     @Override
     public Response getEntry(String path) {
-        return getEntry(new ServletPathRequest(request, ServletPathRequest.toPathInfo(path)));
+        return getEntry(new ServletPathRequest(request, entriesPathInfo()));
     }
 
     @Override
     public Response deleteEntry(String path) {
-        return deleteEntry(new ServletPathRequest(request, ServletPathRequest.toPathInfo(path)));
+        return deleteEntry(new ServletPathRequest(request, entriesPathInfo()));
+    }
+
+    private String entriesPathInfo() {
+        String uri = request.getRequestURI();
+        String prefix = "/entries";
+        if (!uri.startsWith(prefix)) {
+            return "";
+        }
+        String pathInfo = uri.substring(prefix.length());
+        return pathInfo.isEmpty() ? "" : pathInfo;
     }
 
     @Override
@@ -122,11 +129,23 @@ public class EntriesResource implements EntriesApi {
             pathInfo = "";
         }
 
-        String resourceUri = ENV.MOSS_BASE_URL + "/entries" + pathInfo;
-        if (resourceExists(resourceUri)) {
-            return getResource(req);
+        try {
+            GstoreResource headerDocument = new GstoreResource(headerDocumentPath(pathInfo));
+            Model headerModel = headerDocument.readModel(Lang.JSONLD);
+            if (headerModel != null) {
+                return getResource(req, headerModel);
+            }
+        } catch (IOException | URISyntaxException e) {
+            logger.debug("No entry header at {}{}", "/entries", pathInfo, e);
         }
+
         return browse(req);
+    }
+
+    private static String headerDocumentPath(String pathInfo) {
+        String path = pathInfo.startsWith("/") ? pathInfo.substring(1) : pathInfo;
+        String extension = Lang.JSONLD.getFileExtensions().getFirst();
+        return String.format("/header/%s.%s", path, extension);
     }
 
     private Response doSaveEntry(HttpServletRequest req) {
@@ -300,24 +319,11 @@ public class EntriesResource implements EntriesApi {
 
     private Response deleteEntry(HttpServletRequest req) {
         String pathInfo = req.getPathInfo();
-        if (pathInfo == null) {
+        if (pathInfo == null || pathInfo.isBlank() || "/".equals(pathInfo)) {
             return Response.status(Response.Status.NOT_FOUND).entity("Entry path missing").build();
         }
 
-        String resourceUri = ENV.MOSS_BASE_URL + "/entries" + pathInfo;
-        if (resourceExists(resourceUri)) {
-            return deleteResource(req);
-        }
-        return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Method Not Allowed").build();
-    }
-
-    private boolean resourceExists(String resourceUri) {
-        String askQuery = String.format(ASK_TEMPLATE, resourceUri);
-        try (RDFConnection conn = RDFConnectionRemote.service(ENV.STORE_SPARQL_ENDPOINT).build()) {
-            return conn.queryAsk(askQuery);
-        } catch (Exception e) {
-            return false;
-        }
+        return deleteResource(req);
     }
 
     private Response browse(HttpServletRequest req) {
@@ -461,10 +467,8 @@ public class EntriesResource implements EntriesApi {
         try {
             UserInfo userInfo = MossUtils.getUserInfo(userDatabaseManager, req);
 
-            String requestURI = req.getRequestURI();
-            String requestPath = requestURI.substring(9);
-            String extension = Lang.JSONLD.getFileExtensions().getFirst();
-            String headerDocumentPath = String.format("/header/%s.%s", requestPath, extension);
+            String pathInfo = req.getPathInfo();
+            String headerDocumentPath = headerDocumentPath(pathInfo);
 
             GstoreResource headerDocument = new GstoreResource(headerDocumentPath);
             Model headerModel = headerDocument.readModel(Lang.JSONLD);
@@ -539,21 +543,10 @@ public class EntriesResource implements EntriesApi {
         }
     }
 
-    private Response getResource(HttpServletRequest req) {
+    private Response getResource(HttpServletRequest req, Model headerModel) {
         String requestURI = req.getRequestURI();
-        String requestPath = requestURI.substring(8);
-        String extension = Lang.JSONLD.getFileExtensions().getFirst();
-
-        String headerDocumentPath = String.format("/header/%s.%s", requestPath, extension);
 
         try {
-            GstoreResource headerDocument = new GstoreResource(headerDocumentPath);
-            Model headerModel = headerDocument.readModel(Lang.JSONLD);
-
-            if (headerModel == null) {
-                return Response.status(Response.Status.NOT_FOUND).build();
-            }
-
             Resource resource = headerModel.getResource(ENV.MOSS_BASE_URL + requestURI);
 
             String contentGraphURI = RDFUtils.getPropertyValue(headerModel, resource, RDFUris.MOSS_CONTENT, null);

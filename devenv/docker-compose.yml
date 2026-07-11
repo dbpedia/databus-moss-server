@@ -3,7 +3,7 @@ version: "3.0"
 name: moss-dev
 services:
   gstore:
-    image: dbpedia/gstore:dev
+    image: dbpedia/gstore:ffl
     container_name: moss_dev_gstore
     environment:
       STORAGE_USER: "dba"

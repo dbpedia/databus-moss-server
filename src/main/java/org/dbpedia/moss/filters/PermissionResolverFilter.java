@@ -71,6 +71,14 @@ public class PermissionResolverFilter implements Filter {
         String sub = (String) httpRequest.getAttribute(HttpConstants.OIDC.KEY_SUBJECT);
 
         if (sub == null) {
+            try {
+                Set<String> permissions = userDatabase.resolveAnonymousPermissions();
+                List<String> roles = userDatabase.resolveAnonymousRoles();
+                request.setAttribute(HttpConstants.OIDC.KEY_PERMISSIONS, permissions);
+                request.setAttribute(HttpConstants.OIDC.KEY_ROLES, roles);
+            } catch (Exception e) {
+                logger.error("Error resolving anonymous permissions for {}", httpRequest.getRequestURI(), e);
+            }
             chain.doFilter(request, response);
             return;
         }

@@ -9,26 +9,40 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
-import org.dbpedia.moss.generated.api.GApi;
+import org.dbpedia.moss.filters.RequiresPermission;
 import org.dbpedia.moss.utils.ENV;
+import org.dbpedia.moss.utils.HttpConstants;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 
-public class MetadataResource implements GApi {
+@Path("/g")
+public class MetadataResource {
 
     @Context
     private HttpServletRequest request;
 
-    @Override
-    public Response getMetadataResource(String path) {
-        String requestURI = ENV.GSTORE_BASE_URL + request.getRequestURI();
+    @GET
+    @Path("{path:.*}")
+    @RequiresPermission("read-metadata")
+    @Produces({ "text/turtle", "application/ld+json" })
+    public Response getMetadataResource(@PathParam("path") String path) {
+        String gstoreUrl = gstoreFileUrl(request.getRequestURI());
 
         try {
             Lang requestedLanguage = RDFLanguages.contentTypeToLang(request.getHeader("Accept"));
-            HttpURLConnection connection = (HttpURLConnection) new URI(requestURI).toURL().openConnection();
+            HttpURLConnection connection = (HttpURLConnection) new URI(gstoreUrl).toURL().openConnection();
             connection.setRequestMethod("GET");
+            if (requestedLanguage != null) {
+                connection.setRequestProperty("Accept", requestedLanguage.getHeaderString());
+            } else {
+                connection.setRequestProperty("Accept", HttpConstants.MediaTypes.APPLICATION_JSON);
+            }
 
             int responseCode = connection.getResponseCode();
             if (responseCode != HttpURLConnection.HTTP_OK) {
@@ -37,7 +51,7 @@ public class MetadataResource implements GApi {
                         .build();
             }
 
-            String fileExtension = requestURI.substring(requestURI.lastIndexOf('.') + 1);
+            String fileExtension = gstoreUrl.substring(gstoreUrl.lastIndexOf('.') + 1);
             Lang savedLanguage = RDFLanguages.fileExtToLang(fileExtension);
 
             if (requestedLanguage != null && requestedLanguage != savedLanguage) {
@@ -68,5 +82,15 @@ public class MetadataResource implements GApi {
                     .entity("Failed to fetch the resource from the external server.")
                     .build();
         }
+    }
+
+    static String gstoreFileUrl(String requestUri) {
+        if (requestUri.startsWith("/g/")) {
+            return ENV.GSTORE_BASE_URL + "/file/" + requestUri.substring(3);
+        }
+        if (requestUri.startsWith("/g")) {
+            return ENV.GSTORE_BASE_URL + "/file/" + requestUri.substring(2);
+        }
+        return ENV.GSTORE_BASE_URL + requestUri;
     }
 }

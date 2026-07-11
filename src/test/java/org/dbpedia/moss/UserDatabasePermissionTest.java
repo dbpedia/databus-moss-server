@@ -38,11 +38,10 @@ public class UserDatabasePermissionTest {
     }
 
     @Test
-    public void guestRoleIsAppliedWhenUserHasNoRoles() throws Exception {
+    public void defaultRoleIsAppliedWhenUserHasNoRoles() throws Exception {
         Set<String> permissions = userDatabase.resolvePermissions("user-1", List.of());
-        assertTrue(permissions.contains(Permissions.READ_ENTRIES));
-        assertTrue(permissions.contains(Permissions.READ_SETTINGS));
-        assertEquals(2, permissions.size());
+        assertTrue(permissions.contains(Permissions.READ_METADATA));
+        assertEquals(1, permissions.size());
     }
 
     @Test
@@ -113,6 +112,42 @@ public class UserDatabasePermissionTest {
     }
 
     @Test
+    public void defaultRoleCannotBeDeleted() {
+        assertThrows(IllegalArgumentException.class, () -> userDatabase.deleteRole(Permissions.ROLE_DEFAULT));
+    }
+
+    @Test
+    public void publicRoleCannotBeDeleted() {
+        assertThrows(IllegalArgumentException.class, () -> userDatabase.deleteRole(Permissions.ROLE_PUBLIC));
+    }
+
+    @Test
+    public void anonymousUserGetsPublicRole() {
+        assertEquals(List.of(Permissions.ROLE_PUBLIC), userDatabase.resolveAnonymousRoles());
+    }
+
+    @Test
+    public void anonymousUserHasNoPermissionsByDefault() {
+        assertTrue(userDatabase.resolveAnonymousPermissions().isEmpty());
+    }
+
+    @Test
+    public void anonymousPermissionsFollowPublicRoleConfiguration() throws Exception {
+        userDatabase.setRolePermissions(Permissions.ROLE_PUBLIC, List.of(Permissions.READ_METADATA));
+        Set<String> permissions = userDatabase.resolveAnonymousPermissions();
+        assertTrue(permissions.contains(Permissions.READ_METADATA));
+        assertEquals(1, permissions.size());
+    }
+
+    @Test
+    public void defaultRoleIsAlwaysApplied() throws Exception {
+        userDatabase.assignUserRole("user-10", Permissions.ROLE_MAINTAINER);
+        List<String> roles = userDatabase.resolveInternalRoles("user-10", List.of());
+        assertTrue(roles.contains(Permissions.ROLE_DEFAULT));
+        assertTrue(roles.contains(Permissions.ROLE_MAINTAINER));
+    }
+
+    @Test
     public void adminTokenRoleCanBeUpdated() throws Exception {
         userDatabase.updateRole(Permissions.ROLE_ADMIN, "moss-admin-token");
 
@@ -126,7 +161,7 @@ public class UserDatabasePermissionTest {
     @Test
     public void adminRolePermissionsCannotBeModified() {
         assertThrows(IllegalArgumentException.class,
-                () -> userDatabase.setRolePermissions(Permissions.ROLE_ADMIN, List.of(Permissions.READ_ENTRIES)));
+                () -> userDatabase.setRolePermissions(Permissions.ROLE_ADMIN, List.of(Permissions.READ_METADATA)));
         assertEquals(Arrays.asList(Permissions.ALL), userDatabase.getRolePermissions(Permissions.ROLE_ADMIN));
     }
 
@@ -141,10 +176,22 @@ public class UserDatabasePermissionTest {
     }
 
     @Test
-    public void userRoleOverridesDefaultGuestRole() throws Exception {
+    public void assignedRoleAddsPermissionsOnTopOfDefaultRole() throws Exception {
         userDatabase.assignUserRole("user-3", Permissions.ROLE_MAINTAINER);
         Set<String> permissions = userDatabase.resolvePermissions("user-3", List.of());
+        assertTrue(permissions.contains(Permissions.READ_METADATA));
         assertTrue(permissions.contains(Permissions.WRITE_ENTRIES));
-        assertTrue(permissions.contains(Permissions.READ_SETTINGS));
+        assertTrue(permissions.contains(Permissions.WRITE_MODULES));
+        assertTrue(permissions.contains(Permissions.WRITE_FACETS));
+        assertEquals(4, permissions.size());
+    }
+
+    @Test
+    public void maintainerRoleDoesNotIncludeWriteTerminologies() throws Exception {
+        userDatabase.assignUserRole("user-11", Permissions.ROLE_MAINTAINER);
+        Set<String> permissions = userDatabase.resolvePermissions("user-11", List.of());
+        assertTrue(permissions.contains(Permissions.WRITE_MODULES));
+        assertTrue(permissions.contains(Permissions.WRITE_FACETS));
+        assertTrue(!permissions.contains(Permissions.WRITE_TERMINOLOGIES));
     }
 }

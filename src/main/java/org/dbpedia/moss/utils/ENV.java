@@ -18,7 +18,6 @@ public class ENV {
     public static String MOSS_BASE_URL;
     public static String AUTH_ADMIN_ROLE;
     public static String AUTH_ADMIN_USERS;
-    public static String AUTH_DEFAULT_ROLE;
     public static String AUTH_OIDC_ROLE_CLAIM;
     public static String MOSS_LOG_LEVEL;
 
@@ -43,7 +42,6 @@ public class ENV {
         AUTH_ADMIN_ROLE = getVariable("AUTH_ADMIN_ROLE");
         STORE_SPARQL_ENDPOINT = getVariable("STORE_SPARQL_ENDPOINT");
         AUTH_ADMIN_USERS = getVariable("AUTH_ADMIN_USERS");
-        AUTH_DEFAULT_ROLE = getVariable("AUTH_DEFAULT_ROLE");
         AUTH_OIDC_ROLE_CLAIM = getVariable("AUTH_OIDC_ROLE_CLAIM");
         MOSS_LOG_LEVEL = getVariable("MOSS_LOG_LEVEL");
     }

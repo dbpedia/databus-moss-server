@@ -33,17 +33,20 @@ public class PermissionContainerFilter implements ContainerRequestFilter {
         }
 
         String sub = (String) servletRequest.getAttribute(HttpConstants.OIDC.KEY_SUBJECT);
+
+        @SuppressWarnings("unchecked")
+        java.util.Set<String> permissions = (java.util.Set<String>) servletRequest.getAttribute(
+                HttpConstants.OIDC.KEY_PERMISSIONS);
+        if (permissions != null && permissions.contains(required)) {
+            return;
+        }
+
         if (sub == null) {
             abort(requestContext, Response.Status.UNAUTHORIZED, "Authorization required.");
             return;
         }
 
-        @SuppressWarnings("unchecked")
-        java.util.Set<String> permissions = (java.util.Set<String>) servletRequest.getAttribute(
-                HttpConstants.OIDC.KEY_PERMISSIONS);
-        if (permissions == null || !permissions.contains(required)) {
-            abort(requestContext, Response.Status.FORBIDDEN, "Missing required permission: " + required);
-        }
+        abort(requestContext, Response.Status.FORBIDDEN, "Missing required permission: " + required);
     }
 
     private RequiresPermission findRequiresPermission() {

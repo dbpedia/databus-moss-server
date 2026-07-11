@@ -20,8 +20,10 @@ import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.filters.AuthenticationContainerFilter;
 import org.dbpedia.moss.filters.AuthenticationFilter;
 import org.dbpedia.moss.filters.CorsFilter;
+import org.dbpedia.moss.filters.LoggingExceptionMapper;
 import org.dbpedia.moss.filters.PermissionContainerFilter;
 import org.dbpedia.moss.filters.PermissionResolverFilter;
+import org.dbpedia.moss.filters.RequestLoggingFilter;
 import org.dbpedia.moss.resources.EntriesResource;
 import org.dbpedia.moss.resources.FacetsResource;
 import org.dbpedia.moss.resources.MetadataResource;
@@ -47,6 +49,8 @@ import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ch.qos.logback.classic.Level;
+
 import jakarta.servlet.DispatcherType;
 
 public class Main {
@@ -68,6 +72,7 @@ public class Main {
         ARQ.init();
 
         logger.info("ENV:\n{} ", ENV.printAll());
+        configureLogLevel();
 
         File configRoot = new File(ENV.CONFIG_PATH);
         MossConfiguration.initialize(configRoot);
@@ -104,6 +109,8 @@ public class Main {
         ServletContextHandler rootContext = new ServletContextHandler();
         rootContext.setContextPath("");
 
+        rootContext.addFilter(new FilterHolder(new RequestLoggingFilter()), "/*",
+                EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
         rootContext.addFilter(new FilterHolder(new CorsFilter()), "/*",
                 EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
         rootContext.addFilter(
@@ -137,6 +144,7 @@ public class Main {
 
         jerseyConfig.register(PermissionContainerFilter.class);
         jerseyConfig.register(AuthenticationContainerFilter.class);
+        jerseyConfig.register(LoggingExceptionMapper.class);
         jerseyConfig.register(JacksonFeature.class);
 
         ServletHolder jerseyServlet = new ServletHolder(new ServletContainer(jerseyConfig));
@@ -145,5 +153,15 @@ public class Main {
         server.setHandler(rootContext);
         server.start();
         server.join();
+    }
+
+    private static void configureLogLevel() {
+        if (ENV.MOSS_LOG_LEVEL == null || ENV.MOSS_LOG_LEVEL.isBlank()) {
+            return;
+        }
+        ch.qos.logback.classic.Logger rootLogger =
+                (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+        rootLogger.setLevel(Level.toLevel(ENV.MOSS_LOG_LEVEL, Level.INFO));
+        logger.info("Log level set to {}", ENV.MOSS_LOG_LEVEL);
     }
 }

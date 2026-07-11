@@ -66,16 +66,74 @@ public final class UserDatabaseManager {
 
         insertRole(Permissions.ROLE_ADMIN, null);
         insertRole(Permissions.ROLE_MAINTAINER, null);
-        insertRole(Permissions.ROLE_GUEST, null);
+        insertRole(Permissions.ROLE_DEFAULT, null);
+        insertRole(Permissions.ROLE_PUBLIC, null);
+        migrateLegacyGuestRole();
+        migrateLegacyPermissions();
 
         for (String permission : Permissions.ALL) {
             linkRolePermission(Permissions.ROLE_ADMIN, permission);
         }
-        linkRolePermission(Permissions.ROLE_MAINTAINER, Permissions.READ_ENTRIES);
+        linkRolePermission(Permissions.ROLE_MAINTAINER, Permissions.READ_METADATA);
         linkRolePermission(Permissions.ROLE_MAINTAINER, Permissions.WRITE_ENTRIES);
-        linkRolePermission(Permissions.ROLE_MAINTAINER, Permissions.READ_SETTINGS);
-        linkRolePermission(Permissions.ROLE_GUEST, Permissions.READ_ENTRIES);
-        linkRolePermission(Permissions.ROLE_GUEST, Permissions.READ_SETTINGS);
+        linkRolePermission(Permissions.ROLE_MAINTAINER, Permissions.WRITE_MODULES);
+        linkRolePermission(Permissions.ROLE_MAINTAINER, Permissions.WRITE_FACETS);
+        linkRolePermission(Permissions.ROLE_DEFAULT, Permissions.READ_METADATA);
+    }
+
+    private void migrateLegacyPermissions() throws SQLException {
+        for (String legacyRead : List.of("read-entries", "read-settings")) {
+            executeUpdate((Connection connection) -> {
+                PreparedStatement ps = connection.prepareStatement(
+                        "INSERT OR IGNORE INTO role_permission(role, permission) "
+                                + "SELECT role, ? FROM role_permission WHERE permission = ?");
+                ps.setString(1, Permissions.READ_METADATA);
+                ps.setString(2, legacyRead);
+                return ps;
+            });
+            executeUpdate((Connection connection) -> {
+                PreparedStatement ps = connection.prepareStatement(
+                        "DELETE FROM role_permission WHERE permission = ?");
+                ps.setString(1, legacyRead);
+                return ps;
+            });
+        }
+
+        for (String writePermission : List.of(
+                Permissions.WRITE_MODULES, Permissions.WRITE_TERMINOLOGIES, Permissions.WRITE_FACETS)) {
+            executeUpdate((Connection connection) -> {
+                PreparedStatement ps = connection.prepareStatement(
+                        "INSERT OR IGNORE INTO role_permission(role, permission) "
+                                + "SELECT role, ? FROM role_permission WHERE permission = ?");
+                ps.setString(1, writePermission);
+                ps.setString(2, "write-settings");
+                return ps;
+            });
+        }
+        executeUpdate((Connection connection) -> {
+            PreparedStatement ps = connection.prepareStatement(
+                    "DELETE FROM role_permission WHERE permission = ?");
+            ps.setString(1, "write-settings");
+            return ps;
+        });
+    }
+
+    private void migrateLegacyGuestRole() throws SQLException {
+        executeUpdate((Connection connection) -> {
+            PreparedStatement ps = connection.prepareStatement("UPDATE role SET name = ? WHERE name = 'guest'");
+            ps.setString(1, Permissions.ROLE_DEFAULT);
+            return ps;
+        });
+        executeUpdate((Connection connection) -> {
+            PreparedStatement ps = connection.prepareStatement("UPDATE user_role SET role = ? WHERE role = 'guest'");
+            ps.setString(1, Permissions.ROLE_DEFAULT);
+            return ps;
+        });
+        executeUpdate((Connection connection) -> {
+            PreparedStatement ps = connection.prepareStatement("UPDATE role_permission SET role = ? WHERE role = 'guest'");
+            ps.setString(1, Permissions.ROLE_DEFAULT);
+            return ps;
+        });
     }
 
     public List<String> getAPIKeysBySub(String sub) {
@@ -199,21 +257,23 @@ public final class UserDatabaseManager {
     public List<String> resolveInternalRoles(String sub, List<String> tokenRoles) {
         Set<String> internalRoles = new LinkedHashSet<>();
 
+        internalRoles.add(Permissions.ROLE_DEFAULT);
+
         if (tokenRoles != null && !tokenRoles.isEmpty()) {
             internalRoles.addAll(mapTokenRolesToInternal(tokenRoles));
         }
 
         internalRoles.addAll(getUserRoles(sub));
 
-        if (internalRoles.isEmpty()) {
-            String defaultRole = org.dbpedia.moss.utils.ENV.AUTH_DEFAULT_ROLE;
-            if (defaultRole == null || defaultRole.isBlank()) {
-                defaultRole = Permissions.ROLE_GUEST;
-            }
-            internalRoles.add(defaultRole);
-        }
-
         return new ArrayList<>(internalRoles);
+    }
+
+    public List<String> resolveAnonymousRoles() {
+        return List.of(Permissions.ROLE_PUBLIC);
+    }
+
+    public Set<String> resolveAnonymousPermissions() {
+        return expandRolesToPermissions(new LinkedHashSet<>(resolveAnonymousRoles()));
     }
 
     public void ensureAdminUser(String sub) throws SQLException {
@@ -318,6 +378,12 @@ public final class UserDatabaseManager {
         if (isAdminRole(name)) {
             throw new IllegalArgumentException("The admin role cannot be deleted.");
         }
+        if (isDefaultRole(name)) {
+            throw new IllegalArgumentException("The default role cannot be deleted.");
+        }
+        if (isPublicRole(name)) {
+            throw new IllegalArgumentException("The public role cannot be deleted.");
+        }
         executeUpdate((Connection connection) -> {
             PreparedStatement ps = connection.prepareStatement(QUERY_DELETE_ROLE_PERMISSIONS_FOR_ROLE);
             ps.setString(1, name);
@@ -417,6 +483,14 @@ public final class UserDatabaseManager {
 
     private static boolean isAdminRole(String role) {
         return Permissions.ROLE_ADMIN.equals(role);
+    }
+
+    private static boolean isDefaultRole(String role) {
+        return Permissions.ROLE_DEFAULT.equals(role);
+    }
+
+    private static boolean isPublicRole(String role) {
+        return Permissions.ROLE_PUBLIC.equals(role);
     }
 
     public void executeUpdate(IStatementProvider statementProvider) throws SQLException {
