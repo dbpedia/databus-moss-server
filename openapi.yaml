@@ -1,0 +1,933 @@
+openapi: 3.0.3
+info:
+  title: MOSS API
+  description: REST API for the MOSS metadata server.
+  version: 0.2.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local dev
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    MossModule:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        language:
+          type: string
+          description: RDF MIME type for module content
+
+    MossTerminology:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        language:
+          type: string
+          description: RDF MIME type for terminology data
+
+    MossFacet:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        predicate:
+          type: string
+        sortOrder:
+          type: integer
+
+    UserInfo:
+      type: object
+      properties:
+        sub:
+          type: string
+        username:
+          type: string
+        apiKeys:
+          type: array
+          items:
+            type: string
+        isAdmin:
+          type: boolean
+
+    APIKeyInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        key:
+          type: string
+
+    SaveEntryResult:
+      type: object
+      properties:
+        message:
+          type: string
+        path:
+          type: string
+
+    SaveEntryError:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+    DeleteEntryResult:
+      type: object
+      properties:
+        statusCode:
+          type: string
+        path:
+          type: string
+
+    ValidationError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    HalCollection:
+      type: object
+      description: HAL+JSON collection envelope
+      properties:
+        _embedded:
+          type: object
+        _links:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    NotFound:
+      description: Resource not found
+    Unauthorized:
+      description: Missing or invalid credentials
+    Forbidden:
+      description: Admin privileges required
+
+paths:
+
+  /modules:
+    get:
+      tags: [modules]
+      operationId: listModules
+      summary: List all modules
+      responses:
+        '200':
+          description: OK
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/HalCollection'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HalCollection'
+    post:
+      tags: [modules]
+      operationId: createModule
+      summary: Create a module
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        '201':
+          description: Created
+          content:
+            application/ld+json:
+              schema:
+                $ref: '#/components/schemas/MossModule'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /modules/{moduleId}:
+    get:
+      tags: [modules]
+      operationId: getModule
+      summary: Get a module
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/MossModule'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MossModule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [modules]
+      operationId: updateModule
+      summary: Update a module
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/ld+json:
+              schema:
+                $ref: '#/components/schemas/MossModule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [modules]
+      operationId: deleteModule
+      summary: Delete a module
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /modules/{moduleId}/context:
+    get:
+      tags: [modules]
+      operationId: getModuleContext
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/ld+json:
+              schema:
+                type: string
+            text/html:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [modules]
+      operationId: updateModuleContext
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/ld+json:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/ld+json:
+              schema:
+                type: string
+    delete:
+      tags: [modules]
+      operationId: deleteModuleContext
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /modules/{moduleId}/shapes:
+    get:
+      tags: [modules]
+      operationId: getModuleShapes
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/turtle:
+              schema:
+                type: string
+            text/html:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [modules]
+      operationId: updateModuleShapes
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          text/turtle:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/turtle:
+              schema:
+                type: string
+    delete:
+      tags: [modules]
+      operationId: deleteModuleShapes
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /modules/{moduleId}/template:
+    get:
+      tags: [modules]
+      operationId: getModuleTemplate
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/turtle:
+              schema:
+                type: string
+            application/ld+json:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [modules]
+      operationId: updateModuleTemplate
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          text/turtle:
+            schema:
+              type: string
+          application/ld+json:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/turtle:
+              schema:
+                type: string
+    delete:
+      tags: [modules]
+      operationId: deleteModuleTemplate
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /terminologies:
+    get:
+      tags: [terminologies]
+      operationId: listTerminologies
+      responses:
+        '200':
+          description: OK
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/HalCollection'
+    post:
+      tags: [terminologies]
+      operationId: createTerminology
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        '201':
+          description: Created
+          content:
+            application/ld+json:
+              schema:
+                $ref: '#/components/schemas/MossTerminology'
+
+  /terminologies/{terminologyId}:
+    get:
+      tags: [terminologies]
+      operationId: getTerminology
+      parameters:
+        - name: terminologyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/MossTerminology'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [terminologies]
+      operationId: updateTerminology
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: terminologyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/ld+json:
+              schema:
+                $ref: '#/components/schemas/MossTerminology'
+    delete:
+      tags: [terminologies]
+      operationId: deleteTerminology
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: terminologyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+
+  /terminologies/{terminologyId}/data:
+    get:
+      tags: [terminologies]
+      operationId: getTerminologyData
+      parameters:
+        - name: terminologyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/turtle:
+              schema:
+                type: string
+    put:
+      tags: [terminologies]
+      operationId: updateTerminologyData
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: terminologyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          text/turtle:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [terminologies]
+      operationId: deleteTerminologyData
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: terminologyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+
+  /facets:
+    get:
+      tags: [facets]
+      operationId: listFacets
+      responses:
+        '200':
+          description: OK
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/HalCollection'
+    post:
+      tags: [facets]
+      operationId: createFacet
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MossFacet'
+
+  /facets/{facetId}:
+    get:
+      tags: [facets]
+      operationId: getFacet
+      parameters:
+        - name: facetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/MossFacet'
+    put:
+      tags: [facets]
+      operationId: updateFacet
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: facetId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [facets]
+      operationId: deleteFacet
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: facetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+
+  /entries:
+    get:
+      tags: [entries]
+      operationId: browseEntries
+      responses:
+        '200':
+          description: OK
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/HalCollection'
+
+  /entries/{path}:
+    get:
+      tags: [entries]
+      operationId: getEntry
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/HalCollection'
+            text/turtle:
+              schema:
+                type: string
+    delete:
+      tags: [entries]
+      operationId: deleteEntry
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteEntryResult'
+
+  /api/v1/save-entry:
+    post:
+      tags: [entries]
+      operationId: saveEntry
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: module
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: resource
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          text/turtle:
+            schema:
+              type: string
+          application/ld+json:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveEntryResult'
+
+  /api/v1/delete-entry:
+    post:
+      tags: [entries]
+      operationId: deleteEntryByQuery
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: module
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: resource
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteEntryResult'
+
+  /api/v1/validate-entry:
+    post:
+      tags: [entries]
+      operationId: validateEntry
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: module
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: resource
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          text/turtle:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/turtle:
+              schema:
+                type: string
+
+  /api/v1/users/get-user:
+    get:
+      tags: [users]
+      operationId: getUser
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+
+  /api/v1/users/set-username:
+    post:
+      tags: [users]
+      operationId: setUsername
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: username
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /api/v1/users/create-apikey:
+    post:
+      tags: [users]
+      operationId: createApiKey
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKeyInfo'
+
+  /api/v1/users/revoke-apikey:
+    post:
+      tags: [users]
+      operationId: revokeApiKey
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /g/{path}:
+    get:
+      tags: [metadata]
+      operationId: getMetadataResource
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/turtle:
+              schema:
+                type: string
+            application/ld+json:
+              schema:
+                type: string
+
+  /sparql:
+    get:
+      tags: [sparql]
+      operationId: sparqlGet
+      responses:
+        '200':
+          description: SPARQL result
+    post:
+      tags: [sparql]
+      operationId: sparqlPost
+      requestBody:
+        content:
+          application/sparql-query:
+            schema:
+              type: string
+          application/x-www-form-urlencoded:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: SPARQL result

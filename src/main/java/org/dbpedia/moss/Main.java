@@ -17,73 +17,49 @@ import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.config.MossTerminology;
 import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
-import org.dbpedia.moss.servlets.DeleteEntryServlet;
-import org.dbpedia.moss.servlets.EntriesServlet;
-import org.dbpedia.moss.servlets.MetadataReadServlet;
-import org.dbpedia.moss.servlets.MetadataValidationServlet;
-import org.dbpedia.moss.servlets.SaveEntryServlet;
-import org.dbpedia.moss.servlets.SparqlProxyServlet;
-import org.dbpedia.moss.servlets.UserDatabaseServlet;
-import org.dbpedia.moss.servlets.facets.FacetServlet;
-import org.dbpedia.moss.servlets.modules.ModuleApiServlet;
-import org.dbpedia.moss.servlets.terminologies.TerminologyServlet;
-import org.dbpedia.moss.utils.Constants;
+import org.dbpedia.moss.filters.AdminContainerFilter;
+import org.dbpedia.moss.filters.AuthenticatedFilter;
+import org.dbpedia.moss.filters.AuthenticationFilter;
+import org.dbpedia.moss.filters.CorsFilter;
+import org.dbpedia.moss.filters.FetchUserRolesFilter;
+import org.dbpedia.moss.resources.ApiResource;
+import org.dbpedia.moss.resources.EntriesResource;
+import org.dbpedia.moss.resources.FacetsResource;
+import org.dbpedia.moss.resources.MetadataResource;
+import org.dbpedia.moss.resources.ModulesResource;
+import org.dbpedia.moss.resources.SparqlResource;
+import org.dbpedia.moss.resources.TerminologiesResource;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.GstoreResource;
-import org.dbpedia.moss.utils.RequestMethodFilterWrapper;
-import org.eclipse.jetty.security.ConstraintMapping;
-import org.eclipse.jetty.security.DefaultIdentityService;
-import org.eclipse.jetty.security.IdentityService;
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.security.Constraint;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jackson.JacksonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.DispatcherType;
-import jakarta.servlet.Filter;
-import jakarta.servlet.MultipartConfigElement;
-import jakarta.servlet.http.HttpServlet;
 
-/**
- * Run to start a jetty server that hosts the moss servlet and makes it
- * accessible via HTTP
- */
 public class Main {
 
     private static final String BUILD_NUM = "0.2.0";
-
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
     public static Model parseJSONLD(String jsonld, String documentURI) {
-        // Convert JSON-LD string to InputStream
         InputStream inputStream = new ByteArrayInputStream(jsonld.getBytes());
-
-        // Create an empty model
         Model model = ModelFactory.createDefaultModel();
-
-        // Parse JSON-LD into the model
         RDFDataMgr.read(model, inputStream, documentURI, Lang.JSONLD);
-
         return model;
     }
 
-    /**
-     * Run to start a jetty server that hosts the moss servlet and makes it
-     * accessible via HTTP
-     *
-     * @param args
-     * @throws Exception
-     */
     public static void main(String[] args) throws Exception {
-
         logger.info("BUILD_NUM: {} ", BUILD_NUM);
 
         JenaSystem.init();
@@ -93,23 +69,21 @@ public class Main {
 
         File configRoot = new File(ENV.CONFIG_PATH);
         MossConfiguration.initialize(configRoot);
-
         MossConfiguration config = MossConfiguration.get();
 
         for (MossTerminology terminology : config.getTerminologies()) {
-        
             logger.info("Saving Terminology to Gstore: {} ", terminology.getURI());
-
             try {
                 Lang terminologyLanguage = RDFLanguages.contentTypeToLang(terminology.getLanguage());
                 if (terminologyLanguage == null) {
                     logger.error("Unknown or missing language for terminology: {}", terminology.getId());
                     continue;
                 }
-
                 String gstoreUri = terminology.getURI() + "." + terminologyLanguage.getFileExtensions().getFirst();
                 GstoreResource gstoreTerminologyResource = new GstoreResource(gstoreUri);
-                gstoreTerminologyResource.writeModel(terminology.getDataModel(), RDFLanguages.contentTypeToLang(terminology.getLanguage()));
+                gstoreTerminologyResource.writeModel(
+                        terminology.getDataModel(),
+                        RDFLanguages.contentTypeToLang(terminology.getLanguage()));
             } catch (IOException e) {
                 logger.error(e.getMessage());
             }
@@ -125,120 +99,44 @@ public class Main {
         connector.setPort(8080);
         server.addConnector(connector);
 
-        IdentityService identityService = new DefaultIdentityService();
-        server.addBean(identityService);
-
-        Constraint constraint = new Constraint();
-        constraint.setName("Authenticate");
-        constraint.setRoles(new String[]{Constraint.ANY_ROLE});
-        constraint.setAuthenticate(true);
-        // constraint.setDataConstraint(Constraint.DC_CONFIDENTIAL);
-
-        ConstraintMapping mapping = new ConstraintMapping();
-        mapping.setPathSpec("/*");
-        mapping.setConstraint(constraint);
-
-        FilterHolder corsFilterHolder = new FilterHolder(new CorsFilter());
-
-        MultipartConfigElement multipartConfig = new MultipartConfigElement("/tmp");
-
         ServletContextHandler rootContext = new ServletContextHandler();
-        rootContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
         rootContext.setContextPath("");
 
-        rootContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/sparql");
-        rootContext.addServlet(new ServletHolder(new SparqlProxyServlet()), "/sparql/");
+        rootContext.addFilter(new FilterHolder(new CorsFilter()), "/*",
+                EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD));
+        rootContext.addFilter(
+                new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager))),
+                "/*",
+                null);
+        rootContext.addFilter(new FilterHolder(new FetchUserRolesFilter()), "/*", null);
 
-      
-        // Context handler for the unprotected routes
-        ServletContextHandler readContext = new ServletContextHandler();
-        readContext.addFilter(corsFilterHolder, "*", EnumSet.of(DispatcherType.REQUEST));
-        readContext.setContextPath("/g/*");
-        readContext.addServlet(new ServletHolder(new MetadataReadServlet()), "/*");
+        ResourceConfig jerseyConfig = new ResourceConfig();
+        jerseyConfig.property("jersey.config.server.wadl.disableWadl", true);
 
-        // Context handler for the protected api routes
-        ServletContextHandler apiContext = new ServletContextHandler();
-        apiContext.setContextPath("/api/v1");
-        apiContext.addFilter(corsFilterHolder, "/*", EnumSet.of(DispatcherType.REQUEST));
+        jerseyConfig.register(new AbstractBinder() {
+            @Override
+            protected void configure() {
+                bind(userDatabaseManager).to(UserDatabaseManager.class);
+            }
+        });
 
-        AdminFilter adminFilter = new AdminFilter();
-        AuthenticationFilter authFilter = new AuthenticationFilter(new APIKeyValidator(userDatabaseManager));
-        setupReadOnlyAdminServlet(rootContext, new ModuleApiServlet(), "/modules/*", authFilter, adminFilter);
-        setupReadOnlyAdminServlet(rootContext, new TerminologyServlet(), "/terminologies/*", authFilter, adminFilter);
-        setupReadOnlyAdminServlet(rootContext, new FacetServlet(), "/facets/*", authFilter, adminFilter);
+        jerseyConfig.register(MetadataResource.class);
+        jerseyConfig.register(SparqlResource.class);
+        jerseyConfig.register(EntriesResource.class);
+        jerseyConfig.register(ApiResource.class);
+        jerseyConfig.register(ModulesResource.class);
+        jerseyConfig.register(TerminologiesResource.class);
+        jerseyConfig.register(FacetsResource.class);
 
-        setupReadOnlyAuthServlet(rootContext, new EntriesServlet(userDatabaseManager), "/entries/*", authFilter);
+        jerseyConfig.register(AdminContainerFilter.class);
+        jerseyConfig.register(AuthenticatedFilter.class);
+        jerseyConfig.register(JacksonFeature.class);
 
-        FilterHolder authFilterHolder = new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager)));
+        ServletHolder jerseyServlet = new ServletHolder(new ServletContainer(jerseyConfig));
+        rootContext.addServlet(jerseyServlet, "/*");
 
-        ServletHolder saveEntryServletHolder = new ServletHolder(new SaveEntryServlet(userDatabaseManager));
-        saveEntryServletHolder.setInitOrder(0);
-        saveEntryServletHolder.getRegistration().setMultipartConfig(multipartConfig);
-
-        ServletHolder deleteEntryServletHolder = new ServletHolder(new DeleteEntryServlet(userDatabaseManager));
-        deleteEntryServletHolder.setInitOrder(0);
-        deleteEntryServletHolder.getRegistration().setMultipartConfig(multipartConfig);
-
-        apiContext.addFilter(authFilterHolder, "/save-entry", null);
-        apiContext.addServlet(saveEntryServletHolder, "/save-entry");
-
-        apiContext.addFilter(authFilterHolder, "/delete-entry", null);
-        apiContext.addServlet(deleteEntryServletHolder, "/delete-entry");
-
-        ServletHolder metadataValidationServletHolder = new ServletHolder(new MetadataValidationServlet(userDatabaseManager));
-        metadataValidationServletHolder.getRegistration().setMultipartConfig(multipartConfig);
-        apiContext.addFilter(authFilterHolder, "/validate-entry", null);
-        apiContext.addServlet(metadataValidationServletHolder, "/validate-entry");
-
-        apiContext.addServlet(new ServletHolder(new UserDatabaseServlet(userDatabaseManager)), "/users/*");
-        apiContext.addFilter(authFilterHolder, "/users/*", null);
-
-        // apiContext.addFilter(adminFilterHolder, "/save", null);
-        // Set up handler collection
-        HandlerList handlers = new HandlerList();
-        handlers.setHandlers(new Handler[]{
-            readContext,
-            apiContext,
-            rootContext,});
-
-        server.setHandler(handlers);
-
+        server.setHandler(rootContext);
         server.start();
         server.join();
-    }
-
-    private static void setupReadOnlyAdminServlet(ServletContextHandler apiContext, HttpServlet servlet, String path,
-            Filter authFilter, Filter adminFilter) {
-
-        ServletHolder servletHolder = new ServletHolder(servlet);
-        String[] layerListAllowedMethods = new String[]{
-            Constants.REQ_METHOD_HEAD,
-            Constants.REQ_METHOD_GET,
-            Constants.REQ_METHOD_OPTIONS
-        };
-
-        RequestMethodFilterWrapper authFilterWrapper = new RequestMethodFilterWrapper(authFilter, layerListAllowedMethods);
-        RequestMethodFilterWrapper adminFilterWrapper = new RequestMethodFilterWrapper(adminFilter, layerListAllowedMethods);
-
-        apiContext.addServlet(servletHolder, path);
-        apiContext.addFilter(new FilterHolder(authFilterWrapper), path, null);
-        apiContext.addFilter(new FilterHolder(adminFilterWrapper), path, null);
-    }
-
-    private static void setupReadOnlyAuthServlet(ServletContextHandler apiContext, HttpServlet servlet, String path,
-            Filter authFilter) {
-
-        ServletHolder servletHolder = new ServletHolder(servlet);
-        String[] layerListAllowedMethods = new String[]{
-            Constants.REQ_METHOD_HEAD,
-            Constants.REQ_METHOD_GET,
-            Constants.REQ_METHOD_OPTIONS
-        };
-
-        RequestMethodFilterWrapper authFilterWrapper = new RequestMethodFilterWrapper(authFilter, layerListAllowedMethods);
-
-        apiContext.addServlet(servletHolder, path);
-        apiContext.addFilter(new FilterHolder(new CorsFilter()), path, EnumSet.of(DispatcherType.REQUEST));
-        apiContext.addFilter(new FilterHolder(authFilterWrapper), path, null);
     }
 }

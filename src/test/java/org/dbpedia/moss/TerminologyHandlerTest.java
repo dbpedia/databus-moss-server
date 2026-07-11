@@ -2,90 +2,73 @@ package org.dbpedia.moss;
 
 import java.io.File;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.servlets.terminologies.TerminologyServlet;
+import org.dbpedia.moss.resources.TerminologiesResource;
 import org.dbpedia.moss.utils.ENV;
-import org.eclipse.jetty.http.HttpTester;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlet.ServletTester;
-import org.junit.jupiter.api.AfterAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import jakarta.ws.rs.core.Response;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class TerminologyHandlerTest {
 
-    private static ServletTester tester;
+    private TerminologiesResource resource;
 
     @BeforeEach
     public void setup() throws Exception {
         ENV.setTestVariable("CONFIG_PATH", "./config");
         ENV.setTestVariable("MOSS_BASE_URL", "http://localhost:8080");
         ENV.setTestVariable("USER_DATABASE_PATH", "./devenv/users.db");
-
         MossConfiguration.initialize(new File(ENV.CONFIG_PATH));
-
-        tester = new ServletTester();
-        tester.setContextPath("");
-        tester.addServlet(new ServletHolder(new TerminologyServlet()), "/terminologies/*");
-        tester.start();
+        resource = new TerminologiesResource();
     }
 
     @Test
     public void testCreateAndGetTerminology() throws Exception {
-        HttpTester.Response response = TestUtils.sendRequest(tester,
-                "POST",
-                "/terminologies",
-                "{\"id\":\"test-term\",\"label\":\"Test Terminology\",\"language\":\"text/turtle\"}");
-        assertEquals(HttpServletResponse.SC_CREATED, response.getStatus());
+        Response created = resource.createTerminology("""
+                id: test-term-handler
+                label: Test Terminology
+                language: text/turtle
+                """);
+        assertEquals(Response.Status.CREATED.getStatusCode(), created.getStatus());
 
-        response = TestUtils.sendRequest(tester,
-                "GET",
-                "/terminologies/test-term");
-        assertEquals(HttpServletResponse.SC_OK, response.getStatus());
-        JsonNode node = new ObjectMapper().readTree(response.getContent());
-        assertEquals("test-term", node.get("id").asText());
-        assertEquals("Test Terminology", node.get("label").asText());
-        assertEquals("text/turtle", node.get("language").asText());
+        HandlerTestSupport.bindRequest(resource, HandlerTestSupport.halRequest());
+        Response response = resource.getTerminology("test-term-handler");
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        JsonNode node = new ObjectMapper().readTree(HandlerTestSupport.entityAsJson(response));
+        assertEquals("test-term-handler", node.get("id").asText());
 
-        // Hard-coded deletion
-        TestUtils.sendRequest(tester, "DELETE", "/terminologies/test-term");
+        resource.deleteTerminology("test-term-handler");
     }
 
     @Test
-    public void testCreateDuplicateTerminology() throws Exception {
-        TestUtils.sendRequest(tester, "POST", "/terminologies",
-                "{\"id\":\"dup-term\",\"label\":\"First\",\"language\":\"text/turtle\"}");
-
-        HttpTester.Response response = TestUtils.sendRequest(tester, "POST", "/terminologies",
-                "{\"id\":\"dup-term\",\"label\":\"Second\",\"language\":\"text/turtle\"}");
-
-        assertEquals(HttpServletResponse.SC_CONFLICT, response.getStatus());
-
-        TestUtils.sendRequest(tester, "DELETE", "/terminologies/dup-term");
+    public void testCreateDuplicateTerminology() {
+        resource.createTerminology("id: dup-term\nlabel: First\nlanguage: text/turtle\n");
+        Response response = resource.createTerminology("id: dup-term\nlabel: Second\nlanguage: text/turtle\n");
+        assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
+        resource.deleteTerminology("dup-term");
     }
 
     @Test
     public void testListTerminologies() throws Exception {
-        TestUtils.sendRequest(tester, "POST", "/terminologies",
-                "{\"id\":\"term1\",\"label\":\"Term One\",\"language\":\"text/turtle\"}");
-        TestUtils.sendRequest(tester, "POST", "/terminologies",
-                "{\"id\":\"term2\",\"label\":\"Term Two\",\"language\":\"application/ld+json\"}");
+        resource.createTerminology("id: term1\nlabel: Term One\nlanguage: text/turtle\n");
+        resource.createTerminology("id: term2\nlabel: Term Two\nlanguage: application/ld+json\n");
 
-        HttpTester.Response response = TestUtils.sendRequest(tester,
-                "GET",
-                "/terminologies");
-        assertEquals(HttpServletResponse.SC_OK, response.getStatus());
-        JsonNode list = new ObjectMapper().readTree(response.getContent());
+        HandlerTestSupport.bindRequest(resource, HandlerTestSupport.halRequest());
+        Response response = resource.listTerminologies();
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        JsonNode root = new ObjectMapper().readTree(HandlerTestSupport.entityAsJson(response));
+        JsonNode list = root.path("_embedded").path("terminologies");
         assertTrue(list.isArray());
 
-        boolean found1 = false, found2 = false;
+        boolean found1 = false;
+        boolean found2 = false;
         for (JsonNode t : list) {
             if ("term1".equals(t.get("id").asText())) {
                 found1 = true;
@@ -96,67 +79,45 @@ public class TerminologyHandlerTest {
         }
         assertTrue(found1 && found2);
 
-        // Hard-coded deletion
-        TestUtils.sendRequest(tester, "DELETE", "/terminologies/term1");
-        TestUtils.sendRequest(tester, "DELETE", "/terminologies/term2");
+        resource.deleteTerminology("term1");
+        resource.deleteTerminology("term2");
     }
 
     @Test
     public void testUpdateTerminology() throws Exception {
-        TestUtils.sendRequest(tester, "POST", "/terminologies",
-                "{\"id\":\"up-term\",\"label\":\"Old Label\",\"language\":\"text/turtle\"}");
+        resource.createTerminology("id: up-term\nlabel: Old Label\nlanguage: text/turtle\n");
+        Response response = resource.updateTerminology("up-term", """
+                id: up-term
+                label: New Label
+                language: text/turtle
+                """);
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
-        HttpTester.Response response = TestUtils.sendRequest(tester,
-                "PUT",
-                "/terminologies/up-term",
-                "{\"label\":\"New Label\"}");
-        assertEquals(HttpServletResponse.SC_OK, response.getStatus());
-
-        response = TestUtils.sendRequest(tester, "GET", "/terminologies/up-term");
-        JsonNode node = new ObjectMapper().readTree(response.getContent());
+        HandlerTestSupport.bindRequest(resource, HandlerTestSupport.halRequest());
+        response = resource.getTerminology("up-term");
+        JsonNode node = new ObjectMapper().readTree(HandlerTestSupport.entityAsJson(response));
         assertEquals("New Label", node.get("label").asText());
-
-        // Hard-coded deletion
-        TestUtils.sendRequest(tester, "DELETE", "/terminologies/up-term");
+        resource.deleteTerminology("up-term");
     }
 
     @Test
-    public void testDeleteTerminology() throws Exception {
-        TestUtils.sendRequest(tester, "POST", "/terminologies",
-                "{\"id\":\"del-term\",\"label\":\"To Delete\",\"language\":\"text/turtle\"}");
-
-        HttpTester.Response response = TestUtils.sendRequest(tester,
-                "DELETE",
-                "/terminologies/del-term");
-        assertEquals(HttpServletResponse.SC_NO_CONTENT, response.getStatus());
-
-        response = TestUtils.sendRequest(tester, "GET", "/terminologies/del-term");
-        assertEquals(HttpServletResponse.SC_NOT_FOUND, response.getStatus());
+    public void testDeleteTerminology() {
+        resource.createTerminology("id: del-term\nlabel: To Delete\nlanguage: text/turtle\n");
+        Response response = resource.deleteTerminology("del-term");
+        assertEquals(Response.Status.NO_CONTENT.getStatusCode(), response.getStatus());
+        HandlerTestSupport.bindRequest(resource, HandlerTestSupport.halRequest());
+        response = resource.getTerminology("del-term");
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
     }
 
     @Test
-    public void testNonExistentTerminology() throws Exception {
-        HttpTester.Response response = TestUtils.sendRequest(tester,
-                "GET",
-                "/terminologies/missing");
-        assertEquals(HttpServletResponse.SC_NOT_FOUND, response.getStatus());
-
-        response = TestUtils.sendRequest(tester,
-                "PUT",
-                "/terminologies/missing",
-                "{\"label\":\"whatever\"}");
-        assertEquals(HttpServletResponse.SC_NOT_FOUND, response.getStatus());
-
-        response = TestUtils.sendRequest(tester,
-                "DELETE",
-                "/terminologies/missing");
-        assertEquals(HttpServletResponse.SC_NOT_FOUND, response.getStatus());
-    }
-
-    @AfterAll
-    public static void cleanup() throws Exception {
-        if (tester != null) {
-            tester.stop();
-        }
+    public void testNonExistentTerminology() {
+        HandlerTestSupport.bindRequest(resource, HandlerTestSupport.halRequest());
+        Response response = resource.getTerminology("missing");
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+        response = resource.updateTerminology("missing", "label: whatever\nid: missing\n");
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+        response = resource.deleteTerminology("missing");
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
     }
 }

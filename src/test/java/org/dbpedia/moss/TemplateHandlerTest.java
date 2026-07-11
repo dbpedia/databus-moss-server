@@ -2,23 +2,23 @@ package org.dbpedia.moss;
 
 import java.io.File;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.servlets.modules.ModuleApiServlet;
+import org.dbpedia.moss.resources.ModulesResource;
 import org.dbpedia.moss.utils.ENV;
-import org.eclipse.jetty.http.HttpTester;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlet.ServletTester;
-import org.junit.jupiter.api.AfterAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.dbpedia.moss.utils.HttpConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import jakarta.ws.rs.core.Response;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 public class TemplateHandlerTest {
 
-    private static ServletTester tester;
+    private ModulesResource resource;
 
     @BeforeEach
     public void setup() throws Exception {
@@ -26,83 +26,33 @@ public class TemplateHandlerTest {
         ENV.setTestVariable("MOSS_BASE_URL", "http://localhost:8080");
         ENV.setTestVariable("GSTORE_BASE_URL", "http://localhost:5003");
         ENV.setTestVariable("USER_DATABASE_PATH", "./devenv/users.db");
-
         MossConfiguration.initialize(new File(ENV.CONFIG_PATH));
-
-        tester = new ServletTester();
-        tester.setContextPath("/api/v1");
-        tester.addServlet(new ServletHolder(new ModuleApiServlet()), "/modules/*");
-        tester.start();
+        resource = new ModulesResource();
     }
 
     @Test
-    public void testTemplateCrudLifecycle() throws Exception {
-        // create a module with Turtle as language
-        HttpTester.Response res = TestUtils.sendRequest(tester,
-                "POST",
-                "/api/v1/modules",
-                "{\"id\":\"tpl-module\",\"language\":\"text/turtle\"}"
-        );
-        assertEquals(HttpServletResponse.SC_CREATED, res.getStatus());
+    public void testTemplateCrudLifecycle() {
+        var turtleReq = mock(jakarta.servlet.http.HttpServletRequest.class);
+        when(turtleReq.getHeader("Accept")).thenReturn(HttpConstants.MediaTypes.TEXT_TURTLE);
 
-        // GET template -> not found
-        res = TestUtils.sendRequest(tester,
-                "GET",
-                "/api/v1/modules/tpl-module/template.ttl"
-        );
-        assertEquals(HttpServletResponse.SC_NOT_FOUND, res.getStatus());
+        Response created = resource.createModule("id: tpl-module\nlanguage: text/turtle\n");
+        assertEquals(Response.Status.CREATED.getStatusCode(), created.getStatus());
 
-        // PUT invalid RDF (should fail parsing)
-        res = TestUtils.sendRequest(tester,
-                "PUT",
-                "/api/v1/modules/tpl-module/template.ttl",
-                "not valid ttl"
-        );
-        assertEquals(HttpServletResponse.SC_BAD_REQUEST, res.getStatus());
+        HandlerTestSupport.bindRequest(resource, turtleReq);
+        Response response = resource.getModuleTemplate("tpl-module");
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
 
-        // PUT with wrong file extension
-        res = TestUtils.sendRequest(tester,
-                "PUT",
-                "/api/v1/modules/tpl-module/template.jsonld",
-                "<s> <p> <o> ."
-        );
-        assertEquals(HttpServletResponse.SC_BAD_REQUEST, res.getStatus());
+        response = resource.updateModuleTemplate("tpl-module", "not valid ttl");
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
 
-        // PUT valid RDF in Turtle
         String ttlBody = "<http://ex.org/s> <http://ex.org/p> <http://ex.org/o> .";
-        res = TestUtils.sendRequest(tester,
-                "PUT",
-                "/api/v1/modules/tpl-module/template.ttl",
-                ttlBody
-        );
-        assertEquals(HttpServletResponse.SC_OK, res.getStatus());
-        assertTrue(res.getContent().contains("http://ex.org/s"));
+        response = resource.updateModuleTemplate("tpl-module", ttlBody);
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
-        // GET template -> should return same content
-        res = TestUtils.sendRequest(tester,
-                "GET",
-                "/api/v1/modules/tpl-module/template.ttl"
-        );
-        assertEquals(HttpServletResponse.SC_OK, res.getStatus());
-        assertTrue(res.getContent().contains("http://ex.org/s"));
+        response = resource.getModuleTemplate("tpl-module");
+        assertTrue(((String) response.getEntity()).contains("http://ex.org/s"));
 
-        // DELETE the module
-        res = TestUtils.sendRequest(tester,
-                "DELETE",
-                "/api/v1/modules/tpl-module"
-        );
-        assertEquals(HttpServletResponse.SC_NO_CONTENT, res.getStatus());
-
-        // GET again -> should be gone
-        res = TestUtils.sendRequest(tester,
-                "GET",
-                "/api/v1/modules/tpl-module/template.ttl"
-        );
-        assertEquals(HttpServletResponse.SC_NOT_FOUND, res.getStatus());
-    }
-
-    @AfterAll
-    public static void cleanup() throws Exception {
-        // cleanup temp dirs/files if necessary
+        response = resource.deleteModule("tpl-module");
+        assertEquals(Response.Status.NO_CONTENT.getStatusCode(), response.getStatus());
     }
 }

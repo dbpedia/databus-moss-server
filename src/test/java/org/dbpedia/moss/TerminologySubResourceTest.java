@@ -2,77 +2,54 @@ package org.dbpedia.moss;
 
 import java.io.File;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.servlets.terminologies.TerminologyServlet;
+import org.dbpedia.moss.resources.TerminologiesResource;
 import org.dbpedia.moss.utils.ENV;
-import org.eclipse.jetty.http.HttpTester;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlet.ServletTester;
-import org.junit.jupiter.api.AfterAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.dbpedia.moss.utils.HttpConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import jakarta.ws.rs.core.Response;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 public class TerminologySubResourceTest {
 
-    private static ServletTester tester;
+    private TerminologiesResource resource;
 
     @BeforeEach
     public void setup() throws Exception {
         ENV.setTestVariable("CONFIG_PATH", "./config");
         ENV.setTestVariable("MOSS_BASE_URL", "http://localhost:8080");
         ENV.setTestVariable("USER_DATABASE_PATH", "./devenv/users.db");
-
         MossConfiguration.initialize(new File(ENV.CONFIG_PATH));
-
-        tester = new ServletTester();
-        tester.setContextPath("");
-        tester.addServlet(new ServletHolder(new TerminologyServlet()), "/terminologies/*");
-        tester.start();
-
-        // Create a terminology to use in sub-resource tests
-        TestUtils.sendRequest(tester, "POST", "/terminologies",
-                "{\"id\":\"subres-term\",\"label\":\"SubResource Term\",\"language\":\"text/turtle\"}");
+        resource = new TerminologiesResource();
+        resource.createTerminology("""
+                id: subres-term
+                label: SubResource Term
+                language: text/turtle
+                """);
     }
 
     @Test
-    public void testDataSubResource() throws Exception {
+    public void testDataSubResource() {
+        var turtleReq = mock(jakarta.servlet.http.HttpServletRequest.class);
+        when(turtleReq.getHeader("Accept")).thenReturn(HttpConstants.MediaTypes.TEXT_TURTLE);
+
         String rdfData = "<http://example.org/s> <http://example.org/p> <http://example.org/o> .";
+        Response response = resource.updateTerminologyData("subres-term", rdfData);
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
-        // Determine filename from language
-        String dataFilename = "data.ttl";
+        HandlerTestSupport.bindRequest(resource, turtleReq);
+        response = resource.getTerminologyData("subres-term");
+        assertTrue(((String) response.getEntity()).contains("example.org"));
 
-        // PUT data.ttl
-        HttpTester.Response response = TestUtils.sendRequest(tester,
-                "PUT",
-                "/terminologies/subres-term/" + dataFilename,
-                rdfData);
-        assertEquals(HttpServletResponse.SC_OK, response.getStatus());
-        assertTrue(response.getContent().contains("example.org"));
+        response = resource.deleteTerminologyData("subres-term");
+        assertEquals(Response.Status.NO_CONTENT.getStatusCode(), response.getStatus());
 
-        // GET data.ttl
-        response = TestUtils.sendRequest(tester,
-                "GET",
-                "/terminologies/subres-term/" + dataFilename);
-        assertEquals(HttpServletResponse.SC_OK, response.getStatus());
-        assertTrue(response.getContent().contains("example.org"));
-
-        // DELETE data.ttl
-        response = TestUtils.sendRequest(tester,
-                "DELETE",
-                "/terminologies/subres-term/" + dataFilename);
-        assertEquals(HttpServletResponse.SC_NO_CONTENT, response.getStatus());
-    }
-
-    @AfterAll
-    public static void cleanup() throws Exception {
-        if (tester != null) {
-            // Delete the terminology
-            TestUtils.sendRequest(tester, "DELETE", "/terminologies/subres-term");
-            tester.stop();
-        }
+        resource.deleteTerminology("subres-term");
     }
 }

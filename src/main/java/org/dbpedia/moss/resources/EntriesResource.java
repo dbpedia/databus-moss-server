@@ -1,0 +1,487 @@
+package org.dbpedia.moss.resources;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.rdfconnection.RDFConnection;
+import org.apache.jena.rdfconnection.RDFConnectionRemote;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFLanguages;
+import org.apache.jena.riot.RiotException;
+import org.apache.jena.vocabulary.DCTerms;
+import org.apache.jena.vocabulary.RDF;
+import org.dbpedia.moss.config.MossConfiguration;
+import org.dbpedia.moss.db.UserDatabaseManager;
+import org.dbpedia.moss.db.UserInfo;
+import org.dbpedia.moss.generated.api.EntriesApi;
+import org.dbpedia.moss.servlets.ValidationException;
+import org.dbpedia.moss.servlets.modules.ModuleStore;
+import org.dbpedia.moss.utils.ENV;
+import org.dbpedia.moss.utils.GstoreResource;
+import org.dbpedia.moss.utils.HateoasLink;
+import org.dbpedia.moss.utils.HttpConstants;
+import org.dbpedia.moss.utils.HttpUtils;
+import org.dbpedia.moss.utils.MossUtils;
+import org.dbpedia.moss.utils.RDFUris;
+import org.dbpedia.moss.utils.RDFUtils;
+import org.dbpedia.moss.utils.ResponseUtils;
+import org.dbpedia.moss.utils.ServletPathRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import jakarta.inject.Inject;
+import jakarta.json.JsonObject;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.Response;
+
+public class EntriesResource implements EntriesApi {
+
+    private static final Logger logger = LoggerFactory.getLogger(EntriesResource.class);
+    private static final String ASK_TEMPLATE = "ASK WHERE { <%s> ?p ?o }";
+
+    @Context
+    private HttpServletRequest request;
+
+    private final UserDatabaseManager userDatabaseManager;
+    private final String gstoreBaseUrl;
+    private final ModuleStore moduleStore;
+    private final ObjectMapper jsonMapper = new ObjectMapper();
+
+    @Inject
+    public EntriesResource(UserDatabaseManager userDatabaseManager) {
+        this.userDatabaseManager = userDatabaseManager;
+        this.gstoreBaseUrl = ENV.GSTORE_BASE_URL;
+        this.moduleStore = new ModuleStore(MossConfiguration.get().getModuleDirectory().toPath());
+    }
+
+    @Override
+    public Response browseEntries() {
+        return getEntry(new ServletPathRequest(request, ""));
+    }
+
+    @Override
+    public Response getEntry(String path) {
+        return getEntry(new ServletPathRequest(request, ServletPathRequest.toPathInfo(path)));
+    }
+
+    @Override
+    public Response deleteEntry(String path) {
+        return deleteEntry(new ServletPathRequest(request, ServletPathRequest.toPathInfo(path)));
+    }
+
+    private Response getEntry(HttpServletRequest req) {
+        String pathInfo = req.getPathInfo();
+        if (pathInfo == null) {
+            pathInfo = "";
+        }
+
+        String resourceUri = ENV.MOSS_BASE_URL + "/entries" + pathInfo;
+        if (resourceExists(resourceUri)) {
+            return getResource(req);
+        }
+        return browse(req);
+    }
+
+    private Response deleteEntry(HttpServletRequest req) {
+        String pathInfo = req.getPathInfo();
+        if (pathInfo == null) {
+            return Response.status(Response.Status.NOT_FOUND).entity("Entry path missing").build();
+        }
+
+        String resourceUri = ENV.MOSS_BASE_URL + "/entries" + pathInfo;
+        if (resourceExists(resourceUri)) {
+            return deleteResource(req);
+        }
+        return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Method Not Allowed").build();
+    }
+
+    private boolean resourceExists(String resourceUri) {
+        String askQuery = String.format(ASK_TEMPLATE, resourceUri);
+        try (RDFConnection conn = RDFConnectionRemote.service(ENV.STORE_SPARQL_ENDPOINT).build()) {
+            return conn.queryAsk(askQuery);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private Response browse(HttpServletRequest req) {
+        String targetUrl = buildGstoreUrl(req);
+
+        String halJson;
+        try {
+            halJson = fetchHalJson(targetUrl);
+        } catch (IOException e) {
+            return ResponseUtils.notFound("Failed to fetch from gstore: " + e.getMessage());
+        }
+
+        ObjectNode halNode;
+        try {
+            halNode = (ObjectNode) jsonMapper.readTree(halJson);
+        } catch (IOException e) {
+            return ResponseUtils.serverError("Failed to parse HAL response: " + e.getMessage());
+        }
+        updateEmbeddedHAL(halNode);
+
+        String requestURI = req.getRequestURI();
+        List<HateoasLink> links = List.of(
+                new HateoasLink("self", requestURI),
+                new HateoasLink("alternate", requestURI, false, HttpConstants.MediaTypes.TEXT_HTML),
+                new HateoasLink("alternate", requestURI, false, HttpConstants.MediaTypes.APPLICATION_HAL_JSON),
+                new HateoasLink("browse", navigateUp(requestURI), false, HttpConstants.MediaTypes.APPLICATION_HAL_JSON)
+        );
+
+        HttpUtils.addHateoasLinks(halNode, links);
+
+        List<String> acceptedTypes = HttpUtils.getAcceptedMediaTypes(req);
+
+        boolean htmlRequested = acceptedTypes.stream().anyMatch(t -> t.equals(HttpConstants.MediaTypes.TEXT_HTML));
+
+        if (htmlRequested) {
+            try {
+                Response.ResponseBuilder builder = Response.ok(
+                        HttpUtils.getHtmlWrappedJson("browse", halNode),
+                        HttpConstants.MediaTypes.TEXT_HTML
+                );
+                ResponseUtils.addLinkHeaders(builder, links);
+                return builder.build();
+            } catch (IOException e) {
+                return ResponseUtils.serverError("Failed to render HTML browse result: " + e.getMessage());
+            }
+        } else {
+            return ResponseUtils.halOk(halNode, links);
+        }
+    }
+
+    private String fetchHalJson(String targetUrl) throws IOException {
+        URI uri = URI.create(targetUrl);
+        HttpURLConnection connection = (HttpURLConnection) uri.toURL().openConnection();
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("Accept", HttpConstants.MediaTypes.APPLICATION_HAL_JSON);
+        connection.setDoInput(true);
+
+        connection.connect();
+
+        try (InputStream in = connection.getInputStream()) {
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        } finally {
+            connection.disconnect();
+        }
+    }
+
+    private String buildGstoreUrl(HttpServletRequest req) {
+        String path = req.getPathInfo();
+
+        if (path == null) {
+            path = "";
+        }
+
+        return gstoreBaseUrl + "/file/header" + path;
+    }
+
+    private String navigateUp(String requestURI) {
+        int lastSlash = requestURI.lastIndexOf('/');
+        return (lastSlash > 0) ? requestURI.substring(0, lastSlash) : "/";
+    }
+
+    private void updateEmbeddedHAL(ObjectNode halNode) {
+        ArrayNode items = getEmbeddedItems(halNode);
+        if (items == null) {
+            return;
+        }
+
+        for (int i = 0; i < items.size(); i++) {
+            ObjectNode item = (ObjectNode) items.get(i);
+
+            ObjectNode self = (ObjectNode) item.path("_links").path("self");
+            if (self.has("href")) {
+                String href = self.get("href").asText();
+
+                if ("file".equals(item.path("type").asText())) {
+                    item.put("type", "entry");
+                    int lastDot = href.lastIndexOf('.');
+                    if (lastDot > 0) {
+                        href = href.substring(0, lastDot);
+                    }
+
+                    href = href.replace("/file/header", "/entries");
+                    self.put("href", href);
+
+                    item.put("name", href.substring(href.lastIndexOf('/') + 1));
+                } else {
+                    href = href.replace("/file/header", "/entries");
+                    self.put("href", href);
+                }
+            }
+        }
+    }
+
+    private ArrayNode getEmbeddedItems(ObjectNode halNode) {
+        if (!halNode.has("_embedded")) {
+            return null;
+        }
+        ObjectNode embedded = halNode.get("_embedded").isObject() ? (ObjectNode) halNode.get("_embedded") : null;
+        if (embedded == null || !embedded.has("items")) {
+            return null;
+        }
+        return embedded.get("items").isArray() ? (ArrayNode) embedded.get("items") : null;
+    }
+
+    private Response deleteResource(HttpServletRequest req) {
+        try {
+            UserInfo userInfo = MossUtils.getUserInfo(userDatabaseManager, req);
+
+            String requestURI = req.getRequestURI();
+            String requestPath = requestURI.substring(9);
+            String extension = Lang.JSONLD.getFileExtensions().getFirst();
+            String headerDocumentPath = String.format("/header/%s.%s", requestPath, extension);
+
+            GstoreResource headerDocument = new GstoreResource(headerDocumentPath);
+            Model headerModel = headerDocument.readModel(Lang.JSONLD);
+
+            if (headerModel == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+
+            Resource entryResource = headerModel.listSubjectsWithProperty(RDF.type, RDFUris.MOSS_METADATA_ENTRY).nextResource();
+            var moduleURI = entryResource.getPropertyResourceValue(RDFUris.MOSS_INSTANCE_OF).getURI();
+            var resourceUri = entryResource.getPropertyResourceValue(RDFUris.MOSS_EXTENDS).getURI();
+
+            String moduleId = MossUtils.uriToName(moduleURI);
+
+            var moduleRequest = moduleStore.loadModule(moduleId);
+
+            if (moduleRequest.isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("{\"message\":\"Module not found: " + moduleId + "\"}")
+                        .type("application/json")
+                        .build();
+            }
+
+            var module = moduleRequest.get();
+
+            Lang moduleLanguage = RDFLanguages.contentTypeToLang(module.getLanguage());
+
+            int deletionResult = headerDocument.delete();
+
+            if (deletionResult != 200) {
+                throw new Exception("Unable to delete entry header from database.");
+            }
+
+            String contentDocumentPath = MossUtils.getContentStoragePath(resourceUri, module.getId(), moduleLanguage);
+            GstoreResource contentDocument = new GstoreResource(contentDocumentPath, userInfo);
+
+            deletionResult = contentDocument.delete();
+
+            if (deletionResult != 200) {
+                throw new Exception("Unable to delete entry content from database.");
+            }
+
+            Map<String, String> jsonResponse = new HashMap<>();
+            jsonResponse.put("statusCode", "" + deletionResult);
+            jsonResponse.put("path", MossUtils.getDocumentStoragePath(resourceUri, module.getId(), moduleLanguage));
+
+            String jsonResponseString = jsonMapper.writeValueAsString(jsonResponse);
+
+            return Response.status(Response.Status.NO_CONTENT)
+                    .type("application/json")
+                    .entity(jsonResponseString)
+                    .build();
+
+        } catch (IllegalArgumentException e) {
+            logger.error("IllegalArgumentException caught", e);
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .type("application/json")
+                    .entity("{\"message\":\"" + e.getMessage() + "\"}")
+                    .build();
+        } catch (UnsupportedEncodingException | URISyntaxException | ValidationException | RiotException e) {
+            logger.error("Client error caught", e);
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .type("application/json")
+                    .entity("{\"message\":\"" + e.getMessage() + "\"}")
+                    .build();
+        } catch (Exception e) {
+            logger.error("Unexpected exception caught", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .type("application/json")
+                    .entity("{\"message\":\"" + e.getMessage() + "\"}")
+                    .build();
+        }
+    }
+
+    private Response getResource(HttpServletRequest req) {
+        String requestURI = req.getRequestURI();
+        String requestPath = requestURI.substring(8);
+        String extension = Lang.JSONLD.getFileExtensions().getFirst();
+
+        String headerDocumentPath = String.format("/header/%s.%s", requestPath, extension);
+
+        try {
+            GstoreResource headerDocument = new GstoreResource(headerDocumentPath);
+            Model headerModel = headerDocument.readModel(Lang.JSONLD);
+
+            if (headerModel == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+
+            Resource resource = headerModel.getResource(ENV.MOSS_BASE_URL + requestURI);
+
+            String contentGraphURI = RDFUtils.getPropertyValue(headerModel, resource, RDFUris.MOSS_CONTENT, null);
+            String moduleUri = RDFUtils.getPropertyValue(headerModel, resource, RDFUris.MOSS_INSTANCE_OF, null);
+            String moduleId = MossUtils.uriToName(moduleUri);
+
+            var moduleRequest = moduleStore.loadModule(moduleId);
+
+            if (moduleRequest.isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .type("application/json")
+                        .entity("{\"message\":\"Module not found: " + moduleId + "\"}")
+                        .build();
+            }
+
+            var module = moduleRequest.get();
+            Lang contentLang = RDFLanguages.contentTypeToLang(module.getLanguage());
+
+            List<HateoasLink> links = List.of(
+                    new HateoasLink("self", requestURI),
+                    new HateoasLink("delete", requestURI),
+                    new HateoasLink("alternate", requestURI, false, contentLang.getHeaderString()),
+                    new HateoasLink("alternate", requestURI, false, HttpConstants.MediaTypes.TEXT_HTML),
+                    new HateoasLink("alternate", requestURI, false, HttpConstants.MediaTypes.APPLICATION_HAL_JSON),
+                    new HateoasLink("alternate", requestURI, false, HttpConstants.MediaTypes.APPLICATION_JSON),
+                    new HateoasLink("browse", MossUtils.navigateUp(requestURI), false, HttpConstants.MediaTypes.APPLICATION_HAL_JSON)
+            );
+
+            List<String> acceptedTypes = HttpUtils.getAcceptedMediaTypes(req);
+
+            for (String acceptedType : acceptedTypes) {
+                switch (acceptedType) {
+                    case HttpConstants.MediaTypes.APPLICATION_JSON, HttpConstants.MediaTypes.APPLICATION_HAL_JSON -> {
+                        ObjectNode hal = entryAsHAL(headerModel);
+                        HttpUtils.addHateoasLinks(hal, links);
+                        Response.ResponseBuilder builder = Response.ok(
+                                jsonMapper.writeValueAsString(hal),
+                                HttpConstants.MediaTypes.APPLICATION_HAL_JSON
+                        );
+                        for (HateoasLink link : links) {
+                            StringBuilder sb = new StringBuilder();
+                            sb.append("<").append(link.getHref()).append(">; rel=\"").append(link.getRel()).append("\"");
+                            if (link.getType() != null) {
+                                sb.append("; type=\"").append(link.getType()).append("\"");
+                            }
+                            if (link.isTemplated()) {
+                                sb.append("; templated=true");
+                            }
+                            builder.header(HttpConstants.Headers.LINK, sb.toString());
+                        }
+                        return builder.build();
+                    }
+                    case HttpConstants.MediaTypes.TEXT_HTML -> {
+                        ObjectNode hal = entryAsHAL(headerModel);
+                        HttpUtils.addHateoasLinks(hal, links);
+                        Response.ResponseBuilder builder = Response.ok(
+                                HttpUtils.getHtmlWrappedJson(resource.getLocalName(), hal),
+                                HttpConstants.MediaTypes.TEXT_HTML
+                        );
+                        for (HateoasLink link : links) {
+                            StringBuilder sb = new StringBuilder();
+                            sb.append("<").append(link.getHref()).append(">; rel=\"").append(link.getRel()).append("\"");
+                            if (link.getType() != null) {
+                                sb.append("; type=\"").append(link.getType()).append("\"");
+                            }
+                            if (link.isTemplated()) {
+                                sb.append("; templated=true");
+                            }
+                            builder.header(HttpConstants.Headers.LINK, sb.toString());
+                        }
+                        return builder.build();
+                    }
+                    default -> {
+                        Lang contentTypeLanguage = MossUtils.getAcceptLang(req, Lang.JSONLD);
+
+                        String contentDocumentPath = contentGraphURI.replace(String.format("%s/g/", ENV.MOSS_BASE_URL), "");
+                        GstoreResource contentDocument = new GstoreResource(contentDocumentPath);
+                        Model contentModel = contentDocument.readModel(contentLang);
+
+                        Model combinedModel = ModelFactory.createDefaultModel();
+                        combinedModel.add(headerModel);
+                        combinedModel.add(contentModel);
+
+                        return rdfResponse(contentTypeLanguage, combinedModel);
+                    }
+                }
+            }
+
+        } catch (URISyntaxException e) {
+            logger.error(e.getMessage());
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .type("application/json")
+                    .entity("{\"message\":\"" + e.getMessage() + "\"}")
+                    .build();
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .type("application/json")
+                    .entity("{\"message\":\"" + e.getMessage() + "\"}")
+                    .build();
+        }
+
+        return Response.status(Response.Status.NOT_ACCEPTABLE).build();
+    }
+
+    private Response rdfResponse(Lang acceptLanguage, Model layerModel) throws IOException {
+        if (acceptLanguage == Lang.JSONLD) {
+            JsonObject compacted = RDFUtils.compact(layerModel);
+            return Response.ok(compacted.toString(), acceptLanguage.getHeaderString()).build();
+        }
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        layerModel.write(out, acceptLanguage.getName());
+        return Response.ok(out.toString(), acceptLanguage.getHeaderString()).build();
+    }
+
+    private ObjectNode entryAsHAL(Model headerModel) {
+        ObjectNode hal = jsonMapper.createObjectNode();
+
+        if (headerModel.isEmpty()) {
+            return hal;
+        }
+
+        Resource resource = headerModel.listSubjectsWithProperty(RDF.type, RDFUris.MOSS_METADATA_ENTRY).nextResource();
+
+        hal.put("uri", resource.getURI());
+        hal.put("module", resource.getPropertyResourceValue(RDFUris.MOSS_INSTANCE_OF).getURI());
+        hal.put("extends", resource.getPropertyResourceValue(RDFUris.MOSS_EXTENDS).getURI());
+
+        Statement createdStmt = resource.getProperty(DCTerms.created);
+        if (createdStmt != null) {
+            hal.put("created", createdStmt.getLiteral().getString());
+        }
+
+        Statement modifiedStmt = resource.getProperty(DCTerms.modified);
+        if (modifiedStmt != null) {
+            hal.put("modified", modifiedStmt.getLiteral().getString());
+        }
+
+        hal.put("contentGraph", resource.getPropertyResourceValue(RDFUris.MOSS_CONTENT).getURI());
+
+        return hal;
+    }
+}

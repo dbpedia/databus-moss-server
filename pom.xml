@@ -12,6 +12,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
+        <jetty.version>11.0.24</jetty.version>
+        <jersey.version>3.0.16</jersey.version>
+        <openapi.generator.version>7.22.0</openapi.generator.version>
     </properties>
     <dependencies>
         <dependency>
@@ -67,6 +70,11 @@
             <version>2.16.1</version>
         </dependency>
         <dependency>
+            <groupId>org.openapitools</groupId>
+            <artifactId>jackson-databind-nullable</artifactId>
+            <version>0.2.6</version>
+        </dependency>
+        <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
             <version>4.0.1</version>
@@ -103,12 +111,12 @@
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
-            <version>11.0.3</version>
+            <version>${jetty.version}</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-util</artifactId>
-            <version>11.0.3</version>
+            <version>${jetty.version}</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-proxy -->
 
@@ -121,29 +129,38 @@
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
-            <version>11.0.3</version>
+            <version>${jetty.version}</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-security</artifactId>
-            <version>11.0.3</version>
+            <version>${jetty.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-openid</artifactId>
-            <version>11.0.3</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-servlets -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlets</artifactId>
-            <version>11.0.3</version>
+            <version>${jetty.version}</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-proxy -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-proxy</artifactId>
-            <version>11.0.3</version>
+            <version>${jetty.version}</version>
+        </dependency>
+        <!-- Jersey JAX-RS on Jetty -->
+        <dependency>
+            <groupId>org.glassfish.jersey.containers</groupId>
+            <artifactId>jersey-container-servlet</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-json-jackson</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.inject</groupId>
+            <artifactId>jersey-hk2</artifactId>
+            <version>${jersey.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -252,6 +269,63 @@
     </dependencies>
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>${openapi.generator.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/openapi.yaml</inputSpec>
+                            <ignoreFileOverride>${project.basedir}/.openapi-generator-ignore</ignoreFileOverride>
+                            <generatorName>jaxrs-spec</generatorName>
+                            <generateApis>true</generateApis>
+                            <generateModels>true</generateModels>
+                            <generateSupportingFiles>false</generateSupportingFiles>
+                            <apiPackage>org.dbpedia.moss.generated.api</apiPackage>
+                            <modelPackage>org.dbpedia.moss.generated.model</modelPackage>
+                            <configOptions>
+                                <interfaceOnly>true</interfaceOnly>
+                                <returnResponse>true</returnResponse>
+                                <useJakartaEe>true</useJakartaEe>
+                                <useBeanValidation>false</useBeanValidation>
+                                <useSwaggerAnnotations>false</useSwaggerAnnotations>
+                                <legacyDiscriminatorBehavior>false</legacyDiscriminatorBehavior>
+                            </configOptions>
+                            <importMappings>
+                                <importMapping>MossModule=org.dbpedia.moss.config.MossModule</importMapping>
+                                <importMapping>MossTerminology=org.dbpedia.moss.config.MossTerminology</importMapping>
+                                <importMapping>MossFacet=org.dbpedia.moss.servlets.facets.MossFacet</importMapping>
+                                <importMapping>UserInfo=org.dbpedia.moss.db.UserInfo</importMapping>
+                                <importMapping>APIKeyInfo=org.dbpedia.moss.db.APIKeyInfo</importMapping>
+                                <importMapping>HalCollection=com.fasterxml.jackson.databind.node.ObjectNode</importMapping>
+                            </importMappings>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>add-openapi-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/openapi/src/gen/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
