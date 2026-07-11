@@ -23,9 +23,18 @@ import jakarta.ws.rs.core.Response;
  */
 public class SparqlResource implements SparqlApi {
 
+    private static final Set<String> SKIP_REQUEST_HEADERS = Set.of(
+            "host",
+            "connection",
+            "content-length",
+            "accept-encoding"
+    );
+
     private static final Set<String> SKIP_RESPONSE_HEADERS = Set.of(
             "content-length",
-            "transfer-encoding"
+            "transfer-encoding",
+            "content-encoding",
+            "connection"
     );
 
     @Context
@@ -82,7 +91,9 @@ public class SparqlResource implements SparqlApi {
             Enumeration<String> headerNames = req.getHeaderNames();
             while (headerNames.hasMoreElements()) {
                 String headerName = headerNames.nextElement();
-                connection.setRequestProperty(headerName, req.getHeader(headerName));
+                if (!SKIP_REQUEST_HEADERS.contains(headerName.toLowerCase())) {
+                    connection.setRequestProperty(headerName, req.getHeader(headerName));
+                }
             }
 
             if (HttpConstants.Methods.POST.equalsIgnoreCase(method)) {
