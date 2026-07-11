@@ -3,14 +3,11 @@ name: moss
 services:
   virtuoso:
     image: openlink/virtuoso-opensource-7:latest
-    container_name: moss_virtuoso
     restart: unless-stopped
     environment:
       DBA_PASSWORD: ${VIRTUOSO_DBA_PASSWORD}
       SPARQL_UPDATE: "true"
-      DEFAULT_GRAPH: ${VIRTUOSO_DEFAULT_GRAPH}
-    ports:
-      - "${VIRTUOSO_PORT}:8890"
+      DEFAULT_GRAPH: http://localhost:2000
     volumes:
       - virtuoso_data:/database
     entrypoint: /bin/bash -c "
@@ -21,8 +18,7 @@ services:
       "
 
   gstore:
-    image: dbpedia/gstore:dev
-    container_name: moss_gstore
+    image: dbpedia/gstore:ffl
     restart: unless-stopped
     depends_on:
       - virtuoso
@@ -31,10 +27,8 @@ services:
       STORAGE_PASS: ${GSTORE_STORAGE_PASS}
       STORAGE_SPARQL_ENDPOINT_URI: http://virtuoso:8890/sparql
       GSTORE_LOCALHOST_CONTEXT_FALLBACK_URL: http://172.17.0.1
-      DEFAULT_JSONLD_LOCALHOST_CONTEXT: ${GSTORE_JSONLD_CONTEXT_URL}
-      DEFAULT_JSONLD_LOCALHOST_CONTEXT_LOCATION: ${GSTORE_JSONLD_CONTEXT_LOCATION}
-    ports:
-      - "${GSTORE_PORT}:8080"
+      DEFAULT_JSONLD_LOCALHOST_CONTEXT: http://localhost:3000/res/context.jsonld
+      DEFAULT_JSONLD_LOCALHOST_CONTEXT_LOCATION: https://databus.dbpedia.org/res/context.jsonld
     volumes:
       - gstore_git:/gstore/git
       - gstore_logs:/gstore/logs
@@ -43,28 +37,15 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    container_name: moss_server
     restart: unless-stopped
     depends_on:
       - gstore
-      - virtuoso
+    env_file: .env
     environment:
       CONFIG_PATH: /config
-      MOSS_BASE_URL: ${MOSS_BASE_URL}
       GSTORE_BASE_URL: http://gstore:8080
       STORE_SPARQL_ENDPOINT: http://virtuoso:8890/sparql
       USER_DATABASE_PATH: /data/users.db
-      AUTH_OIDC_ISSUER: ${AUTH_OIDC_ISSUER}
-      AUTH_OIDC_CLIENT_ID: ${AUTH_OIDC_CLIENT_ID}
-      AUTH_OIDC_CLIENT_SECRET: ${AUTH_OIDC_CLIENT_SECRET}
-      AUTH_OIDC_DISCOVERY_URL: ${AUTH_OIDC_DISCOVERY_URL}
-      AUTH_ADMIN_USERS: ${AUTH_ADMIN_USERS}
-      AUTH_ADMIN_ROLE: ${AUTH_ADMIN_ROLE}
-      MOSS_LOG_LEVEL: ${MOSS_LOG_LEVEL}
-      EXTRA_ROOT_CERT_PATH: ${EXTRA_ROOT_CERT_PATH}
-      HTTP_PROXY: ${HTTP_PROXY}
-      HTTPS_PROXY: ${HTTPS_PROXY}
-      NO_PROXY: ${NO_PROXY}
     ports:
       - "${MOSS_SERVER_PORT}:8080"
     volumes:
@@ -75,25 +56,14 @@ services:
     build:
       context: ../../databus-moss-frontend
       dockerfile: Dockerfile
-    container_name: moss_frontend
     restart: unless-stopped
     depends_on:
       - moss-server
+    env_file: .env
     environment:
-      PUBLIC_MOSS_BASE_URL: ${PUBLIC_MOSS_BASE_URL}
-      MOSS_API_SERVER_URL: ${MOSS_API_SERVER_URL}
-      ORIGIN: ${ORIGIN}
-      AUTH_OIDC_CLIENT_ID: ${AUTH_OIDC_CLIENT_ID}
-      AUTH_OIDC_CLIENT_SECRET: ${AUTH_OIDC_CLIENT_SECRET}
-      AUTH_OIDC_ISSUER: ${AUTH_OIDC_ISSUER}
-      AUTH_OIDC_CLIENT_SCOPE: ${AUTH_OIDC_CLIENT_SCOPE}
-      AUTH_OIDC_DISCOVERY_URL: ${AUTH_OIDC_DISCOVERY_URL}
-      AUTH_SECRET: ${AUTH_SECRET}
-      AUTH_TRUST_HOST: ${AUTH_TRUST_HOST}
-      AUTH_DEBUG: ${AUTH_DEBUG}
-      HTTP_PROXY: ${HTTP_PROXY}
-      HTTPS_PROXY: ${HTTPS_PROXY}
-      NO_PROXY: ${NO_PROXY}
+      MOSS_API_SERVER_URL: http://moss-server:8080
+      AUTH_OIDC_CLIENT_SCOPE: openid profile email
+      AUTH_TRUST_HOST: "true"
     ports:
       - "${MOSS_FRONTEND_PORT}:3000"
 
