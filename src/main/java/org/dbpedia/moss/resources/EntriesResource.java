@@ -286,11 +286,7 @@ public class EntriesResource implements EntriesApi {
             Dataset dataset = MossDatasetUtils.createEntryDataset(module, resourceUri, userInfo.getUsername(), contentModel);
             ValidationReport report = doShaclValidation(dataset.getUnionModel(), module);
 
-            String acceptHeader = req.getHeader("Accept");
-            Lang responseLang = RDFLanguages.contentTypeToLang(acceptHeader);
-            if (responseLang == null) {
-                responseLang = Lang.TURTLE;
-            }
+            Lang responseLang = MossUtils.getAcceptLang(req, Lang.TURTLE);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             RDFDataMgr.write(out, report.getModel(), responseLang);

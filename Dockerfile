@@ -1,6 +1,8 @@
 FROM maven:3.9-eclipse-temurin-21 AS builder
 WORKDIR /build
 COPY pom.xml .
+COPY openapi.yaml .
+COPY .openapi-generator-ignore .
 COPY src ./src
 RUN mvn -q -DskipTests package
 

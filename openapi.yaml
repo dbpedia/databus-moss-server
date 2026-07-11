@@ -818,6 +818,11 @@ paths:
       tags: [entries]
       operationId: validateEntry
       summary: Validate entry RDF against module SHACL shapes
+      description: >
+        Returns a SHACL validation report as RDF. The `Accept` header selects the
+        response RDF format; when omitted or not a recognized RDF type, `text/turtle`
+        is used.
+      x-jaxrs-skip-produces: true
       x-required-permission: write-entries
       security:
         - bearerAuth: []

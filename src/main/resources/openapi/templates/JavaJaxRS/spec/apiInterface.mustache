@@ -18,8 +18,8 @@
  {{/vendorExtensions}}
  @{{httpMethod}}{{#subresourceOperation}}
  @Path("{{#vendorExtensions.x-jaxrs-path}}{{{vendorExtensions.x-jaxrs-path}}}{{/vendorExtensions.x-jaxrs-path}}{{^vendorExtensions.x-jaxrs-path}}{{{path}}}{{/vendorExtensions.x-jaxrs-path}}"){{/subresourceOperation}}{{#hasConsumes}}
- @Consumes({ {{#consumes}}"{{{mediaType}}}"{{^-last}}, {{/-last}}{{/consumes}} }){{/hasConsumes}}{{#hasProduces}}
- @Produces({ {{#produces}}"{{{mediaType}}}"{{^-last}}, {{/-last}}{{/produces}} }){{/hasProduces}}{{#useSwaggerAnnotations}}
+ @Consumes({ {{#consumes}}"{{{mediaType}}}"{{^-last}}, {{/-last}}{{/consumes}} }){{/hasConsumes}}{{^vendorExtensions.x-jaxrs-skip-produces}}{{#hasProduces}}
+ @Produces({ {{#produces}}"{{{mediaType}}}"{{^-last}}, {{/-last}}{{/produces}} }){{/hasProduces}}{{/vendorExtensions.x-jaxrs-skip-produces}}{{#useSwaggerAnnotations}}
  @ApiOperation(value = "{{{summary}}}", notes = "{{{notes}}}"{{#hasAuthMethods}}, authorizations = {
  {{#authMethods}}{{#isOAuth}}@Authorization(value = "{{name}}", scopes = {
  {{#scopes}}@AuthorizationScope(scope = "{{scope}}", description = "{{description}}"){{^-last}},
