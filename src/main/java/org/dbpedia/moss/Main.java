@@ -17,18 +17,20 @@ import org.dbpedia.moss.config.MossConfiguration;
 import org.dbpedia.moss.config.MossTerminology;
 import org.dbpedia.moss.db.APIKeyValidator;
 import org.dbpedia.moss.db.UserDatabaseManager;
-import org.dbpedia.moss.filters.AdminContainerFilter;
-import org.dbpedia.moss.filters.AuthenticatedFilter;
+import org.dbpedia.moss.filters.AuthenticationContainerFilter;
 import org.dbpedia.moss.filters.AuthenticationFilter;
 import org.dbpedia.moss.filters.CorsFilter;
-import org.dbpedia.moss.filters.FetchUserRolesFilter;
-import org.dbpedia.moss.resources.ApiResource;
+import org.dbpedia.moss.filters.PermissionContainerFilter;
+import org.dbpedia.moss.filters.PermissionResolverFilter;
 import org.dbpedia.moss.resources.EntriesResource;
 import org.dbpedia.moss.resources.FacetsResource;
 import org.dbpedia.moss.resources.MetadataResource;
 import org.dbpedia.moss.resources.ModulesResource;
+import org.dbpedia.moss.resources.PermissionsResource;
+import org.dbpedia.moss.resources.RolesResource;
 import org.dbpedia.moss.resources.SparqlResource;
 import org.dbpedia.moss.resources.TerminologiesResource;
+import org.dbpedia.moss.resources.UsersResource;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.GstoreResource;
 import org.eclipse.jetty.server.HttpConfiguration;
@@ -108,7 +110,10 @@ public class Main {
                 new FilterHolder(new AuthenticationFilter(new APIKeyValidator(userDatabaseManager))),
                 "/*",
                 null);
-        rootContext.addFilter(new FilterHolder(new FetchUserRolesFilter()), "/*", null);
+        rootContext.addFilter(
+                new FilterHolder(new PermissionResolverFilter(userDatabaseManager)),
+                "/*",
+                null);
 
         ResourceConfig jerseyConfig = new ResourceConfig();
         jerseyConfig.property("jersey.config.server.wadl.disableWadl", true);
@@ -123,13 +128,15 @@ public class Main {
         jerseyConfig.register(MetadataResource.class);
         jerseyConfig.register(SparqlResource.class);
         jerseyConfig.register(EntriesResource.class);
-        jerseyConfig.register(ApiResource.class);
+        jerseyConfig.register(UsersResource.class);
+        jerseyConfig.register(RolesResource.class);
+        jerseyConfig.register(PermissionsResource.class);
         jerseyConfig.register(ModulesResource.class);
         jerseyConfig.register(TerminologiesResource.class);
         jerseyConfig.register(FacetsResource.class);
 
-        jerseyConfig.register(AdminContainerFilter.class);
-        jerseyConfig.register(AuthenticatedFilter.class);
+        jerseyConfig.register(PermissionContainerFilter.class);
+        jerseyConfig.register(AuthenticationContainerFilter.class);
         jerseyConfig.register(JacksonFeature.class);
 
         ServletHolder jerseyServlet = new ServletHolder(new ServletContainer(jerseyConfig));

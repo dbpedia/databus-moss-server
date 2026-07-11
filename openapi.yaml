@@ -70,8 +70,65 @@ components:
           type: array
           items:
             type: string
-        isAdmin:
-          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+    MossRole:
+      type: object
+      properties:
+        name:
+          type: string
+        tokenRole:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+    RoleCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        tokenRole:
+          type: string
+
+    RolePermissionsRequest:
+      type: object
+      properties:
+        permissions:
+          type: array
+          items:
+            type: string
+
+    UserRolesRequest:
+      type: object
+      properties:
+        roles:
+          type: array
+          items:
+            type: string
+
+    SetUsernameRequest:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+
+    ApiKeyCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
 
     APIKeyInfo:
       type: object
@@ -134,7 +191,7 @@ components:
     Unauthorized:
       description: Missing or invalid credentials
     Forbidden:
-      description: Admin privileges required
+      description: Missing required permission
 
 paths:
 
@@ -156,6 +213,7 @@ paths:
     post:
       tags: [modules]
       operationId: createModule
+      x-required-permission: write-settings
       summary: Create a module
       security:
         - bearerAuth: []
@@ -202,6 +260,7 @@ paths:
     put:
       tags: [modules]
       operationId: updateModule
+      x-required-permission: write-settings
       summary: Update a module
       security:
         - bearerAuth: []
@@ -230,6 +289,7 @@ paths:
     delete:
       tags: [modules]
       operationId: deleteModule
+      x-required-permission: write-settings
       summary: Delete a module
       security:
         - bearerAuth: []
@@ -271,6 +331,7 @@ paths:
     put:
       tags: [modules]
       operationId: updateModuleContext
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -296,6 +357,7 @@ paths:
     delete:
       tags: [modules]
       operationId: deleteModuleContext
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -336,6 +398,7 @@ paths:
     put:
       tags: [modules]
       operationId: updateModuleShapes
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -361,6 +424,7 @@ paths:
     delete:
       tags: [modules]
       operationId: deleteModuleShapes
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -401,6 +465,7 @@ paths:
     put:
       tags: [modules]
       operationId: updateModuleTemplate
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -429,6 +494,7 @@ paths:
     delete:
       tags: [modules]
       operationId: deleteModuleTemplate
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -458,6 +524,7 @@ paths:
     post:
       tags: [terminologies]
       operationId: createTerminology
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -497,6 +564,7 @@ paths:
     put:
       tags: [terminologies]
       operationId: updateTerminology
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -522,6 +590,7 @@ paths:
     delete:
       tags: [terminologies]
       operationId: deleteTerminology
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -555,6 +624,7 @@ paths:
     put:
       tags: [terminologies]
       operationId: updateTerminologyData
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -576,6 +646,7 @@ paths:
     delete:
       tags: [terminologies]
       operationId: deleteTerminologyData
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -603,6 +674,7 @@ paths:
     post:
       tags: [facets]
       operationId: createFacet
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -640,6 +712,7 @@ paths:
     put:
       tags: [facets]
       operationId: updateFacet
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -661,6 +734,7 @@ paths:
     delete:
       tags: [facets]
       operationId: deleteFacet
+      x-required-permission: write-settings
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -678,6 +752,7 @@ paths:
     get:
       tags: [entries]
       operationId: browseEntries
+      summary: Browse entries
       responses:
         '200':
           description: OK
@@ -685,51 +760,11 @@ paths:
             application/hal+json:
               schema:
                 $ref: '#/components/schemas/HalCollection'
-
-  /entries/{path}:
-    get:
-      tags: [entries]
-      operationId: getEntry
-      parameters:
-        - name: path
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/hal+json:
-              schema:
-                $ref: '#/components/schemas/HalCollection'
-            text/turtle:
-              schema:
-                type: string
-    delete:
-      tags: [entries]
-      operationId: deleteEntry
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
-      parameters:
-        - name: path
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Deleted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeleteEntryResult'
-
-  /api/v1/save-entry:
     post:
       tags: [entries]
-      operationId: saveEntry
+      operationId: createEntry
+      summary: Create or update an entry
+      x-required-permission: write-entries
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -761,36 +796,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/SaveEntryResult'
 
-  /api/v1/delete-entry:
-    post:
-      tags: [entries]
-      operationId: deleteEntryByQuery
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
-      parameters:
-        - name: module
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: resource
-          in: query
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Deleted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeleteEntryResult'
-
-  /api/v1/validate-entry:
+  /entries/validate:
     post:
       tags: [entries]
       operationId: validateEntry
+      summary: Validate entry RDF against module SHACL shapes
+      x-required-permission: write-entries
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -819,10 +830,55 @@ paths:
               schema:
                 type: string
 
-  /api/v1/users/get-user:
+  /entries/{path}:
+    get:
+      tags: [entries]
+      operationId: getEntry
+      summary: Get an entry
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/HalCollection'
+            text/turtle:
+              schema:
+                type: string
+    delete:
+      tags: [entries]
+      operationId: deleteEntry
+      summary: Delete an entry
+      x-required-permission: write-entries
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteEntryResult'
+
+  /users/me:
     get:
       tags: [users]
-      operationId: getUser
+      operationId: getCurrentUser
+      summary: Get the authenticated user
+      x-requires-authentication: true
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -833,34 +889,78 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserInfo'
-
-  /api/v1/users/set-username:
-    post:
+    put:
       tags: [users]
-      operationId: setUsername
+      operationId: updateCurrentUser
+      summary: Update the authenticated user's profile
+      x-requires-authentication: true
       security:
         - bearerAuth: []
         - apiKeyAuth: []
-      parameters:
-        - name: username
-          in: query
-          required: true
-          schema:
-            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetUsernameRequest'
       responses:
         '200':
           description: OK
 
-  /api/v1/users/create-apikey:
+  /users/me/api-keys:
     post:
       tags: [users]
       operationId: createApiKey
+      summary: Create an API key for the authenticated user
+      x-requires-authentication: true
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKeyInfo'
+
+  /users/me/api-keys/{name}:
+    delete:
+      tags: [users]
+      operationId: deleteApiKey
+      summary: Revoke an API key
+      x-requires-authentication: true
       security:
         - bearerAuth: []
         - apiKeyAuth: []
       parameters:
         - name: name
-          in: query
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+
+  /users/{sub}/roles:
+    get:
+      tags: [users]
+      operationId: getUserRoles
+      summary: Get roles assigned to a user
+      x-required-permission: write-users
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: sub
+          in: path
           required: true
           schema:
             type: string
@@ -870,24 +970,168 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/APIKeyInfo'
-
-  /api/v1/users/revoke-apikey:
-    post:
+                $ref: '#/components/schemas/UserRolesRequest'
+    put:
       tags: [users]
-      operationId: revokeApiKey
+      operationId: setUserRoles
+      summary: Set roles for a user
+      x-required-permission: write-users
       security:
         - bearerAuth: []
         - apiKeyAuth: []
       parameters:
-        - name: name
-          in: query
+        - name: sub
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRolesRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRolesRequest'
+
+  /permissions:
+    get:
+      tags: [auth]
+      operationId: listPermissions
+      summary: List all permissions
+      x-required-permission: write-users
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /roles:
+    get:
+      tags: [auth]
+      operationId: listRoles
+      summary: List all roles
+      x-required-permission: write-users
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MossRole'
+    post:
+      tags: [auth]
+      operationId: createRole
+      summary: Create a role
+      x-required-permission: write-users
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MossRole'
+
+  /roles/{role}:
+    delete:
+      tags: [auth]
+      operationId: deleteRole
+      summary: Delete a role
+      x-required-permission: write-users
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: role
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /roles/{role}/permissions:
+    get:
+      tags: [auth]
+      operationId: getRolePermissions
+      summary: Get role permissions
+      x-required-permission: write-users
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: role
+          in: path
           required: true
           schema:
             type: string
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolePermissionsRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [auth]
+      operationId: setRolePermissions
+      summary: Set role permissions
+      x-required-permission: write-users
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: role
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RolePermissionsRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolePermissionsRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /g/{path}:
     get:

@@ -1,15 +1,13 @@
 package org.dbpedia.moss.db;
 
 public class UserInfo {
-    
+
     private String username;
-
     private String sub;
-
     private String[] apiKeys;
+    private String[] roles;
+    private String[] permissions;
 
-    private boolean isAdmin;
-    
     public String[] getApiKeys() {
         return apiKeys;
     }
@@ -21,7 +19,7 @@ public class UserInfo {
     public String getSub() {
         return sub;
     }
-    
+
     public void setSub(String sub) {
         this.sub = sub;
     }
@@ -34,11 +32,19 @@ public class UserInfo {
         this.username = username;
     }
 
-    public boolean isIsAdmin() {
-        return isAdmin;
+    public String[] getRoles() {
+        return roles;
     }
 
-    public void setIsAdmin(boolean isAdmin) {
-        this.isAdmin = isAdmin;
+    public void setRoles(String[] roles) {
+        this.roles = roles;
+    }
+
+    public String[] getPermissions() {
+        return permissions;
+    }
+
+    public void setPermissions(String[] permissions) {
+        this.permissions = permissions;
     }
 }

@@ -122,11 +122,6 @@
 
 
         <dependency>
-            <groupId>io.pebbletemplates</groupId>
-            <artifactId>pebble</artifactId>
-            <version>3.2.1</version>
-        </dependency>
-        <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
             <version>${jetty.version}</version>
@@ -280,6 +275,7 @@
                         </goals>
                         <configuration>
                             <inputSpec>${project.basedir}/openapi.yaml</inputSpec>
+                            <templateResourcePath>${project.basedir}/src/main/resources/openapi/templates/JavaJaxRS/spec</templateResourcePath>
                             <ignoreFileOverride>${project.basedir}/.openapi-generator-ignore</ignoreFileOverride>
                             <generatorName>jaxrs-spec</generatorName>
                             <generateApis>true</generateApis>
@@ -301,6 +297,7 @@
                                 <importMapping>MossFacet=org.dbpedia.moss.servlets.facets.MossFacet</importMapping>
                                 <importMapping>UserInfo=org.dbpedia.moss.db.UserInfo</importMapping>
                                 <importMapping>APIKeyInfo=org.dbpedia.moss.db.APIKeyInfo</importMapping>
+                                <importMapping>MossRole=org.dbpedia.moss.db.MossRole</importMapping>
                                 <importMapping>HalCollection=com.fasterxml.jackson.databind.node.ObjectNode</importMapping>
                             </importMappings>
                         </configuration>

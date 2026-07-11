@@ -8,8 +8,8 @@ import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 
-@Authenticated
-public class AuthenticatedFilter implements ContainerRequestFilter {
+@RequiresAuthentication
+public class AuthenticationContainerFilter implements ContainerRequestFilter {
 
     @Context
     private HttpServletRequest servletRequest;

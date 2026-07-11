@@ -10,12 +10,12 @@ See the [installation guide](doc/deployment.md) for setup and deployment.
 
 ### CURL
 
-To create entries on a MOSS instance first create an API using the MOSS web application. Then call `https://moss.dev.dbpedia.link/api/v1/save-entry` with request parameters module and resource. The list of available modules can be requested via `https://moss.dev.dbpedia.link/modules`. The resource parameters specifies the Databus resource being extended by the entry.
+To create entries on a MOSS instance first create an API key via `POST /users/me/api-keys`. Then call `POST /entries` with query parameters `module` and `resource`. The list of available modules can be requested via `GET /modules`. The `resource` parameter specifies the Databus resource being extended by the entry.
 
 #### Example:
 ```
 curl --request POST \
-  --url 'https://moss.dev.dbpedia.link/api/v1/save-entry?module=keyword&resource=https%3A%2F%2Fdatabus.dbpedia.org%2Fdbpedia-enterprise%2Fenriched-source-snapshots' \
+  --url 'https://moss.dev.dbpedia.link/entries?module=keyword&resource=https%3A%2F%2Fdatabus.dbpedia.org%2Fdbpedia-enterprise%2Fenriched-source-snapshots' \
   --header 'Content-Type: text/turtle' \
   --header 'X-API-KEY: [API_KEY_GOES_HERE]' \
   --data 'PREFIX schema: <https://schema.org/> 

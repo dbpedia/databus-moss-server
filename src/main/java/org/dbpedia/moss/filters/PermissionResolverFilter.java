@@ -4,16 +4,18 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.services.OIDCDiscoveryService;
-import org.dbpedia.moss.utils.AdminAccess;
 import org.dbpedia.moss.utils.ENV;
 import org.dbpedia.moss.utils.HttpClientWithProxy;
 import org.dbpedia.moss.utils.HttpConstants;
@@ -38,18 +40,24 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 
-public class FetchUserRolesFilter implements Filter {
+public class PermissionResolverFilter implements Filter {
 
-    private static final Logger logger = LoggerFactory.getLogger(FetchUserRolesFilter.class);
+    private static final Logger logger = LoggerFactory.getLogger(PermissionResolverFilter.class);
     private static final ObjectMapper mapper = new ObjectMapper();
 
+    private final UserDatabaseManager userDatabase;
+
     private OIDCDiscoveryService discoveryService;
-    private Cache<String, List<String>> rolesCache;
+    private Cache<String, List<String>> tokenRolesCache;
+
+    public PermissionResolverFilter(UserDatabaseManager userDatabase) {
+        this.userDatabase = userDatabase;
+    }
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
         this.discoveryService = OIDCDiscoveryService.getInstance();
-        this.rolesCache = CacheBuilder.newBuilder()
+        this.tokenRolesCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(10, TimeUnit.MINUTES)
                 .maximumSize(1000)
                 .build();
@@ -60,56 +68,70 @@ public class FetchUserRolesFilter implements Filter {
             throws IOException, ServletException {
 
         HttpServletRequest httpRequest = (HttpServletRequest) request;
-        String token = (String) httpRequest.getAttribute(AuthenticationFilter.FILTER_ATTRIBUTE_AUTH_TOKEN);
         String sub = (String) httpRequest.getAttribute(HttpConstants.OIDC.KEY_SUBJECT);
 
-        if (token == null) {
+        if (sub == null) {
             chain.doFilter(request, response);
             return;
         }
 
         try {
-            List<String> roles = rolesCache.getIfPresent(token);
-            if (roles == null) {
-                roles = extractRolesFromJwt(token);
-                if (roles.isEmpty()) {
-                    roles = fetchRolesFromUserInfo(token);
-                }
-                if (!roles.isEmpty()) {
-                    rolesCache.put(token, new ArrayList<>(roles));
-                }
-            } else {
-                roles = new ArrayList<>(roles);
-            }
+            List<String> tokenRoles = extractTokenRoles(httpRequest);
+            applyAdminUserBootstrap(sub, httpRequest);
 
-            applyAdminUserWhitelist(roles, sub, httpRequest);
+            Set<String> permissions = userDatabase.resolvePermissions(sub, tokenRoles);
+            List<String> roles = userDatabase.resolveInternalRoles(sub, tokenRoles);
+
+            request.setAttribute(HttpConstants.OIDC.KEY_PERMISSIONS, permissions);
             request.setAttribute(HttpConstants.OIDC.KEY_ROLES, roles);
-            request.setAttribute(HttpConstants.OIDC.KEY_IS_ADMIN, AdminAccess.hasAdminRole(roles));
         } catch (Exception e) {
-            logger.error("Error processing user roles for {}", httpRequest.getRequestURI(), e);
+            logger.error("Error resolving permissions for {}", httpRequest.getRequestURI(), e);
         }
 
         chain.doFilter(request, response);
     }
 
-    private void applyAdminUserWhitelist(List<String> roles, String sub, HttpServletRequest request) {
+    private void applyAdminUserBootstrap(String sub, HttpServletRequest request) {
         String adminUsers = ENV.AUTH_ADMIN_USERS;
         if (adminUsers == null || adminUsers.isBlank()) {
             return;
         }
 
         String preferredUsername = (String) request.getAttribute(HttpConstants.OIDC.KEY_PREFERRED_USERNAME);
-        String adminRole = AdminAccess.adminRoleKey();
-
         boolean whitelisted = Arrays.stream(adminUsers.split(","))
                 .map(String::trim)
+                .filter(s -> !s.isEmpty())
                 .anyMatch(username -> username.equals(sub)
                         || (preferredUsername != null && username.equals(preferredUsername)));
 
-        if (whitelisted && roles.stream().noneMatch(role -> role.equalsIgnoreCase(adminRole))) {
-            roles.add(adminRole);
-            logger.debug("Granted admin role via AUTH_ADMIN_USERS for subject {}", sub);
+        if (whitelisted) {
+            try {
+                userDatabase.ensureAdminUser(sub);
+            } catch (Exception e) {
+                logger.error("Failed to bootstrap admin role for {}", sub, e);
+            }
         }
+    }
+
+    private List<String> extractTokenRoles(HttpServletRequest httpRequest) throws Exception {
+        String token = (String) httpRequest.getAttribute(AuthenticationFilter.FILTER_ATTRIBUTE_AUTH_TOKEN);
+        if (token == null) {
+            return List.of();
+        }
+
+        List<String> cached = tokenRolesCache.getIfPresent(token);
+        if (cached != null) {
+            return new ArrayList<>(cached);
+        }
+
+        List<String> roles = extractRolesFromJwt(token);
+        if (roles.isEmpty()) {
+            roles = fetchRolesFromUserInfo(token);
+        }
+        if (!roles.isEmpty()) {
+            tokenRolesCache.put(token, new ArrayList<>(roles));
+        }
+        return roles;
     }
 
     private List<String> extractRolesFromJwt(String token) {
@@ -117,6 +139,13 @@ public class FetchUserRolesFilter implements Filter {
 
         try {
             DecodedJWT jwt = JWT.decode(token);
+
+            if (ENV.AUTH_OIDC_ROLE_CLAIM != null && !ENV.AUTH_OIDC_ROLE_CLAIM.isBlank()) {
+                roles.addAll(extractRolesFromJwtPayload(jwt, ENV.AUTH_OIDC_ROLE_CLAIM));
+                if (!roles.isEmpty()) {
+                    return roles;
+                }
+            }
 
             Claim realmAccessClaim = jwt.getClaim(HttpConstants.OIDC.KEY_REALM_ACCESS);
             if (!realmAccessClaim.isMissing()) {
@@ -137,10 +166,15 @@ public class FetchUserRolesFilter implements Filter {
                     Object clientRoles = clientMap.get(HttpConstants.OIDC.KEY_ROLES);
                     if (clientRoles instanceof List<?> roleList) {
                         for (Object role : roleList) {
-                            roles.add(ENV.AUTH_OIDC_CLIENT_ID + "/" + String.valueOf(role));
+                            roles.add(ENV.AUTH_OIDC_CLIENT_ID + "/" + role);
                         }
                     }
                 }
+            }
+
+            Claim rootRoles = jwt.getClaim(HttpConstants.OIDC.KEY_ROLES);
+            if (!rootRoles.isMissing() && rootRoles.asList(String.class) != null) {
+                roles.addAll(rootRoles.asList(String.class));
             }
 
         } catch (JWTDecodeException e) {
@@ -148,6 +182,25 @@ public class FetchUserRolesFilter implements Filter {
         }
 
         return roles;
+    }
+
+    private List<String> extractRolesFromJwtPayload(DecodedJWT jwt, String path) {
+        try {
+            JsonNode node = mapper.readTree(new String(Base64.getUrlDecoder().decode(jwt.getPayload())));
+            for (String part : path.split("\\.")) {
+                node = node.path(part);
+            }
+            List<String> roles = new ArrayList<>();
+            if (node.isArray()) {
+                node.forEach(n -> roles.add(n.asText()));
+            } else if (node.isTextual()) {
+                roles.add(node.asText());
+            }
+            return roles;
+        } catch (Exception e) {
+            logger.debug("Failed to extract roles from JWT claim path {}", path);
+            return List.of();
+        }
     }
 
     private List<String> fetchRolesFromUserInfo(String token) throws Exception {
@@ -183,6 +236,21 @@ public class FetchUserRolesFilter implements Filter {
     private List<String> parseRolesFromJson(JsonNode node) {
         List<String> roles = new ArrayList<>();
 
+        if (ENV.AUTH_OIDC_ROLE_CLAIM != null && !ENV.AUTH_OIDC_ROLE_CLAIM.isBlank()) {
+            JsonNode claimNode = node;
+            for (String part : ENV.AUTH_OIDC_ROLE_CLAIM.split("\\.")) {
+                claimNode = claimNode.path(part);
+            }
+            if (claimNode.isArray()) {
+                claimNode.forEach(n -> roles.add(n.asText()));
+                return roles;
+            }
+            if (claimNode.isTextual()) {
+                roles.add(claimNode.asText());
+                return roles;
+            }
+        }
+
         JsonNode rootRoles = node.get(HttpConstants.OIDC.KEY_ROLES);
         if (rootRoles != null && rootRoles.isArray()) {
             rootRoles.forEach(n -> roles.add(n.asText()));
@@ -202,18 +270,13 @@ public class FetchUserRolesFilter implements Filter {
             }
         }
 
-        JsonNode isAdminNode = node.get(HttpConstants.OIDC.KEY_IS_ADMIN);
-        if (isAdminNode != null && isAdminNode.asBoolean(false)) {
-            roles.add(AdminAccess.adminRoleKey());
-        }
-
         return roles;
     }
 
     @Override
     public void destroy() {
-        if (rolesCache != null) {
-            rolesCache.invalidateAll();
+        if (tokenRolesCache != null) {
+            tokenRolesCache.invalidateAll();
         }
     }
 }

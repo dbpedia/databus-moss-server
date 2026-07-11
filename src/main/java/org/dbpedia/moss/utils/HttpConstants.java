@@ -40,7 +40,6 @@ public final class HttpConstants {
         public static final String DISCOVERY_DOCUMENT = "/.well-known/openid-configuration";
         public static final String KEY_SUBJECT = "sub";
         public static final String KEY_ROLES = "roles";
-        public static final String KEY_IS_ADMIN = "isAdmin";
         public static final String KEY_NAME = "name";
         public static final String KEY_GIVEN_NAME = "given_name";
         public static final String KEY_FAMILY_NAME = "family_name";
@@ -49,6 +48,7 @@ public final class HttpConstants {
         public static final String DISCOVERY_KEY_JWKS_URI = "jwks_uri";
         public static final String DISCOVERY_KEY_INTROSPECTION_ENDPOINT = "introspection_endpoint";
         public static final String DISCOVERY_KEY_USERINFO_ENDPOINT = "userinfo_endpoint";
+        public static final String KEY_PERMISSIONS = "permissions";
         public static final String KEY_REALM_ACCESS = "realm_access";
         public static final String KEY_RESOURCE_ACCESS = "resource_access";
     }

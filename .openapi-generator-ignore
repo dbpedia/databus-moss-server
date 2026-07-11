@@ -4,3 +4,4 @@
 **/model/UserInfo.java
 **/model/APIKeyInfo.java
 **/model/HalCollection.java
+**/model/MossRole.java

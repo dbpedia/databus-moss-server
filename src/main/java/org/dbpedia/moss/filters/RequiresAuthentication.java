@@ -10,5 +10,5 @@ import jakarta.ws.rs.NameBinding;
 @NameBinding
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE, ElementType.METHOD})
-public @interface AdminOnly {
+public @interface RequiresAuthentication {
 }
