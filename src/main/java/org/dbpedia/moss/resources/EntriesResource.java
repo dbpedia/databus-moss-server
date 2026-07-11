@@ -323,18 +323,16 @@ public class EntriesResource implements EntriesApi {
     private Response browse(HttpServletRequest req) {
         String targetUrl = buildGstoreUrl(req);
 
-        String halJson;
-        try {
-            halJson = fetchHalJson(targetUrl);
-        } catch (IOException e) {
-            return ResponseUtils.notFound("Failed to fetch from gstore: " + e.getMessage());
-        }
-
         ObjectNode halNode;
         try {
-            halNode = (ObjectNode) jsonMapper.readTree(halJson);
+            String halJson = fetchHalJson(targetUrl);
+            if (halJson == null) {
+                halNode = emptyBrowseHal();
+            } else {
+                halNode = (ObjectNode) jsonMapper.readTree(halJson);
+            }
         } catch (IOException e) {
-            return ResponseUtils.serverError("Failed to parse HAL response: " + e.getMessage());
+            return ResponseUtils.notFound("Failed to fetch from gstore: " + e.getMessage());
         }
         updateEmbeddedHAL(halNode);
 
@@ -377,11 +375,28 @@ public class EntriesResource implements EntriesApi {
 
         connection.connect();
 
-        try (InputStream in = connection.getInputStream()) {
-            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        try {
+            int status = connection.getResponseCode();
+            if (status == HttpURLConnection.HTTP_NOT_FOUND) {
+                return null;
+            }
+            if (status < 200 || status >= 300) {
+                throw new IOException(targetUrl + " returned HTTP " + status);
+            }
+            try (InputStream in = connection.getInputStream()) {
+                return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            }
         } finally {
             connection.disconnect();
         }
+    }
+
+    private ObjectNode emptyBrowseHal() {
+        ObjectNode result = jsonMapper.createObjectNode();
+        ObjectNode embedded = jsonMapper.createObjectNode();
+        embedded.set("items", jsonMapper.createArrayNode());
+        result.set("_embedded", embedded);
+        return result;
     }
 
     private String buildGstoreUrl(HttpServletRequest req) {

@@ -5,6 +5,7 @@ import org.dbpedia.moss.db.UserDatabaseManager;
 import org.dbpedia.moss.generated.api.RolesApi;
 import org.dbpedia.moss.generated.model.RoleCreateRequest;
 import org.dbpedia.moss.generated.model.RolePermissionsRequest;
+import org.dbpedia.moss.generated.model.RoleUpdateRequest;
 import org.dbpedia.moss.utils.HttpConstants;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +42,21 @@ public class RolesResource implements RolesApi {
                     .entity(json)
                     .type(HttpConstants.MediaTypes.APPLICATION_JSON)
                     .build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        }
+    }
+
+    @Override
+    public Response updateRole(String role, RoleUpdateRequest roleUpdateRequest) {
+        try {
+            if (userDatabaseManager.getRole(role) == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            userDatabaseManager.updateRole(role, roleUpdateRequest.getTokenRole());
+            MossRole updatedRole = userDatabaseManager.getRole(role);
+            String json = new ObjectMapper().writeValueAsString(updatedRole);
+            return Response.ok(json, HttpConstants.MediaTypes.APPLICATION_JSON).build();
         } catch (Exception e) {
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }

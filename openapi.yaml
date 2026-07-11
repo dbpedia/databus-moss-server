@@ -100,6 +100,12 @@ components:
         tokenRole:
           type: string
 
+    RoleUpdateRequest:
+      type: object
+      properties:
+        tokenRole:
+          type: string
+
     RolePermissionsRequest:
       type: object
       properties:
@@ -873,6 +879,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/DeleteEntryResult'
 
+  /users:
+    get:
+      tags: [users]
+      operationId: listUsers
+      summary: List all users
+      x-required-permission: read-users
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserInfo'
+
   /users/me:
     get:
       tags: [users]
@@ -954,7 +979,8 @@ paths:
       tags: [users]
       operationId: getUserRoles
       summary: Get roles assigned to a user
-      x-required-permission: write-users
+      description: The path parameter accepts either the user's OIDC sub or their MOSS username.
+      x-required-permission: write-roles
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -962,6 +988,7 @@ paths:
         - name: sub
           in: path
           required: true
+          description: OIDC sub or MOSS username
           schema:
             type: string
       responses:
@@ -975,7 +1002,8 @@ paths:
       tags: [users]
       operationId: setUserRoles
       summary: Set roles for a user
-      x-required-permission: write-users
+      description: The path parameter accepts either the user's OIDC sub or their MOSS username.
+      x-required-permission: write-roles
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -983,6 +1011,7 @@ paths:
         - name: sub
           in: path
           required: true
+          description: OIDC sub or MOSS username
           schema:
             type: string
       requestBody:
@@ -1004,7 +1033,7 @@ paths:
       tags: [auth]
       operationId: listPermissions
       summary: List all permissions
-      x-required-permission: write-users
+      x-required-permission: write-roles
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -1023,7 +1052,7 @@ paths:
       tags: [auth]
       operationId: listRoles
       summary: List all roles
-      x-required-permission: write-users
+      x-required-permission: write-roles
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -1040,7 +1069,7 @@ paths:
       tags: [auth]
       operationId: createRole
       summary: Create a role
-      x-required-permission: write-users
+      x-required-permission: write-roles
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -1059,11 +1088,40 @@ paths:
                 $ref: '#/components/schemas/MossRole'
 
   /roles/{role}:
+    patch:
+      tags: [auth]
+      operationId: updateRole
+      summary: Update a role's OIDC token mapping
+      x-required-permission: write-roles
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: role
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleUpdateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MossRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
     delete:
       tags: [auth]
       operationId: deleteRole
       summary: Delete a role
-      x-required-permission: write-users
+      x-required-permission: write-roles
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -1084,7 +1142,7 @@ paths:
       tags: [auth]
       operationId: getRolePermissions
       summary: Get role permissions
-      x-required-permission: write-users
+      x-required-permission: write-roles
       security:
         - bearerAuth: []
         - apiKeyAuth: []
@@ -1107,7 +1165,7 @@ paths:
       tags: [auth]
       operationId: setRolePermissions
       summary: Set role permissions
-      x-required-permission: write-users
+      x-required-permission: write-roles
       security:
         - bearerAuth: []
         - apiKeyAuth: []

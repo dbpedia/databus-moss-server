@@ -39,6 +39,16 @@ public class UsersResource implements UsersApi {
     }
 
     @Override
+    public Response listUsers() {
+        try {
+            String json = new ObjectMapper().writeValueAsString(userDatabaseManager.listUsers());
+            return Response.ok(json, HttpConstants.MediaTypes.APPLICATION_JSON).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        }
+    }
+
+    @Override
     public Response getCurrentUser() {
         String sub = (String) request.getAttribute(HttpConstants.OIDC.KEY_SUBJECT);
         try {
@@ -119,8 +129,12 @@ public class UsersResource implements UsersApi {
     }
 
     @Override
-    public Response getUserRoles(String sub) {
+    public Response getUserRoles(String identifier) {
         try {
+            String sub = userDatabaseManager.resolveSub(identifier);
+            if (sub == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
             UserRolesRequest body = new UserRolesRequest();
             body.setRoles(userDatabaseManager.getUserRoles(sub));
             String json = new ObjectMapper().writeValueAsString(body);
@@ -131,8 +145,12 @@ public class UsersResource implements UsersApi {
     }
 
     @Override
-    public Response setUserRoles(String sub, UserRolesRequest userRolesRequest) {
+    public Response setUserRoles(String identifier, UserRolesRequest userRolesRequest) {
         try {
+            String sub = userDatabaseManager.resolveSub(identifier);
+            if (sub == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
             userDatabaseManager.setUserRoles(sub, userRolesRequest.getRoles());
             UserRolesRequest body = new UserRolesRequest();
             body.setRoles(userDatabaseManager.getUserRoles(sub));

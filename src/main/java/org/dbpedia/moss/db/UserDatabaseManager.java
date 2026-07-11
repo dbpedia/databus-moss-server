@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -100,6 +101,30 @@ public final class UserDatabaseManager {
         return userInfo[0];
     }
 
+    public UserInfo getUserInfoByUsername(String username) {
+        final UserInfo[] userInfo = {null};
+        executeSelect(QUERY_SELECT_USER_BY_USERNAME, (ResultSet rs) -> {
+            while (rs.next()) {
+                UserInfo info = new UserInfo();
+                info.setSub(rs.getString("sub"));
+                info.setUsername(rs.getString(USERDB_COLUMN_USERNAME));
+                userInfo[0] = info;
+            }
+        }, username);
+        return userInfo[0];
+    }
+
+    public String resolveSub(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            return null;
+        }
+        if (getUserInfoBySub(identifier) != null) {
+            return identifier;
+        }
+        UserInfo byUsername = getUserInfoByUsername(identifier);
+        return byUsername != null ? byUsername.getSub() : null;
+    }
+
     public List<String> getAPIKeyNamesBySub(String sub) {
         final ArrayList<String> apiKeyNames = new ArrayList<>();
         executeSelect(QUERY_SELECT_API_KEYS_BY_SUB, (ResultSet rs) -> {
@@ -110,9 +135,38 @@ public final class UserDatabaseManager {
         return apiKeyNames;
     }
 
+    public List<UserInfo> listUsers() {
+        List<UserInfo> users = new ArrayList<>();
+        executeSelect(QUERY_SELECT_ALL_USERS, (ResultSet rs) -> {
+            while (rs.next()) {
+                UserInfo info = new UserInfo();
+                info.setSub(rs.getString("sub"));
+                info.setUsername(rs.getString(USERDB_COLUMN_USERNAME));
+                users.add(info);
+            }
+        });
+        for (UserInfo user : users) {
+            List<String> roles = getUserRoles(user.getSub());
+            user.setRoles(roles.toArray(String[]::new));
+        }
+        return users;
+    }
+
     public void updateUsername(String sub, String username) throws SQLException {
         executeUpdate((Connection connection) -> {
             PreparedStatement preparedStmt = connection.prepareStatement(QUERY_INSERT_USER);
+            preparedStmt.setString(1, sub);
+            preparedStmt.setString(2, username);
+            return preparedStmt;
+        });
+    }
+
+    public void ensureUsernameIfUnset(String sub, String username) throws SQLException {
+        if (sub == null || sub.isBlank() || username == null || username.isBlank()) {
+            return;
+        }
+        executeUpdate((Connection connection) -> {
+            PreparedStatement preparedStmt = connection.prepareStatement(QUERY_INSERT_USER_IF_ABSENT);
             preparedStmt.setString(1, sub);
             preparedStmt.setString(2, username);
             return preparedStmt;
@@ -210,16 +264,6 @@ public final class UserDatabaseManager {
         }
     }
 
-    public List<String> listPermissions() {
-        List<String> permissions = new ArrayList<>();
-        executeSelect(QUERY_SELECT_ALL_PERMISSIONS, (ResultSet rs) -> {
-            while (rs.next()) {
-                permissions.add(rs.getString("name"));
-            }
-        });
-        return permissions;
-    }
-
     public List<MossRole> listRoles() {
         List<MossRole> roles = new ArrayList<>();
         executeSelect(QUERY_SELECT_ALL_ROLES, (ResultSet rs) -> {
@@ -261,7 +305,19 @@ public final class UserDatabaseManager {
         });
     }
 
+    public void updateRole(String name, String tokenRole) throws SQLException {
+        executeUpdate((Connection connection) -> {
+            PreparedStatement ps = connection.prepareStatement(QUERY_UPDATE_ROLE);
+            ps.setString(1, tokenRole);
+            ps.setString(2, name);
+            return ps;
+        });
+    }
+
     public void deleteRole(String name) throws SQLException {
+        if (isAdminRole(name)) {
+            throw new IllegalArgumentException("The admin role cannot be deleted.");
+        }
         executeUpdate((Connection connection) -> {
             PreparedStatement ps = connection.prepareStatement(QUERY_DELETE_ROLE_PERMISSIONS_FOR_ROLE);
             ps.setString(1, name);
@@ -280,6 +336,9 @@ public final class UserDatabaseManager {
     }
 
     public List<String> getRolePermissions(String role) {
+        if (isAdminRole(role)) {
+            return Arrays.asList(Permissions.ALL);
+        }
         List<String> permissions = new ArrayList<>();
         executeSelect(QUERY_SELECT_ROLE_PERMISSIONS, (ResultSet rs) -> {
             while (rs.next()) {
@@ -290,6 +349,9 @@ public final class UserDatabaseManager {
     }
 
     public void setRolePermissions(String role, List<String> permissions) throws SQLException {
+        if (isAdminRole(role)) {
+            throw new IllegalArgumentException("The admin role permissions cannot be modified.");
+        }
         executeUpdate((Connection connection) -> {
             PreparedStatement ps = connection.prepareStatement(QUERY_DELETE_ROLE_PERMISSIONS_FOR_ROLE);
             ps.setString(1, role);
@@ -337,6 +399,9 @@ public final class UserDatabaseManager {
 
     private Set<String> expandRolesToPermissions(Set<String> roles) {
         Set<String> permissions = new HashSet<>();
+        if (roles.contains(Permissions.ROLE_ADMIN)) {
+            permissions.addAll(Arrays.asList(Permissions.ALL));
+        }
         if (roles.isEmpty()) {
             return permissions;
         }
@@ -348,6 +413,10 @@ public final class UserDatabaseManager {
             }
         }, roles.toArray());
         return permissions;
+    }
+
+    private static boolean isAdminRole(String role) {
+        return Permissions.ROLE_ADMIN.equals(role);
     }
 
     public void executeUpdate(IStatementProvider statementProvider) throws SQLException {
@@ -445,17 +514,29 @@ public final class UserDatabaseManager {
     private static final String QUERY_INSERT_USER = """
         INSERT OR REPLACE INTO user (sub, username) VALUES (?, ?);""";
 
+    private static final String QUERY_INSERT_USER_IF_ABSENT = """
+        INSERT OR IGNORE INTO user (sub, username) VALUES (?, ?);""";
+
     private static final String QUERY_SELECT_API_KEYS_BY_SUB = """
         SELECT key, name FROM api WHERE sub = ?;""";
 
     private static final String QUERY_SELECT_USER_BY_SUB = """
         SELECT sub, username FROM user WHERE sub = ?;""";
 
+    private static final String QUERY_SELECT_USER_BY_USERNAME = """
+        SELECT sub, username FROM user WHERE username = ?;""";
+
+    private static final String QUERY_SELECT_ALL_USERS = """
+        SELECT sub, username FROM user ORDER BY username;""";
+
     private static final String QUERY_INSERT_PERMISSION = """
         INSERT OR IGNORE INTO permission(name) VALUES(?);""";
 
     private static final String QUERY_INSERT_ROLE = """
         INSERT OR IGNORE INTO role(name, token_role) VALUES(?, ?);""";
+
+    private static final String QUERY_UPDATE_ROLE = """
+        UPDATE role SET token_role = ? WHERE name = ?;""";
 
     private static final String QUERY_INSERT_ROLE_PERMISSION = """
         INSERT OR IGNORE INTO role_permission(role, permission) VALUES(?, ?);""";
@@ -471,9 +552,6 @@ public final class UserDatabaseManager {
 
     private static final String QUERY_SELECT_USER_ROLES = """
         SELECT role FROM user_role WHERE sub = ?;""";
-
-    private static final String QUERY_SELECT_ALL_PERMISSIONS = """
-        SELECT name FROM permission ORDER BY name;""";
 
     private static final String QUERY_SELECT_ALL_ROLES = """
         SELECT name, token_role FROM role ORDER BY name;""";

@@ -76,6 +76,7 @@ public class PermissionResolverFilter implements Filter {
         }
 
         try {
+            ensureUsernameFromPreferred(sub, httpRequest);
             List<String> tokenRoles = extractTokenRoles(httpRequest);
             applyAdminUserBootstrap(sub, httpRequest);
 
@@ -89,6 +90,18 @@ public class PermissionResolverFilter implements Filter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    private void ensureUsernameFromPreferred(String sub, HttpServletRequest request) {
+        String preferredUsername = (String) request.getAttribute(HttpConstants.OIDC.KEY_PREFERRED_USERNAME);
+        if (preferredUsername == null || preferredUsername.isBlank()) {
+            return;
+        }
+        try {
+            userDatabase.ensureUsernameIfUnset(sub, preferredUsername);
+        } catch (Exception e) {
+            logger.error("Failed to set username from preferred_username for {}", sub, e);
+        }
     }
 
     private void applyAdminUserBootstrap(String sub, HttpServletRequest request) {
