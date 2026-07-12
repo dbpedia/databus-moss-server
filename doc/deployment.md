@@ -52,7 +52,6 @@ Set [environment variables](#environment-variables) in the process environment o
 export CONFIG_PATH="./config"
 export MOSS_BASE_URL="http://localhost:8080"
 export GSTORE_BASE_URL="http://gstore-host:8080"
-export STORE_SPARQL_ENDPOINT="http://virtuoso:8890/sparql"
 export USER_DATABASE_PATH="./data/users.db"
 export AUTH_OIDC_ISSUER="https://your-idp/realms/your-realm"
 export AUTH_OIDC_CLIENT_ID="moss-resource-server"
@@ -88,7 +87,6 @@ docker run --rm -p 8080:8080 \
   -e CONFIG_PATH="/config" \
   -e MOSS_BASE_URL="https://moss-api.example.com" \
   -e GSTORE_BASE_URL="https://gstore.internal:8080" \
-  -e STORE_SPARQL_ENDPOINT="https://sparql.internal/sparql" \
   -e USER_DATABASE_PATH="/data/users.db" \
   -e AUTH_OIDC_ISSUER="https://your-idp/realms/your-realm" \
   -e AUTH_OIDC_CLIENT_ID="your-client-id" \
@@ -115,8 +113,7 @@ Values are supplied by the process environment (`System.getenv`): use your orche
 |----------|-------------|
 | `CONFIG_PATH` | Absolute or relative path to the MOSS config directory (`MossConfiguration.initialize`). |
 | `MOSS_BASE_URL` | Canonical public base URL of this server (no trailing path beyond what your deployment uses as root). Used for resource IRIs and gstore context parameters. |
-| `GSTORE_BASE_URL` | Base URL of the graph store backend (metadata read/browse, `GstoreResource`). |
-| `STORE_SPARQL_ENDPOINT` | Full SPARQL endpoint URL; powers `/sparql` proxy and direct Jena connections in `EntriesServlet`. |
+| `GSTORE_BASE_URL` | Base URL of the graph store backend (metadata read/browse, `GstoreResource`). SPARQL is proxied at `{GSTORE_BASE_URL}/sparql`. |
 | `USER_DATABASE_PATH` | Path to the SQLite file managed by `UserDatabaseManager` (directory must exist or be creatable). |
 
 ### Authentication (OIDC)

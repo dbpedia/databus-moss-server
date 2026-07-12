@@ -2,7 +2,6 @@ package org.dbpedia.moss.users;
 
 import java.util.Arrays;
 
-import org.dbpedia.moss.users.Permissions;
 import org.dbpedia.moss.generated.api.PermissionsApi;
 import org.dbpedia.moss.http.HttpConstants;
 

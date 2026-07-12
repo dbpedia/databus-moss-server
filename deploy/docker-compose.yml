@@ -18,13 +18,13 @@ services:
       "
 
   gstore:
-    image: dbpedia/gstore:ffl
+    image: ghcr.io/dbpedia/gstore:dev
     restart: unless-stopped
     depends_on:
       - virtuoso
     environment:
-      STORAGE_USER: ${GSTORE_STORAGE_USER}
-      STORAGE_PASS: ${GSTORE_STORAGE_PASS}
+      STORAGE_USER: dba
+      STORAGE_PASS: ${VIRTUOSO_DBA_PASSWORD}
       STORAGE_SPARQL_ENDPOINT_URI: http://virtuoso:8890/sparql
       GSTORE_LOCALHOST_CONTEXT_FALLBACK_URL: http://172.17.0.1
       DEFAULT_JSONLD_LOCALHOST_CONTEXT: http://localhost:3000/res/context.jsonld
@@ -34,18 +34,18 @@ services:
       - gstore_logs:/gstore/logs
 
   moss-server:
-    build:
-      context: ..
-      dockerfile: Dockerfile
+    image: ghcr.io/dbpedia/databus-moss-server:dev
     restart: unless-stopped
     depends_on:
       - gstore
-    env_file: .env
     environment:
       CONFIG_PATH: /config
       GSTORE_BASE_URL: http://gstore:8080
-      STORE_SPARQL_ENDPOINT: http://virtuoso:8890/sparql
       USER_DATABASE_PATH: /data/users.db
+      MOSS_BASE_URL: ${MOSS_BASE_URL}
+      AUTH_OIDC_ISSUER: ${AUTH_OIDC_ISSUER}
+      AUTH_OIDC_CLIENT_ID: ${AUTH_OIDC_CLIENT_ID}
+      AUTH_OIDC_CLIENT_SECRET: ${AUTH_OIDC_CLIENT_SECRET}
     ports:
       - "${MOSS_SERVER_PORT}:8080"
     volumes:
@@ -53,15 +53,18 @@ services:
       - moss_data:/data
 
   moss-frontend:
-    build:
-      context: ../../databus-moss-frontend
-      dockerfile: Dockerfile
+    image: ghcr.io/dbpedia/databus-moss-frontend:dev
     restart: unless-stopped
     depends_on:
       - moss-server
-    env_file: .env
     environment:
       MOSS_API_SERVER_URL: http://moss-server:8080
+      PUBLIC_MOSS_BASE_URL: ${MOSS_BASE_URL}
+      ORIGIN: ${ORIGIN}
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_OIDC_ISSUER: ${AUTH_OIDC_ISSUER}
+      AUTH_OIDC_CLIENT_ID: ${AUTH_OIDC_CLIENT_ID}
+      AUTH_OIDC_CLIENT_SECRET: ${AUTH_OIDC_CLIENT_SECRET}
       AUTH_OIDC_CLIENT_SCOPE: openid profile email
       AUTH_TRUST_HOST: "true"
     ports:

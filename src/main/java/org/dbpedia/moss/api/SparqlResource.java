@@ -40,7 +40,7 @@ public class SparqlResource implements SparqlApi {
     @Context
     private HttpServletRequest request;
 
-    private final String sparqlEndpoint = ENV.STORE_SPARQL_ENDPOINT;
+    private final String sparqlEndpoint = ENV.GSTORE_BASE_URL + "/sparql";
 
     /**
      * Proxies a GET request to the store SPARQL endpoint, forwarding the query string and headers.
