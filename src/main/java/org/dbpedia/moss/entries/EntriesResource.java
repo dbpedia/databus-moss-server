@@ -195,7 +195,16 @@ public class EntriesResource implements EntriesApi {
             combinedModel.add(dataModel);
             combinedModel.add(header.toModel());
 
-            doShaclValidation(combinedModel, module);
+            ValidationReport report = doShaclValidation(combinedModel, module);
+            if (!report.conforms()) {
+                Lang responseLang = MossUtils.getAcceptLang(req, Lang.TURTLE);
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                RDFDataMgr.write(out, report.getModel(), responseLang);
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .type(responseLang.getContentType().getContentTypeStr())
+                        .entity(out.toString())
+                        .build();
+            }
 
             if (contentTypeLanguage != moduleLanguage) {
                 StringWriter out = new StringWriter();

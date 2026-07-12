@@ -15,8 +15,8 @@ services:
     ports:
       - "3002:8080"
     volumes:
-      - ./data/gstore/git:/gstore/git
-      - ./data/gstore/logs:/gstore/logs
+      - gstore_git:/gstore/git
+      - gstore_logs:/gstore/logs
   virtuoso:
     image: "openlink/virtuoso-opensource-7:latest"
     container_name: moss_dev_virtuoso
@@ -27,10 +27,15 @@ services:
     ports:
       - "3003:8890"
     volumes:
-      - ./data/virtuoso:/database
+      - virtuoso_data:/database
     entrypoint: /bin/bash -c "
         echo 'grant SPARQL_LOAD_SERVICE_DATA to \"SPARQL\";' > /opt/virtuoso-opensource/initdb.d/ini.sql &&
         echo 'grant SPARQL_SPONGE to \"SPARQL\";' >> /opt/virtuoso-opensource/initdb.d/ini.sql &&
         echo 'grant SPARQL_SELECT_FED to \"SPARQL\";' > /opt/virtuoso-opensource/initdb.d/ini.sql &&
         /virtuoso-entrypoint.sh
       "
+
+volumes:
+  virtuoso_data:
+  gstore_git:
+  gstore_logs:
