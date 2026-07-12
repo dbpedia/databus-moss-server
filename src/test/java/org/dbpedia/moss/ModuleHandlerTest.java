@@ -2,9 +2,9 @@ package org.dbpedia.moss;
 
 import java.io.File;
 
-import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.resources.ModulesResource;
-import org.dbpedia.moss.utils.ENV;
+import org.dbpedia.moss.app.MossConfiguration;
+import org.dbpedia.moss.modules.ModulesResource;
+import org.dbpedia.moss.app.ENV;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

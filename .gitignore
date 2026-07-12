@@ -50,7 +50,6 @@ dependency-reduced-pom.xml
 # Application
 /bin/
 WebContent
-lucene-index
 tb-graph
 index
 logs

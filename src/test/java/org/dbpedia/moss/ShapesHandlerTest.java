@@ -2,10 +2,10 @@ package org.dbpedia.moss;
 
 import java.io.File;
 
-import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.resources.ModulesResource;
-import org.dbpedia.moss.utils.ENV;
-import org.dbpedia.moss.utils.HttpConstants;
+import org.dbpedia.moss.app.MossConfiguration;
+import org.dbpedia.moss.modules.ModulesResource;
+import org.dbpedia.moss.app.ENV;
+import org.dbpedia.moss.http.HttpConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -47,6 +47,14 @@ public class ShapesHandlerTest {
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
         response = resource.getModuleShapes("shapes-module");
+        assertTrue(((String) response.getEntity()).contains("ex:Thing"));
+
+        var noAcceptReq = mock(jakarta.servlet.http.HttpServletRequest.class);
+        when(noAcceptReq.getHeader("Accept")).thenReturn(null);
+        HandlerTestSupport.bindRequest(resource, noAcceptReq);
+        response = resource.getModuleShapes("shapes-module");
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(HttpConstants.MediaTypes.TEXT_TURTLE, response.getMediaType().toString());
         assertTrue(((String) response.getEntity()).contains("ex:Thing"));
 
         response = resource.deleteModule("shapes-module");

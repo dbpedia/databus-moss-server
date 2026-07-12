@@ -11,9 +11,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-import org.dbpedia.moss.db.MossRole;
-import org.dbpedia.moss.db.Permissions;
-import org.dbpedia.moss.db.UserDatabaseManager;
+import org.dbpedia.moss.users.MossRole;
+import org.dbpedia.moss.users.Permissions;
+import org.dbpedia.moss.users.UserDatabaseManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

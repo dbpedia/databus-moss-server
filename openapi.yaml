@@ -61,23 +61,33 @@ components:
 
     UserInfo:
       type: object
+      description: >
+        Caller profile and effective permissions. Authenticated responses include
+        identity fields (`sub`, `username`, `apiKeys`). Anonymous responses from
+        `GET /users/me` include only `roles` and `permissions` for the public
+        principal (no identity fields).
       properties:
         sub:
           type: string
+          description: OIDC subject; present only for authenticated callers.
         username:
           type: string
+          description: MOSS username; present only for authenticated callers.
         apiKeys:
           type: array
           items:
             type: string
+          description: API key names; present only for authenticated callers.
         roles:
           type: array
           items:
             type: string
+          description: Effective MOSS roles for this request.
         permissions:
           type: array
           items:
             type: string
+          description: Effective permissions enforced for this request.
 
     MossRole:
       type: object
@@ -921,18 +931,38 @@ paths:
     get:
       tags: [users]
       operationId: getCurrentUser
-      summary: Get the authenticated user
-      x-requires-authentication: true
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
+      summary: Get the current caller's profile and effective permissions
+      description: >
+        Returns the authenticated user profile when a valid Bearer token or API
+        key is supplied. Without authentication, returns 200 with the anonymous
+        public principal: `roles` and `permissions` only (no `sub`, `username`,
+        or `apiKeys`). Permissions reflect what the API enforces for that caller.
+      security: []
       responses:
         '200':
-          description: OK
+          description: >
+            Caller profile. Authenticated callers receive identity fields plus
+            effective roles and permissions. Anonymous callers receive only
+            `roles` (typically `["public"]`) and `permissions` from the public
+            role configuration.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserInfo'
+              examples:
+                authenticated:
+                  summary: Authenticated user
+                  value:
+                    sub: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+                    username: "janfo"
+                    apiKeys: ["dev-key"]
+                    roles: ["default", "maintainer"]
+                    permissions: ["read-metadata", "write-entries"]
+                anonymous:
+                  summary: Anonymous caller
+                  value:
+                    roles: ["public"]
+                    permissions: ["read-metadata"]
     put:
       tags: [users]
       operationId: updateCurrentUser

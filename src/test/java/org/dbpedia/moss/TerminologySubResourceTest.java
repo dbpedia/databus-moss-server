@@ -2,10 +2,10 @@ package org.dbpedia.moss;
 
 import java.io.File;
 
-import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.resources.TerminologiesResource;
-import org.dbpedia.moss.utils.ENV;
-import org.dbpedia.moss.utils.HttpConstants;
+import org.dbpedia.moss.app.MossConfiguration;
+import org.dbpedia.moss.terminologies.TerminologiesResource;
+import org.dbpedia.moss.app.ENV;
+import org.dbpedia.moss.http.HttpConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

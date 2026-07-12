@@ -10,10 +10,10 @@
  */
  {{#vendorExtensions}}
  {{#x-required-permission}}
- @org.dbpedia.moss.filters.RequiresPermission("{{x-required-permission}}")
+ @org.dbpedia.moss.auth.filters.RequiresPermission("{{x-required-permission}}")
  {{/x-required-permission}}
  {{#x-requires-authentication}}
- @org.dbpedia.moss.filters.RequiresAuthentication
+ @org.dbpedia.moss.auth.filters.RequiresAuthentication
  {{/x-requires-authentication}}
  {{/vendorExtensions}}
  @{{httpMethod}}{{#subresourceOperation}}

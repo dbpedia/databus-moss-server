@@ -3,7 +3,7 @@ package org.dbpedia.moss;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.dbpedia.moss.utils.HttpConstants;
+import org.dbpedia.moss.http.HttpConstants;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;

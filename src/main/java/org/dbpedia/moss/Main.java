@@ -1,40 +1,35 @@
 package org.dbpedia.moss;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.EnumSet;
 
 import org.apache.jena.query.ARQ;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.sys.JenaSystem;
-import org.dbpedia.moss.config.MossConfiguration;
-import org.dbpedia.moss.config.MossTerminology;
-import org.dbpedia.moss.db.APIKeyValidator;
-import org.dbpedia.moss.db.UserDatabaseManager;
-import org.dbpedia.moss.filters.AuthenticationContainerFilter;
-import org.dbpedia.moss.filters.AuthenticationFilter;
-import org.dbpedia.moss.filters.CorsFilter;
-import org.dbpedia.moss.filters.LoggingExceptionMapper;
-import org.dbpedia.moss.filters.PermissionContainerFilter;
-import org.dbpedia.moss.filters.PermissionResolverFilter;
-import org.dbpedia.moss.filters.RequestLoggingFilter;
-import org.dbpedia.moss.resources.EntriesResource;
-import org.dbpedia.moss.resources.FacetsResource;
-import org.dbpedia.moss.resources.MetadataResource;
-import org.dbpedia.moss.resources.ModulesResource;
-import org.dbpedia.moss.resources.PermissionsResource;
-import org.dbpedia.moss.resources.RolesResource;
-import org.dbpedia.moss.resources.SparqlResource;
-import org.dbpedia.moss.resources.TerminologiesResource;
-import org.dbpedia.moss.resources.UsersResource;
-import org.dbpedia.moss.utils.ENV;
-import org.dbpedia.moss.utils.GstoreResource;
+import org.dbpedia.moss.app.MossConfiguration;
+import org.dbpedia.moss.terminologies.MossTerminology;
+import org.dbpedia.moss.users.APIKeyValidator;
+import org.dbpedia.moss.users.UserDatabaseManager;
+import org.dbpedia.moss.auth.filters.AuthenticationContainerFilter;
+import org.dbpedia.moss.auth.filters.AuthenticationFilter;
+import org.dbpedia.moss.auth.filters.CorsFilter;
+import org.dbpedia.moss.auth.filters.LoggingExceptionMapper;
+import org.dbpedia.moss.auth.filters.PermissionContainerFilter;
+import org.dbpedia.moss.auth.filters.PermissionResolverFilter;
+import org.dbpedia.moss.auth.filters.RequestLoggingFilter;
+import org.dbpedia.moss.entries.EntriesResource;
+import org.dbpedia.moss.facets.FacetsResource;
+import org.dbpedia.moss.api.MetadataResource;
+import org.dbpedia.moss.modules.ModulesResource;
+import org.dbpedia.moss.users.PermissionsResource;
+import org.dbpedia.moss.users.RolesResource;
+import org.dbpedia.moss.api.SparqlResource;
+import org.dbpedia.moss.terminologies.TerminologiesResource;
+import org.dbpedia.moss.users.UsersResource;
+import org.dbpedia.moss.app.ENV;
+import org.dbpedia.moss.storage.GstoreResource;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
@@ -57,13 +52,6 @@ public class Main {
 
     private static final String BUILD_NUM = "0.2.0";
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
-
-    public static Model parseJSONLD(String jsonld, String documentURI) {
-        InputStream inputStream = new ByteArrayInputStream(jsonld.getBytes());
-        Model model = ModelFactory.createDefaultModel();
-        RDFDataMgr.read(model, inputStream, documentURI, Lang.JSONLD);
-        return model;
-    }
 
     public static void main(String[] args) throws Exception {
         logger.info("BUILD_NUM: {} ", BUILD_NUM);
