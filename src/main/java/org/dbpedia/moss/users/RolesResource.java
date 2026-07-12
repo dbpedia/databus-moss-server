@@ -1,7 +1,5 @@
 package org.dbpedia.moss.users;
 
-import org.dbpedia.moss.users.MossRole;
-import org.dbpedia.moss.users.UserDatabaseManager;
 import org.dbpedia.moss.generated.api.RolesApi;
 import org.dbpedia.moss.generated.model.RoleCreateRequest;
 import org.dbpedia.moss.generated.model.RolePermissionsRequest;

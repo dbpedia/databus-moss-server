@@ -4,10 +4,6 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
 
-import org.dbpedia.moss.users.APIKeyInfo;
-import org.dbpedia.moss.users.APIKeyValidator;
-import org.dbpedia.moss.users.UserDatabaseManager;
-import org.dbpedia.moss.users.UserInfo;
 import org.dbpedia.moss.generated.api.UsersApi;
 import org.dbpedia.moss.generated.model.ApiKeyCreateRequest;
 import org.dbpedia.moss.generated.model.SetUsernameRequest;

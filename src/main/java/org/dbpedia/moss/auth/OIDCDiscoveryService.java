@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dbpedia.moss.app.ENV;
 import org.dbpedia.moss.http.HttpClientWithProxy;
 import org.dbpedia.moss.http.HttpConstants;
-import org.dbpedia.moss.auth.OIDCDiscoveryDocument;
 
 public class OIDCDiscoveryService {
 
