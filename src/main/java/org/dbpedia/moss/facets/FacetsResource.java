@@ -6,8 +6,6 @@ import java.util.Optional;
 
 import org.dbpedia.moss.app.MossConfiguration;
 import org.dbpedia.moss.generated.api.FacetsApi;
-import org.dbpedia.moss.facets.FacetStore;
-import org.dbpedia.moss.facets.MossFacet;
 import org.dbpedia.moss.http.HateoasLink;
 import org.dbpedia.moss.http.HttpConstants;
 import org.dbpedia.moss.http.HttpUtils;
