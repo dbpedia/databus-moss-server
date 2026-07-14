@@ -823,6 +823,45 @@ paths:
               schema:
                 $ref: '#/components/schemas/SaveEntryResult'
 
+  /api/v1/save-entry:
+    post:
+      tags: [entries]
+      operationId: saveEntry
+      deprecated: true
+      summary: Create or update an entry (deprecated)
+      description: Deprecated. Use `POST /entries` instead.
+      x-required-permission: write-entries
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: module
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: resource
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          text/turtle:
+            schema:
+              type: string
+          application/ld+json:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveEntryResult'
+
   /entries/validate:
     post:
       tags: [entries]

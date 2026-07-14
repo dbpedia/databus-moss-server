@@ -20,6 +20,7 @@ import org.dbpedia.moss.auth.filters.PermissionContainerFilter;
 import org.dbpedia.moss.auth.filters.PermissionResolverFilter;
 import org.dbpedia.moss.auth.filters.RequestLoggingFilter;
 import org.dbpedia.moss.entries.EntriesResource;
+import org.dbpedia.moss.entries.SaveEntryResource;
 import org.dbpedia.moss.facets.FacetsResource;
 import org.dbpedia.moss.api.MetadataResource;
 import org.dbpedia.moss.modules.ModulesResource;
@@ -123,6 +124,7 @@ public class Main {
         jerseyConfig.register(MetadataResource.class);
         jerseyConfig.register(SparqlResource.class);
         jerseyConfig.register(EntriesResource.class);
+        jerseyConfig.register(SaveEntryResource.class);
         jerseyConfig.register(UsersResource.class);
         jerseyConfig.register(RolesResource.class);
         jerseyConfig.register(PermissionsResource.class);

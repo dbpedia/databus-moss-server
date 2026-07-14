@@ -15,7 +15,9 @@
  {{#x-requires-authentication}}
  @org.dbpedia.moss.auth.filters.RequiresAuthentication
  {{/x-requires-authentication}}
- {{/vendorExtensions}}
+ {{/vendorExtensions}}{{#isDeprecated}}
+ @Deprecated
+ {{/isDeprecated}}
  @{{httpMethod}}{{#subresourceOperation}}
  @Path("{{#vendorExtensions.x-jaxrs-path}}{{{vendorExtensions.x-jaxrs-path}}}{{/vendorExtensions.x-jaxrs-path}}{{^vendorExtensions.x-jaxrs-path}}{{{path}}}{{/vendorExtensions.x-jaxrs-path}}"){{/subresourceOperation}}{{#hasConsumes}}
  @Consumes({ {{#consumes}}"{{{mediaType}}}"{{^-last}}, {{/-last}}{{/consumes}} }){{/hasConsumes}}{{^vendorExtensions.x-jaxrs-skip-produces}}{{#hasProduces}}

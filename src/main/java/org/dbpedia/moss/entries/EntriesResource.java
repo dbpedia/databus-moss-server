@@ -112,6 +112,10 @@ public class EntriesResource implements EntriesApi {
         return doSaveEntry(req);
     }
 
+    Response saveEntryRequest(HttpServletRequest req) {
+        return doSaveEntry(req);
+    }
+
     @Override
     public Response validateEntry(String module, String body, String resource) {
         HttpServletRequest req = new MutableServletRequest(request, body, HttpConstants.MediaTypes.TEXT_TURTLE)
