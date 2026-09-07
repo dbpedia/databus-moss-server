@@ -1,6 +1,5 @@
 {
   "@context": {
-    
     "adms": "http://www.w3.org/ns/adms#",
     "cco": "https://terminology.tib.eu/ts/ontologies/cco",
     "csvw": "http://www.w3.org/ns/csvw#",

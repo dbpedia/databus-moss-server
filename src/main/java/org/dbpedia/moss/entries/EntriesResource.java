@@ -106,7 +106,7 @@ public class EntriesResource implements EntriesApi {
 
     @Override
     public Response createEntry(String module, String resource, String body) {
-        HttpServletRequest req = new MutableServletRequest(request, body, HttpConstants.MediaTypes.TEXT_TURTLE)
+        HttpServletRequest req = new MutableServletRequest(request, body, request.getContentType())
                 .withParameter("module", module)
                 .withParameter("resource", resource);
         return doSaveEntry(req);
@@ -118,7 +118,7 @@ public class EntriesResource implements EntriesApi {
 
     @Override
     public Response validateEntry(String module, String body, String resource) {
-        HttpServletRequest req = new MutableServletRequest(request, body, HttpConstants.MediaTypes.TEXT_TURTLE)
+        HttpServletRequest req = new MutableServletRequest(request, body, request.getContentType())
                 .withParameter("module", module)
                 .withParameter("resource", resource);
         return doValidateEntry(req);

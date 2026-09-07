@@ -25,7 +25,7 @@ public class SaveEntryResource implements ApiApi {
 
     @Override
     public Response saveEntry(String module, String resource, String body) {
-        HttpServletRequest req = new MutableServletRequest(request, body, HttpConstants.MediaTypes.TEXT_TURTLE)
+        HttpServletRequest req = new MutableServletRequest(request, body, request.getContentType())
                 .withParameter("module", module)
                 .withParameter("resource", resource);
         return entriesResource.saveEntryRequest(req);
