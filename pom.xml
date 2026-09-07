@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>dbpedia.org</groupId>
     <artifactId>moss</artifactId>
-    <version>1.0</version>
+    <version>0.3.1</version>
     <name>moss</name>
     <url>https://github.com/dbpedia/databus-moss</url>
     <properties>
