@@ -12,6 +12,7 @@ import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.RiotException;
 import org.dbpedia.moss.app.MossConfiguration;
 import org.dbpedia.moss.generated.api.ModulesApi;
+import org.dbpedia.moss.http.AcceptHeaderRequest;
 import org.dbpedia.moss.http.HateoasLink;
 import org.dbpedia.moss.http.HttpConstants;
 import org.dbpedia.moss.http.HttpUtils;
@@ -248,6 +249,18 @@ public class ModulesResource implements ModulesApi {
 
     @Override
     public Response getModuleContext(String moduleId) {
+        return getModuleContext(moduleId, request);
+    }
+
+    @Override
+    public Response getModuleContextJsonLd(String moduleId) {
+        return getModuleContext(
+                moduleId,
+                new AcceptHeaderRequest(request, HttpConstants.MediaTypes.APPLICATION_LD_JSON)
+        );
+    }
+
+    private Response getModuleContext(String moduleId, HttpServletRequest req) {
         Optional<String> contentOpt;
         try {
             contentOpt = store.loadSubResource(moduleId, CONTEXT_FILE);
@@ -262,11 +275,12 @@ public class ModulesResource implements ModulesApi {
         List<HateoasLink> links = List.of(
                 new HateoasLink("self", "/modules/" + moduleId + "/context"),
                 new HateoasLink("module", "/modules/" + moduleId),
+                new HateoasLink("alternate", "/modules/" + moduleId + "/context.jsonld", false, HttpConstants.MediaTypes.APPLICATION_LD_JSON),
                 new HateoasLink("alternate", "/modules/" + moduleId + "/context", false, HttpConstants.MediaTypes.APPLICATION_LD_JSON),
                 new HateoasLink("alternate", "/modules/" + moduleId + "/context", false, HttpConstants.MediaTypes.APPLICATION_JSON),
                 new HateoasLink("alternate", "/modules/" + moduleId + "/context", false, HttpConstants.MediaTypes.TEXT_HTML)
         );
-        List<String> acceptedTypes = HttpUtils.getAcceptedMediaTypes(request);
+        List<String> acceptedTypes = HttpUtils.getAcceptedMediaTypes(req);
 
         for (String type : acceptedTypes) {
             switch (type) {

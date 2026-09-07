@@ -344,7 +344,7 @@ public class EntriesResource implements EntriesApi {
                 halNode = (ObjectNode) jsonMapper.readTree(halJson);
             }
         } catch (IOException e) {
-            return ResponseUtils.notFound("Failed to fetch from gstore: " + e.getMessage());
+            return ResponseUtils.serviceUnavailable("Failed to fetch from gstore: " + e.getMessage());
         }
         updateEmbeddedHAL(halNode);
 
