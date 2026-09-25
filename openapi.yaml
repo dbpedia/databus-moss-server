@@ -392,6 +392,27 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /modules/{moduleId}/context.jsonld:
+    get:
+      tags: [modules]
+      operationId: getModuleContextJsonLd
+      x-required-permission: read-metadata
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/ld+json:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /modules/{moduleId}/shapes:
     get:
       tags: [modules]

@@ -8,7 +8,7 @@ RUN mvn -q -DskipTests package
 
 FROM eclipse-temurin:21-jre
 EXPOSE 8080
-COPY --from=builder /build/target/moss-1.0-jar-with-dependencies.jar /opt/app/
+COPY --from=builder /build/target/moss-*-jar-with-dependencies.jar /opt/app/app.jar
 
 SHELL ["/bin/bash", "-c"]
 
@@ -27,4 +27,4 @@ CMD if [[ -n "$EXTRA_ROOT_CERT_PATH" ]]; then \
         echo "WARNING: EXTRA_ROOT_CERT_PATH is set to '$EXTRA_ROOT_CERT_PATH' but file was not found."; \
       fi; \
     fi && \
-    java -jar /opt/app/moss-1.0-jar-with-dependencies.jar
+    java -jar /opt/app/app.jar

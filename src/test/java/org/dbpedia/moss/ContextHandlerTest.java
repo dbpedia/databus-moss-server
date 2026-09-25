@@ -12,6 +12,10 @@ import jakarta.ws.rs.core.Response;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import org.dbpedia.moss.http.HttpConstants;
 
 public class ContextHandlerTest {
 
@@ -42,6 +46,13 @@ public class ContextHandlerTest {
 
         response = resource.getModuleContext("ctx-module");
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+        var jsonLdReq = mock(jakarta.servlet.http.HttpServletRequest.class);
+        when(jsonLdReq.getHeader(HttpConstants.Headers.ACCEPT)).thenReturn(HttpConstants.MediaTypes.TEXT_HTML);
+        HandlerTestSupport.bindRequest(resource, jsonLdReq);
+        response = resource.getModuleContextJsonLd("ctx-module");
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(HttpConstants.MediaTypes.APPLICATION_LD_JSON, response.getMediaType().toString());
 
         response = resource.deleteModule("ctx-module");
         assertEquals(Response.Status.NO_CONTENT.getStatusCode(), response.getStatus());

@@ -45,6 +45,13 @@ public final class ResponseUtils {
                 .build();
     }
 
+    public static Response serviceUnavailable(String message) {
+        return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                .entity("{\"message\":\"" + escapeJson(message) + "\"}")
+                .type(HttpConstants.MediaTypes.APPLICATION_JSON)
+                .build();
+    }
+
     public static Response noContent() {
         return Response.noContent().build();
     }

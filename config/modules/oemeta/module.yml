@@ -1,0 +1,5 @@
+---
+id: oemeta
+label: Open Energy Metadata
+description: Open Energy Metadata module.
+language: application/ld+json

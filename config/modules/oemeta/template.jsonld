@@ -1,0 +1,119 @@
+{
+ "@context": "http://localhost:8080/modules/oemeta/context.jsonld",
+ "name": "Template",
+ "title": "Data set Template for MOSS",
+ "description": "This is an empty template for moss.openenergyplatform.org",
+ "@id": "https://databus.openenergyplatform.org/choyerklick/templates/oemeta204/2025-11-22",
+ "resources": [
+  {
+   "@id": "$DATABUS_RESOURCE",
+   "name": "Resource01",
+   "topics": [],
+   "title": "Resource Number one",
+   "path": null,
+   "description": "A first resource for the template",
+   "languages": [
+    "en"
+   ],
+   "subject": [
+    {
+     "name": "example of usage",
+     "@id": "http://purl.obolibrary.org/obo/IAO_0000112"
+    }
+   ],
+   "keywords": [
+    "Template",
+    "Example"
+   ],
+   "publicationDate": "2025-11-22",
+   "embargoPeriod": {
+    "start": null,
+    "end": null,
+    "isActive": false
+   },
+   "context": {
+    "title": "SOMMER ",
+    "homepage": "https://nfdi4energy.uol.de",
+    "documentation": null,
+    "sourceCode": "https://github.com/NFDI4Energy/SOMMER",
+    "publisher": "German Aerospace Center",
+    "publisherLogo": null,
+    "contact": "carsten.hoyer-klick@dlr.de",
+    "fundingAgency": "DFG",
+    "fundingAgencyLogo": null,
+    "grantNo": "501865131"
+   },
+   "spatial": {
+    "location": {
+     "address": null,
+     "latitude": null,
+     "longitude": null
+    },
+    "extent": {
+     "name": null,
+     "resolutionValue": null,
+     "resolutionUnit": null,
+     "boundingBox": [
+      null,
+      null,
+      null,
+      null
+     ],
+     "crs": null
+    }
+   },
+   "temporal": {
+    "referenceDate": "2025-11-22",
+    "timeseries": []
+   },
+   "sources": [],
+   "licenses": [
+    {
+     "name": "CC-BY-4.0",
+     "title": "Creative Commons Attribution 4.0 International ",
+     "path": "https://creativecommons.org/licenses/by/4.0/",
+     "instruction": null,
+     "attribution": null,
+     "copyrightStatement": null
+    }
+   ],
+   "contributors": [
+    {
+     "title": "Carsten Hoyer-Klick",
+     "path": "https://orcid.org/0000-0002-7273-9176",
+     "organization": "German Aerospace Center, Institute of Networked Energy Systems",
+     "roles": [
+      "Researcher"
+     ],
+     "date": "2025-11-22",
+     "object": "Metadata Template ",
+     "comment": null
+    }
+   ],
+   "type": null,
+   "format": null,
+   "encoding": null,
+   "schema": {
+    "fields": [],
+    "primaryKey": [],
+    "foreignKeys": []
+   },
+   "dialect": {
+    "delimiter": null,
+    "decimalSeparator": null
+   },
+   "review": {
+    "path": null,
+    "badge": null
+   }
+  }
+ ],
+ "metaMetadata": {
+  "metadataVersion": null,
+  "metadataLicense": {
+   "name": null,
+   "title": null,
+   "path": null
+  }
+ }
+}

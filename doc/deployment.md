@@ -42,7 +42,7 @@ mvn -q package
 
 The runnable artifact is the fat JAR built by `maven-assembly-plugin`:
 
-`target/moss-1.0-jar-with-dependencies.jar`
+`target/moss-<version>-jar-with-dependencies.jar` (version from `pom.xml`)
 
 ## Run (non-Docker)
 
@@ -57,7 +57,7 @@ export AUTH_OIDC_ISSUER="https://your-idp/realms/your-realm"
 export AUTH_OIDC_CLIENT_ID="moss-resource-server"
 export AUTH_OIDC_CLIENT_SECRET="your-client-secret"
 
-java -jar target/moss-1.0-jar-with-dependencies.jar
+java -jar target/moss-*-jar-with-dependencies.jar
 ```
 
 ## Docker
